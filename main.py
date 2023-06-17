@@ -2,6 +2,7 @@ import pygame
 
 # Initialize Pygame
 pygame.init()
+print(pygame)
 
 pygame.display.set_mode((400, 400))
 pygame.display.set_caption("Dragon Ball Z Buu's Fury")
