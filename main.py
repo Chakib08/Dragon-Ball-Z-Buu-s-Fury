@@ -1,33 +1,15 @@
 import pygame
+from game import Game
 
-# Initialize Pygame
-pygame.init()
-print(pygame)
-
-pygame.display.set_mode((400, 400))
-pygame.display.set_caption("Dragon Ball Z Buu's Fury")
-
-# Load the sound file
 main_theme = "Sounds/DBZ-Buus-Fury-Soundtrack-Theme.wav"
-pygame.mixer.music.load(main_theme)
+resolution = (400, 400)
+caption = "Dragon Ball Z Buu's Fury"
+isAppRunning = True
 
-# Play the sound
-pygame.mixer.music.play()
-
-# Main game loop
-clock = pygame.time.Clock()
-
-isRunning = True
-
-while isRunning:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            isRunning = False
-            
-    # Update the display
-    pygame.display.update()
-    clock.tick(60)
-
-# Quit the game and Pygame
-pygame.mixer.music.stop()
-pygame.quit()
+if __name__ == '__main__':
+    # Initialize Pygame
+    pygame.init()
+    
+    app = Game(resolution, caption)
+    app.play_music(main_theme, isAppRunning)
+    app.run(isAppRunning)
