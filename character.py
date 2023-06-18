@@ -26,3 +26,19 @@ class Character(pygame.sprite.Sprite):
         img.blit(self.sprit_sheet, (0, 0), (x, y, 32, 32))
         
         return img
+    
+    def move(self, side, speed):
+        self.side = side
+        self.speed = speed
+        
+        if(self.side == "right"):
+            self.position[0] += self.speed
+
+        if(self.side == "left"):
+            self.position[0] -= self.speed
+
+        if(self.side == "down"):
+            self.position[1] += self.speed
+
+        if(self.side == "up"):
+            self.position[1] -= self.speed
