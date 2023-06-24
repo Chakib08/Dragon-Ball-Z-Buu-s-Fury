@@ -15,6 +15,10 @@ goku_imgX = 1
 goku_imgY = 2
 goku_background = (0, 64, 64)
 
+
+# Define goku position images
+
+
 class Game:
     def __init__(self, resolution, caption, tmx_map):
         # Initialize game window
@@ -31,7 +35,7 @@ class Game:
         map_layer.zoom = 1
         
         # Character param
-        self.speed = 2
+        self.speed = 3
         
         # Get Goku postion from tmx map
         goku_postion = tmx_data.get_object_by_name("goku")
@@ -64,36 +68,81 @@ class Game:
     def keyBoard_input(self):
         isPressed = pygame.key.get_pressed()
         
-        if(isPressed[pygame.K_UP]):
-            # Set image where the sprite walk at top
-            self.character.image = self.character.get_img(28, 67, 32, 32, [24, 32])
+        if isPressed[pygame.K_UP]:
+            # Set image where the sprite walks up
+            self.character.images = [
+                self.character.get_img(28, 67, 32, 32, [24, 32]),
+                self.character.get_img(53, 68, 32, 32, [25, 31]),
+                self.character.get_img(79, 68, 32, 32, [24, 31]),
+                self.character.get_img(104, 68, 32, 32, [25, 31]),
+                # Add more images for the walking animation
+            ]
+            self.character.image = self.character.images[self.character.imageIdx]
+            self.character.imageIdx += 1
+            if(self.character.imageIdx == len(self.character.images)):
+                self.character.imageIdx = 0
+            
             self.character.image.set_colorkey(goku_background)
+            pygame.time.delay(100)
             self.character.move("up", self.speed)
         
-        elif(isPressed[pygame.K_DOWN]):
-            # Set image where the sprite walk at down
-            self.character.image = self.character.get_img(106, 2, 32, 32, [25, 31])
+        elif isPressed[pygame.K_DOWN]:
+            # Set image where the sprite walks down
+            self.character.images = [
+                self.character.get_img(54, 3, 32, 32, [25, 30]),
+                self.character.get_img(80, 3, 32, 32, [25, 30]),
+                self.character.get_img(106, 2, 32, 32, [25, 31]),
+                self.character.get_img(132, 3, 32, 32, [25, 30]),
+                # Add more images for the walking animation
+            ]
+            self.character.image = self.character.images[self.character.imageIdx]
+            self.character.imageIdx += 1
+            if(self.character.imageIdx == len(self.character.images)):
+                self.character.imageIdx = 0
+            
             self.character.image.set_colorkey(goku_background)
+            pygame.time.delay(100)
             self.character.move("down", self.speed)
 
-        elif(isPressed[pygame.K_RIGHT]):
-            # Set image where the sprite walk at right
-            self.character.image = self.character.get_img(50, 35, 32, 32, [22, 31])
+        elif isPressed[pygame.K_RIGHT]:
+            # Set image where the sprite walks right
+            self.character.images = [
+                self.character.get_img(50, 35, 32, 32, [22, 31]),
+                self.character.get_img(73, 35, 32, 32, [23, 31]),
+                self.character.get_img(97, 36, 32, 32, [24, 30]),
+                self.character.get_img(122, 35, 32, 32, [23, 31]),
+            ]
+            self.character.image = self.character.images[self.character.imageIdx]
+            self.character.imageIdx += 1
+            if(self.character.imageIdx == len(self.character.images)):
+                self.character.imageIdx = 0
+            
             self.character.image.set_colorkey(goku_background)
+            pygame.time.delay(100)
             self.character.move("right", self.speed)
 
-        elif(isPressed[pygame.K_LEFT]):
-            # Set image where the sprite walk at left
-            self.character.image = self.character.get_img(50, 35, 32, 32, [22, 31])
+        elif isPressed[pygame.K_LEFT]:
+            # Set image where the sprite walks left
+            self.character.images = [
+                self.character.get_img(50, 35, 32, 32, [22, 31]),
+                self.character.get_img(73, 35, 32, 32, [23, 31]),
+                self.character.get_img(97, 36, 32, 32, [24, 30]),
+                self.character.get_img(122, 35, 32, 32, [23, 31]),
+            ]
+            
+            self.character.image = self.character.images[self.character.imageIdx]
             self.character.image = pygame.transform.flip(self.character.image, True, False)
+            self.character.imageIdx += 1
+            if(self.character.imageIdx == len(self.character.images)):
+                self.character.imageIdx = 0
             self.character.image.set_colorkey(goku_background)
+            pygame.time.delay(100)
             self.character.move("left", self.speed)
         
         else:
+            self.character.images = []  # Reset the animation frames
             self.character.image = self.character.get_img(1, 2, 32, 32, [24, 31])
             self.character.image.set_colorkey(goku_background)
-
-       
     
     def run(self, isRunning):
         clock = pygame.time.Clock()
