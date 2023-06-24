@@ -1,29 +1,34 @@
-from typing import Any
 import pygame
+from animation import Animation
 
-class Character(pygame.sprite.Sprite):
-    def __init__(self, pos_x, pos_y, charac_img, size, background):
+class Character(Animation):
+    def __init__(self, pos_x, pos_y, img_x, img_y, area_width, area_height, charac_img, size, background):
         super().__init__()
         
         self.charac_img = charac_img
         self.size = size
         self.background = background
         
+        self.img_coor = [img_x, img_y]
+        self.area = [area_width, area_height]
+        
         # Load character image       
         self.sprit_sheet = pygame.image.load(self.charac_img)
-        self.image = self.get_img(1, 2, self.size)
+        self.image = self.get_img(self.img_coor[0], self.img_coor[1], self.area[0], self.area[1], self.size)
         self.image.set_colorkey(self.background)
+        self.imageIdx = 0
+        self.images = []
         self.rect = self.image.get_rect()
         self.position = [pos_x, pos_y]
         
     def update(self):
         self.rect.topleft = self.position
         
-    def get_img(self, x, y, size):
+    def get_img(self, x, y, area_width, area_height, size):
         
         # ROI from loaded image
         img = pygame.Surface(size)
-        img.blit(self.sprit_sheet, (0, 0), (x, y, 32, 32))
+        img.blit(self.sprit_sheet, (0, 0), (x, y, area_width, area_height))
         
         return img
     

@@ -11,7 +11,9 @@ character_size = [24,31]
 goku_img = "Graphics/Image_charac/Goku/goku.png"
 goku_posX = 120
 goku_posY = 30
-goku_background = [0, 64, 64]
+goku_imgX = 1
+goku_imgY = 2
+goku_background = (0, 64, 64)
 
 class Game:
     def __init__(self, resolution, caption, tmx_map):
@@ -35,7 +37,7 @@ class Game:
         goku_postion = tmx_data.get_object_by_name("goku")
         
         # Intancite Goku character
-        self.character = Character(goku_postion.x , goku_postion.y, goku_img, character_size, goku_background)
+        self.character = Character(goku_postion.x , goku_postion.y, goku_imgX, goku_imgY, 32, 32, goku_img, character_size, goku_background)
 
         # Draw layers groups
         self.group = pyscroll.PyscrollGroup(map_layer=map_layer, default_layer=1)
@@ -63,19 +65,33 @@ class Game:
         isPressed = pygame.key.get_pressed()
         
         if(isPressed[pygame.K_UP]):
+            # Set image where the sprite walk at top
+            self.character.image = self.character.get_img(28, 67, 32, 32, [24, 32])
+            self.character.image.set_colorkey(goku_background)
             self.character.move("up", self.speed)
         
         elif(isPressed[pygame.K_DOWN]):
+            # Set image where the sprite walk at down
+            self.character.image = self.character.get_img(106, 2, 32, 32, [25, 31])
+            self.character.image.set_colorkey(goku_background)
             self.character.move("down", self.speed)
 
         elif(isPressed[pygame.K_RIGHT]):
+            # Set image where the sprite walk at right
+            self.character.image = self.character.get_img(50, 35, 32, 32, [22, 31])
+            self.character.image.set_colorkey(goku_background)
             self.character.move("right", self.speed)
 
         elif(isPressed[pygame.K_LEFT]):
+            # Set image where the sprite walk at left
+            self.character.image = self.character.get_img(50, 35, 32, 32, [22, 31])
+            self.character.image = pygame.transform.flip(self.character.image, True, False)
+            self.character.image.set_colorkey(goku_background)
             self.character.move("left", self.speed)
         
         else:
-            pass
+            self.character.image = self.character.get_img(1, 2, 32, 32, [24, 31])
+            self.character.image.set_colorkey(goku_background)
 
        
     
