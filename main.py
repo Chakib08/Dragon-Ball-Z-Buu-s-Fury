@@ -15,4 +15,4 @@ if __name__ == '__main__':
     
     app = Game(resolution, caption, tmx_map)
     app.play_music(main_theme, isAppRunning)
-    app.run(isAppRunning)
+    app.run(isAppRunning)   
