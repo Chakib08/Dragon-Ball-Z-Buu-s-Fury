@@ -34,6 +34,8 @@ goku_ssj_animations = [
 [386, 377, 32, 33, [32, 33]],
 [424, 377, 32, 33, [32, 33]]]
 
+goku_ssj_isTransformed = False
+
 class Game:
     def __init__(self, resolution, caption, tmx_map):
         # Initialize game window
@@ -56,7 +58,7 @@ class Game:
         goku_postion = tmx_data.get_object_by_name("goku")
         
         # Intancite Goku character
-        self.character = Saiyan(goku_postion.x , goku_postion.y, goku_imgX, goku_imgY, 32, 32, goku_img, character_size, goku_background)
+        self.character = Saiyan(goku_postion.x , goku_postion.y, goku_imgX, goku_imgY, 32, 32, goku_img, character_size, goku_background, goku_ssj_isTransformed)
 
         # Draw layers groups
         self.group = pyscroll.PyscrollGroup(map_layer=map_layer, default_layer=1)
@@ -159,7 +161,7 @@ class Game:
             pygame.time.delay(100)
             self.character.move("left", self.speed)
         
-        elif isPressed[pygame.K_SPACE]:
+        elif isPressed[pygame.K_SPACE] and self.character.isTransofrmed == False:
                 self.character.sprit_sheet = pygame.image.load(goku_ssj1)
                 self.character.images = []  # Reset the animation frames
                 for animation in range(len(goku_ssj_animations)):
@@ -167,36 +169,26 @@ class Game:
                 
                 self.character.image = self.character.images[self.character.imageTransformIdx]
                 self.character.imageTransformIdx += 1
-                if(self.character.imageTransformIdx== len(self.character.images)):
-                    self.character.imageTransformIdx = 0
+
                 self.character.image.set_colorkey(goku_ssj1_bg)
-                pygame.time.delay(100)   
+                pygame.time.delay(100)
+                if(self.character.imageTransformIdx== len(self.character.images)):
+                    self.character.isTransofrmed = True
+                print(self.character.isTransofrmed)
+                     
         
         else:
-            self.character.sprit_sheet = pygame.image.load(goku_img)
             self.character.images = []  # Reset the animation frames
-            self.character.image = self.character.get_img(1, 2, 32, 32, [24, 31])
-            self.character.image.set_colorkey(goku_background)
-
             
-        # for event in pygame.event.get():
-        #     if event.type == pygame.KEYDOWN:
-        #         if event.key == pygame.K_SPACE:
-        #             self.character.sprit_sheet = pygame.image.load(goku_ssj1)
-        #             for animation in range(len(goku_ssj_animations)):
-        #                 self.character.images.append(self.character.get_img(goku_ssj_animations[animation][0], goku_ssj_animations[animation][1], goku_ssj_animations[animation][2], goku_ssj_animations[animation][3], goku_ssj_animations[animation][4]))
-                    
-        #             self.character.image = self.character.images[self.character.imageIdx]
-        #             self.character.imageIdx += 1
-        #             if(self.character.imageIdx == len(self.character.images)):
-        #                 self.character.imageIdx = 0
-        #             self.character.image.set_colorkey(goku_ssj1_bg)
-        #             pygame.time.delay(100000)        
-            
-        
-
-            
-            
+            if self.character.isTransofrmed == False:
+                self.character.sprit_sheet = pygame.image.load(goku_img)
+                self.character.image = self.character.get_img(1, 2, 32, 32, [24, 31])
+                self.character.image.set_colorkey(goku_background)
+            else:
+                self.character.sprit_sheet = pygame.image.load(goku_ssj1)
+                self.character.image = self.character.get_img(29, 452, 32, 32, [16, 31])
+                self.character.image.set_colorkey(goku_ssj1_bg)
+                     
             
     
     def run(self, isRunning):
