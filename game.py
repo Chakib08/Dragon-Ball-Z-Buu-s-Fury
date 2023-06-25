@@ -159,22 +159,25 @@ class Game:
             pygame.time.delay(100)
             self.character.move("left", self.speed)
         
+        elif isPressed[pygame.K_SPACE]:
+                self.character.sprit_sheet = pygame.image.load(goku_ssj1)
+                self.character.images = []  # Reset the animation frames
+                for animation in range(len(goku_ssj_animations)):
+                    self.character.images.append(self.character.get_img(goku_ssj_animations[animation][0], goku_ssj_animations[animation][1], goku_ssj_animations[animation][2], goku_ssj_animations[animation][3], goku_ssj_animations[animation][4]))
+                
+                self.character.image = self.character.images[self.character.imageTransformIdx]
+                self.character.imageTransformIdx += 1
+                if(self.character.imageTransformIdx== len(self.character.images)):
+                    self.character.imageTransformIdx = 0
+                self.character.image.set_colorkey(goku_ssj1_bg)
+                pygame.time.delay(100)   
+        
         else:
             self.character.sprit_sheet = pygame.image.load(goku_img)
             self.character.images = []  # Reset the animation frames
             self.character.image = self.character.get_img(1, 2, 32, 32, [24, 31])
             self.character.image.set_colorkey(goku_background)
-            if isPressed[pygame.K_SPACE]:
-                self.character.sprit_sheet = pygame.image.load(goku_ssj1)
-                for animation in range(len(goku_ssj_animations)):
-                    self.character.images.append(self.character.get_img(goku_ssj_animations[animation][0], goku_ssj_animations[animation][1], goku_ssj_animations[animation][2], goku_ssj_animations[animation][3], goku_ssj_animations[animation][4]))
-                
-                self.character.image = self.character.images[self.character.imageIdx]
-                self.character.imageIdx += 1
-                if(self.character.imageIdx == len(self.character.images)):
-                    self.character.imageIdx = 0
-                self.character.image.set_colorkey(goku_ssj1_bg)
-                pygame.time.delay(100)   
+
             
         # for event in pygame.event.get():
         #     if event.type == pygame.KEYDOWN:

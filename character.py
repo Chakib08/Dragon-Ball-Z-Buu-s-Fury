@@ -17,6 +17,7 @@ class Character(Animation):
         self.image = self.get_img(self.img_coor[0], self.img_coor[1], self.area[0], self.area[1], self.size)
         self.image.set_colorkey(self.background)
         self.imageIdx = 0
+        self.imageTransformIdx = 0
         self.images = []
         self.rect = self.image.get_rect()
         self.position = [pos_x, pos_y]
