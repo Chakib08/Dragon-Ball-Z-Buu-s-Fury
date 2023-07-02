@@ -44,6 +44,8 @@ class Animation(pygame.sprite.Sprite):
             self.images.append(self.get_image_by_animation_name(animation_macro + " " + str(i)))
 
         self.image = self.images[self.current_animation_index]
+        if "Left" in animation_macro:
+            self.image = pygame.transform.flip(self.image, True, False)
         self.current_animation_index += 1
 
         if(self.current_animation_index == len(self.images)):

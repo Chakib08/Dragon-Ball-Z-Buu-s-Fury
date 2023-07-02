@@ -15,16 +15,16 @@ class Character(Animation):
     def walk(self, side, speed):
         self.side = side
         
-        if(self.side == "right"):
+        if(self.side == "Right"):
             self.position[0] += self.speed
 
-        elif(self.side == "left"):
+        elif(self.side == "Left"):
             self.position[0] -= self.speed
 
-        elif(self.side == "down"):
+        elif(self.side == "Down"):
             self.position[1] += self.speed
 
-        elif(self.side == "up"):
+        elif(self.side == "Up"):
             self.position[1] -= self.speed
             
         else:
@@ -35,19 +35,12 @@ class Character(Animation):
     
     def attack():
         pass
-    
             
-    def animate(self, animation_macro, animation_nbr, capability):
+    def animate(self, animation_macro, animation_nbr):
         super().animate(animation_macro, animation_nbr)
-        if capability == "Walk":
-            self.walk("up", self.speed)
-        elif capability == "Run":
-            pass
-        elif capability == "Attack":
-            pass
+        macro, side = animation_macro.split()
+        
+        if macro == "Walk":
+            self.walk(side, self.speed)
         else:
             pass
-            
-    
-
-    
