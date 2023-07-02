@@ -85,24 +85,34 @@ class Game:
     def keyBoard_input(self):
         isPressed = pygame.key.get_pressed()
 
-        if isPressed[pygame.K_UP]:   
-            self.character.animate("Walk Up", walk_animation_nbr)
+        if isPressed[pygame.K_UP]:
+            if isPressed[pygame.K_SPACE]:
+                self.character.animate("Run Up", walk_animation_nbr)
+            else:
+                self.character.animate("Walk Up", walk_animation_nbr)
         elif isPressed[pygame.K_DOWN]:
-            self.character.animate("Walk Down", walk_animation_nbr)
+            if isPressed[pygame.K_SPACE]:
+                self.character.animate("Run Down", walk_animation_nbr)
+            else:
+                self.character.animate("Walk Down", walk_animation_nbr)
         elif isPressed[pygame.K_RIGHT]:
-            self.character.animate("Walk Right", walk_animation_nbr)
+            if isPressed[pygame.K_SPACE]:
+                self.character.animate("Run Right", walk_animation_nbr)
+            else:
+                self.character.animate("Walk Right", walk_animation_nbr)
         elif isPressed[pygame.K_LEFT]:
-            self.character.animate("Walk Left", walk_animation_nbr)
-            
+            if isPressed[pygame.K_SPACE]:
+                self.character.animate("Run Left", walk_animation_nbr)
+            else:
+                self.character.animate("Walk Left", walk_animation_nbr)
+
         
+            
         else:
             self.character.images = []  # Reset the animation frames
             
             if self.character.isTransofrmed == False:
-                self.character.image = self.character.get_image_by_animation_name("IDLE Down")   
-                
-                
-    
+                self.character.image = self.character.get_image_by_animation_name("IDLE Down") 
                 
     def run(self, isRunning):
         clock = pygame.time.Clock()

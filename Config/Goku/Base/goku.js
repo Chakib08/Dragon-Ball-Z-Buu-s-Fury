@@ -291,7 +291,280 @@
           "G": 64,
           "B": 64
         }
+      },
+
+      {   
+        "AnimationName": "Run Up 0",
+        "x": 131,
+        "y": 68,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Up 1",
+        "x": 157,
+        "y": 68,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Up 2",
+        "x": 183,
+        "y": 68,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Up 3",
+        "x": 209,
+        "y": 69,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Down 0",
+        "x": 159,
+        "y": 2,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Down 1",
+        "x": 184,
+        "y": 3,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Down 2",
+        "x": 210,
+        "y": 2,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Down 3",
+        "x": 235,
+        "y": 3,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Right 0",
+        "x": 147,
+        "y": 35,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 22,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+      
+      {   
+        "AnimationName": "Run Right 1",
+        "x": 170,
+        "y": 35,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Right 2",
+        "x": 194,
+        "y": 36,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      }, 
+
+      {   
+        "AnimationName": "Run Right 3",
+        "x": 220,
+        "y": 36,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+      
+      {   
+        "AnimationName": "Run Left 0",
+        "x": 147,
+        "y": 35,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 22,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+      
+      {   
+        "AnimationName": "Run Left 1",
+        "x": 170,
+        "y": 35,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {   
+        "AnimationName": "Run Left 2",
+        "x": 194,
+        "y": 36,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      }, 
+
+      {   
+        "AnimationName": "Run Left 3",
+        "x": 220,
+        "y": 36,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
       }
+
     ]
   }
   

@@ -12,7 +12,7 @@ class Character(Animation):
     def update(self):
         self.rect.topleft = self.position
     
-    def walk(self, side, speed):
+    def move(self, side, speed):
         self.side = side
         
         if(self.side == "Right"):
@@ -29,9 +29,6 @@ class Character(Animation):
             
         else:
             pass
-            
-    def run():
-        pass
     
     def attack():
         pass
@@ -41,6 +38,7 @@ class Character(Animation):
         macro, side = animation_macro.split()
         
         if macro == "Walk":
-            self.walk(side, self.speed)
-        else:
-            pass
+            self.move(side, self.speed)
+        elif macro == "Run":
+            self.speed = 8
+            self.move(side, self.speed)
