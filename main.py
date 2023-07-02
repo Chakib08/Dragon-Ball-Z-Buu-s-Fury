@@ -7,7 +7,7 @@ caption = "Dragon Ball Z Buu's Fury"
 isAppRunning = True
 
 # Tmx data
-tmx_map = "Graphics/map.tmx"
+tmx_map = "Graphics/map.tmx"          
 
 if __name__ == '__main__':
     # Initialize Pygame

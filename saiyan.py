@@ -3,10 +3,12 @@ from character import Character
 
 class Saiyan(Character):
     
-    def __init__(self, pos_x, pos_y, img_x, img_y, area_width, area_height, charac_img, size, background, isTransformed):
-        super().__init__(pos_x, pos_y, img_x, img_y, area_width, area_height, charac_img, size, background)
+    def __init__(self, pos_x, pos_y, isTransformed, json_file):
+        super().__init__(pos_x, pos_y, json_file)
         
         self.isTransofrmed = isTransformed
+        self.imageTransformIdx = 0
+
     
     def transform(self, level, transformation_images):
         
