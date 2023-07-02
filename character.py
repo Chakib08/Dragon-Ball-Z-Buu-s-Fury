@@ -38,6 +38,7 @@ class Character(Animation):
         macro, side = animation_macro.split()
         
         if macro == "Walk":
+            self.speed = 4
             self.move(side, self.speed)
         elif macro == "Run":
             self.speed = 8
