@@ -1,4 +1,3 @@
-import pygame
 from animation import Animation
 
 class Character(Animation):
@@ -19,14 +18,17 @@ class Character(Animation):
         if(self.side == "right"):
             self.position[0] += self.speed
 
-        if(self.side == "left"):
+        elif(self.side == "left"):
             self.position[0] -= self.speed
 
-        if(self.side == "down"):
+        elif(self.side == "down"):
             self.position[1] += self.speed
 
-        if(self.side == "up"):
+        elif(self.side == "up"):
             self.position[1] -= self.speed
+            
+        else:
+            pass
             
     def run():
         pass
