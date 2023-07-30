@@ -563,6 +563,210 @@
           "G": 64,
           "B": 64
         }
+      },
+
+      {   
+        "AnimationName": "Transform SSJ 0",
+        "x": 6,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 33,
+        "Size": {
+          "Width": 32,
+          "Height": 33
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {   
+        "AnimationName": "Transform SSJ 1",
+        "x": 44,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 33,
+        "Size": {
+          "Width": 32,
+          "Height": 33
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {   
+        "AnimationName": "Transform SSJ 2",
+        "x": 80,
+        "y": 376,
+        "Area Width": 32,
+        "Area Height": 33,
+        "Size": {
+          "Width": 32,
+          "Height": 33
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {   
+        "AnimationName": "Transform SSJ 3",
+        "x": 155,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 34,
+        "Size": {
+          "Width": 32,
+          "Height": 34
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {   
+        "AnimationName": "Transform SSJ 4",
+        "x": 193,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 34,
+        "Size": {
+          "Width": 32,
+          "Height": 34
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {   
+        "AnimationName": "Transform SSJ 5",
+        "x": 234,
+        "y": 376,
+        "Area Width": 32,
+        "Area Height": 34,
+        "Size": {
+          "Width": 32,
+          "Height": 34
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {
+        "AnimationName": "Transform SSJ 6",
+        "x": 274,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 34,
+        "Size": {
+          "Width": 32,
+          "Height": 34
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {
+        "AnimationName": "Transform SSJ 7",
+        "x": 312,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 34,
+        "Size": {
+          "Width": 32,
+          "Height": 34
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {
+        "AnimationName": "Transform SSJ 8",
+        "x": 349,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 33,
+        "Size": {
+          "Width": 32,
+          "Height": 33
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {
+        "AnimationName": "Transform SSJ 9",
+        "x": 386,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 33,
+        "Size": {
+          "Width": 32,
+          "Height": 33
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {
+        "AnimationName": "Transform SSJ 10",
+        "x": 386,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 33,
+        "Size": {
+          "Width": 32,
+          "Height": 33
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
+      },
+
+      {
+        "AnimationName": "Transform SSJ 11",
+        "x": 424,
+        "y": 377,
+        "Area Width": 32,
+        "Area Height": 33,
+        "Size": {
+          "Width": 32,
+          "Height": 33
+        },
+        "Background": {
+          "R": 0,
+          "G": 128,
+          "B": 0
+        }
       }
 
     ]

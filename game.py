@@ -36,7 +36,7 @@ walk_animation_nbr = 4
 # [424, 377, 32, 33, [32, 33]]]
 
 goku_ssj_isTransformed = False
-goku_base_json_file = "Config/Goku/Base/goku.js"
+goku_base_json_file = "Config/Goku/Base/goku.json"
 
 class Game:
     def __init__(self, resolution, caption, tmx_map):
@@ -105,9 +105,6 @@ class Game:
                 self.character.animate("Run Left", walk_animation_nbr)
             else:
                 self.character.animate("Walk Left", walk_animation_nbr)
-
-        
-            
         else:
             self.character.images = []  # Reset the animation frames
             
