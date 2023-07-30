@@ -5,38 +5,11 @@ from saiyan import Saiyan
 
 # Define all constants here
 walk_animation_nbr = 4
-
-# # Define the character size by the image resolution 32x32
-# character_size = [24,31]
-
-# # Define image character
-# goku_img = "Graphics/Image_charac/Goku/goku.png"
-# goku_posX = 120
-# goku_posY = 30
-# goku_imgX = 1
-# goku_imgY = 2
-# goku_background = (0, 64, 64)
-
-
-# # Define goku super saiyan transformation images
-# goku_ssj1 = "Graphics/Image_charac/Goku/GokuSS1.png"
-# goku_ssj1_bg = (0, 128, 0)
-# goku_ssj_animations = [
-# [6, 377, 32, 33, [32, 33]],
-# [44, 377, 32, 33, [32, 33]],
-# [80, 376, 32, 33, [32, 33]],
-# [155, 377, 32, 34, [32, 34]],
-# [193, 377, 32, 34, [32, 34]],
-# [234, 377, 32, 34, [32, 34]],
-# [274, 377, 32, 34, [32, 34]],
-# [312, 377, 32, 34, [32, 34]],
-# [349, 377, 32, 33, [32, 33]],
-# [349, 377, 32, 33, [32, 33]],
-# [386, 377, 32, 33, [32, 33]],
-# [424, 377, 32, 33, [32, 33]]]
+transform_ssj_nbr = 12
 
 goku_ssj_isTransformed = False
 goku_base_json_file = "Config/Goku/Base/goku.json"
+goku_ssj_sprite_path = "Graphics/Image_charac/Goku/GokuSS1.png"
 
 class Game:
     def __init__(self, resolution, caption, tmx_map):
@@ -105,10 +78,14 @@ class Game:
                 self.character.animate("Run Left", walk_animation_nbr)
             else:
                 self.character.animate("Walk Left", walk_animation_nbr)
+        elif isPressed[pygame.K_s]:
+            self.character.sprit_sheet = pygame.image.load(goku_ssj_sprite_path)
+            self.character.animate("Transform SSJ Down", transform_ssj_nbr)
         else:
             self.character.images = []  # Reset the animation frames
             
             if self.character.isTransofrmed == False:
+                self.character.sprit_sheet = pygame.image.load("Graphics/Image_charac/Goku/goku.png")
                 self.character.image = self.character.get_image_by_animation_name("IDLE Down") 
                 
     def run(self, isRunning):

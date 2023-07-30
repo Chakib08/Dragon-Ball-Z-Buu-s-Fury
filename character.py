@@ -35,7 +35,7 @@ class Character(Animation):
             
     def animate(self, animation_macro, animation_nbr):
         super().animate(animation_macro, animation_nbr)
-        macro, side = animation_macro.split()
+        macro, level, side = animation_macro.split()
         
         if macro == "Walk":
             self.speed = 4

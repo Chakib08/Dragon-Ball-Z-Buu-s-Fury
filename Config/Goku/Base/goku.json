@@ -566,7 +566,7 @@
       },
 
       {   
-        "AnimationName": "Transform SSJ 0",
+        "AnimationName": "Transform SSJ Down 0",
         "x": 6,
         "y": 377,
         "Area Width": 32,
@@ -583,7 +583,7 @@
       },
 
       {   
-        "AnimationName": "Transform SSJ 1",
+        "AnimationName": "Transform SSJ Down 1",
         "x": 44,
         "y": 377,
         "Area Width": 32,
@@ -600,7 +600,7 @@
       },
 
       {   
-        "AnimationName": "Transform SSJ 2",
+        "AnimationName": "Transform SSJ Down 2",
         "x": 80,
         "y": 376,
         "Area Width": 32,
@@ -617,7 +617,7 @@
       },
 
       {   
-        "AnimationName": "Transform SSJ 3",
+        "AnimationName": "Transform SSJ Down 3",
         "x": 155,
         "y": 377,
         "Area Width": 32,
@@ -634,7 +634,7 @@
       },
 
       {   
-        "AnimationName": "Transform SSJ 4",
+        "AnimationName": "Transform SSJ Down 4",
         "x": 193,
         "y": 377,
         "Area Width": 32,
@@ -651,7 +651,7 @@
       },
 
       {   
-        "AnimationName": "Transform SSJ 5",
+        "AnimationName": "Transform SSJ Down 5",
         "x": 234,
         "y": 376,
         "Area Width": 32,
@@ -668,7 +668,7 @@
       },
 
       {
-        "AnimationName": "Transform SSJ 6",
+        "AnimationName": "Transform SSJ Down 6",
         "x": 274,
         "y": 377,
         "Area Width": 32,
@@ -685,7 +685,7 @@
       },
 
       {
-        "AnimationName": "Transform SSJ 7",
+        "AnimationName": "Transform SSJ Down 7",
         "x": 312,
         "y": 377,
         "Area Width": 32,
@@ -702,7 +702,7 @@
       },
 
       {
-        "AnimationName": "Transform SSJ 8",
+        "AnimationName": "Transform SSJ Down 8",
         "x": 349,
         "y": 377,
         "Area Width": 32,
@@ -719,7 +719,7 @@
       },
 
       {
-        "AnimationName": "Transform SSJ 9",
+        "AnimationName": "Transform SSJ Down 9",
         "x": 386,
         "y": 377,
         "Area Width": 32,
@@ -736,7 +736,7 @@
       },
 
       {
-        "AnimationName": "Transform SSJ 10",
+        "AnimationName": "Transform SSJ Down 10",
         "x": 386,
         "y": 377,
         "Area Width": 32,
@@ -753,7 +753,7 @@
       },
 
       {
-        "AnimationName": "Transform SSJ 11",
+        "AnimationName": "Transform SSJ Down 11",
         "x": 424,
         "y": 377,
         "Area Width": 32,
