@@ -8,20 +8,22 @@ class Saiyan(Character):
         super().__init__(pos_x, pos_y, json_file)
         
         self.isTransofrmed = isTransformed
-        self.imageTransformIdx = 0
     
-    # def animate(self, animation_macro, animation_nbr):
-    #     self.images = []
-    #     for i in range(animation_nbr):
-    #         self.images.append(self.get_image_by_animation_name(animation_macro + " " + str(i)))
-
-    #     self.image = self.images[self.current_animation_index]
-    #     if "Left" in animation_macro:
-    #         self.image = pygame.transform.flip(self.image, True, False)
-    #     self.current_animation_index += 1
-
-    #     if(self.current_animation_index == len(self.images)):
-    #         self.current_animation_index = 0
-    #     pygame.time.delay(100)
+    
+    def animate(self, animation_macro, animation_nbr):
+        super().animate(animation_macro, animation_nbr)
+        
+        # Check if the Transofrm string is in the animation macro retreived from the json file
+        if "Transform" in animation_macro:
+            macro, level, side = animation_macro.split()
+        else:
+            macro, side = animation_macro.split()
+                
+        if macro == "Walk":
+            self.speed = 4
+            self.move(side, self.speed)
+        elif macro == "Run":
+            self.speed = 8
+            self.move(side, self.speed)
         
 

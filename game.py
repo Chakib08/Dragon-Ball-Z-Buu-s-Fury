@@ -24,7 +24,7 @@ class Game:
         tmx_data = pytmx.load_pygame(self.tmx_map)
         map_data = pyscroll.data.TiledMapData(tmx_data)
         map_layer = pyscroll.orthographic.BufferedRenderer(map_data, self.resolution)
-        map_layer.zoom = 1
+        map_layer.zoom = 2
         
         # Get Goku postion from tmx map
         goku_postion = tmx_data.get_object_by_name("goku")
