@@ -24,14 +24,21 @@ class Game:
         tmx_data = pytmx.load_pygame(self.tmx_map)
         map_data = pyscroll.data.TiledMapData(tmx_data)
         map_layer = pyscroll.orthographic.BufferedRenderer(map_data, self.resolution)
-        map_layer.zoom = 2
+        map_layer.zoom = 1
         
         # Get Goku postion from tmx map
         goku_postion = tmx_data.get_object_by_name("goku")
         
         # Intancite Goku character
         self.character = Saiyan(goku_postion.x , goku_postion.y, goku_ssj_isTransformed, goku_base_json_file)
+        
+        self.collisions = []
+        
+        for obj in tmx_data.objects:
+            if obj.type == "collision":
+                self.collisions.append(pygame.Rect(obj.x, obj.y, obj.width, obj.height))
 
+            
         # Draw layers groups
         self.group = pyscroll.PyscrollGroup(map_layer=map_layer, default_layer=1)
         
@@ -92,23 +99,28 @@ class Game:
                 self.character.image = self.character.get_image_by_animation_name("IDLE Down") 
             else:
                 self.character.image = self.character.get_image_by_animation_name("IDLE SSJ Down")                 
-                
+    
+    def update(self):
+        self.group.update()       
+        for sprite in self.group.sprites():
+            if sprite.feet.collidelist(self.collisions) > -1:
+                sprite.move_back()
                 
     def run(self, isRunning):
-        clock = pygame.time.Clock()
+
         self.isRunning = isRunning
         while self.isRunning:
+            self.character.save_location()
+            self.keyBoard_input()
+            self.update()
+            self.group.center(self.character.rect.center)
+            self.group.draw(self.screen)
+            pygame.display.flip()
+            clock = pygame.time.Clock()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.isRunning = False
             clock.tick(60)
-            # Game logic and rendering goes here
-            self.keyBoard_input()
-            self.group.update()
-            self.group.draw(self.screen)
-            pygame.display.flip()
-            
-
         pygame.quit()
         
         

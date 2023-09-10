@@ -14,5 +14,5 @@ if __name__ == '__main__':
     pygame.init()
     
     app = Game(resolution, caption, tmx_map)
-    app.play_music(main_theme, isAppRunning)
+    #app.play_music(main_theme, isAppRunning)
     app.run(isAppRunning)
