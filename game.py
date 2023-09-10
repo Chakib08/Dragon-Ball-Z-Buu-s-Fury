@@ -81,12 +81,18 @@ class Game:
         elif isPressed[pygame.K_s]:
             self.character.sprit_sheet = pygame.image.load(goku_ssj_sprite_path)
             self.character.animate("Transform SSJ Down", transform_ssj_nbr)
+            self.character.isTransofrmed = True
         else:
             self.character.images = []  # Reset the animation frames
-            
+            self.character.current_animation_index = 0
+            self.character.sprit_sheet = pygame.image.load("Graphics/Image_charac/Goku/goku.png")
+
+
             if self.character.isTransofrmed == False:
-                self.character.sprit_sheet = pygame.image.load("Graphics/Image_charac/Goku/goku.png")
                 self.character.image = self.character.get_image_by_animation_name("IDLE Down") 
+            else:
+                self.character.image = self.character.get_image_by_animation_name("IDLE SSJ Down")                 
+                
                 
     def run(self, isRunning):
         clock = pygame.time.Clock()
