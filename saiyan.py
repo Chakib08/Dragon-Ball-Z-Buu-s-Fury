@@ -9,7 +9,6 @@ class Saiyan(Character):
         
         self.isTransofrmed = isTransformed
         self.rect = self.image.get_rect()
-        self.side = "Right"
 
     def move(self, side, speed):
         super().move(side, speed)

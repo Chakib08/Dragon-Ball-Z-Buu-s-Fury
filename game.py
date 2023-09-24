@@ -37,6 +37,8 @@ class Game:
         for obj in tmx_data.objects:
             if obj.type == "collision":
                 self.collisions.append(pygame.Rect(obj.x, obj.y, obj.width, obj.height))
+                # print("{} {} {} {}".format(obj.x, obj.y, obj.width, obj.height))
+                # print("\n")
 
             
         # Draw layers groups
@@ -103,8 +105,10 @@ class Game:
     def update(self):
         self.group.update()       
         for sprite in self.group.sprites():
-            if sprite.feet.collidelist(self.collisions) > -1:
+            if sprite.feet.collidelist(self.collisions) > 1:
                 sprite.move_back()
+        print("Current postion : {}".format(self.character.position))
+        print("Old postion : {}".format(self.character.old_position))
                 
     def run(self, isRunning):
 
