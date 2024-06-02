@@ -24,7 +24,7 @@ class Game:
         tmx_data = pytmx.load_pygame(self.tmx_map)
         map_data = pyscroll.data.TiledMapData(tmx_data)
         map_layer = pyscroll.orthographic.BufferedRenderer(map_data, self.resolution)
-        map_layer.zoom = 1
+        map_layer.zoom = 2
         
         # Get Goku postion from tmx map
         goku_postion = tmx_data.get_object_by_name("goku")
@@ -105,10 +105,10 @@ class Game:
     def update(self):
         self.group.update()       
         for sprite in self.group.sprites():
-            if sprite.feet.collidelist(self.collisions) > 1:
+            if sprite.feet.collidelist(self.collisions) > -1:
+                print("collision detected")
                 sprite.move_back()
-        print("Current postion : {}".format(self.character.position))
-        print("Old postion : {}".format(self.character.old_position))
+
                 
     def run(self, isRunning):
 

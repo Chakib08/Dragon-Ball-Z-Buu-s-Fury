@@ -10,7 +10,7 @@ class Character(Animation):
         self.speed = 4
         self.position = [pos_x, pos_y]
         self.rect = self.image.get_rect()
-        self.feet = pygame.Rect(6, 6, self.rect.width * 0.5, 3)
+        self.feet = pygame.Rect(0, 0, self.rect.width / 4, 4)
         self.old_position = self.position.copy()
 
         
@@ -21,7 +21,7 @@ class Character(Animation):
     def move_back(self):
         self.position = self.old_position
         self.feet.midbottom = self.rect.midbottom
-        self.rect.topleft = self.rect.midbottom
+        #self.rect.topleft = self.rect.midbottom
     
     def move(self, side, speed):
         self.side = side
