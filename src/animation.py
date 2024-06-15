@@ -53,4 +53,4 @@ class Animation(pygame.sprite.Sprite):
 
         if(self.current_animation_index == len(self.images)):
             self.current_animation_index = 0
-        pygame.time.delay(75)
+        pygame.time.delay(100)

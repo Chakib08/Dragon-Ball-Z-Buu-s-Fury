@@ -66,12 +66,13 @@ class Game:
 
     def play_music(self, music):
         # Load the sound file
+        pygame.mixer.music.stop()
         self.isRunning = True
         self.music = music
         pygame.mixer.music.load(self.music)
         # Play the sound
         if (self.isRunning):
-            pygame.mixer.music.play()
+            pygame.mixer.music.play(-1)  # Play music indefinitely
         else:
             pygame.mixer.music.stop()
 
@@ -124,9 +125,12 @@ class Game:
                 sprite.move_back()
 
     def run(self):
-        # Initialize clock
+        main_theme = current_dir.parent / "Sounds/DBZ-Buus-Fury-Soundtrack-Theme.wav"
+        goku_home_theme = current_dir.parent / "Sounds/DBZ-Buus-Fury-Soundtrack-Gokus-Home.wav"
+        self.play_music(main_theme)
         clock = pygame.time.Clock()
-
+        self.music_changed = True
+        
         # Initialize Menu
         mainMenu = Menu(self.resolution)
 
@@ -150,6 +154,9 @@ class Game:
 
             # Update game state and draw
             if self.isPlaying:
+                if self.music_changed:
+                    self.play_music(goku_home_theme)
+                    self.music_changed = False
                 self.character.save_location()
                 self.keyBoard_input()
                 self.update()
