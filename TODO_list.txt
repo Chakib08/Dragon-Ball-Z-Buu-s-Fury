@@ -1,0 +1,11 @@
+* Add other goku's position
+* Add Option in the menu
+* Add Fighting mechanics
+* Add HP and Mana
+* Create Goku's house
+* Refactore code
+* Woalking diagonally
+* Vs NPCs / Talking to NPCs
+* Update collisions
+* Button start to check profile and items
+* OSTs handeling
