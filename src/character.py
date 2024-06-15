@@ -7,12 +7,11 @@ class Character(Animation):
         
         # self.hp = hp
         # self.ki = ki
-        self.speed = 4
+        self.speed = 5
         self.position = [pos_x, pos_y]
         self.rect = self.image.get_rect()
         self.feet = pygame.Rect(0, 0, self.rect.width / 4, 4)
         self.old_position = self.position.copy()
-
         
     def update(self):
         self.rect.topleft = self.position

@@ -1,11 +1,14 @@
 import pygame
-import json 
+import json
+from pathlib import Path
               
 class Animation(pygame.sprite.Sprite):
     def __init__(self, json_file):
         super().__init__()
         self.character_name = self.parse_data(json_file, "Character")
-        self.sprit_sheet =  pygame.image.load(self.parse_data(json_file, "Image path"))
+        
+        parent_dir = Path(__file__).resolve().parent.parent
+        self.sprit_sheet =  pygame.image.load(parent_dir / self.parse_data(json_file, "Image path"))
         self.animations = self.parse_data(json_file, "Animations")
         self.current_animation_index = 0
         self.animation_name = "IDLE Down"
@@ -50,4 +53,4 @@ class Animation(pygame.sprite.Sprite):
 
         if(self.current_animation_index == len(self.images)):
             self.current_animation_index = 0
-        pygame.time.delay(100)
+        pygame.time.delay(75)
