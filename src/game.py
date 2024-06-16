@@ -137,6 +137,10 @@ class Game:
         # Set up the start image rect
         image_start_rect = mainMenu.image_start.get_rect()
         image_start_rect.center = (self.resolution[0] / 2, self.resolution[1] / 1.5)
+        
+        image_options_rect = mainMenu.image_options.get_rect()
+        image_options_rect.center = (self.resolution[0] / 2, self.resolution[1] / 1.42)
+        
         self.isPlaying = False
 
         while self.isRunning:
@@ -148,6 +152,10 @@ class Game:
                         mainMenu.image_start = pygame.image.load(current_dir.parent / "Graphics/menu/start-active.png")
                     else:
                         mainMenu.image_start = pygame.image.load(current_dir.parent / "Graphics/menu/start-inactive.png")
+                    if image_options_rect.collidepoint(event.pos):
+                        mainMenu.image_options = pygame.image.load(current_dir.parent / "Graphics/menu/options-active.png")
+                    else:
+                        mainMenu.image_options = pygame.image.load(current_dir.parent / "Graphics/menu/options-inactive.png")
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if image_start_rect.collidepoint(event.pos):
                         self.isPlaying = True
@@ -165,6 +173,7 @@ class Game:
             else:
                 self.screen.blit(mainMenu.image_menu, (0, 0))
                 self.screen.blit(mainMenu.image_start, image_start_rect.topleft)
+                self.screen.blit(mainMenu.image_options, image_options_rect.topleft)
 
             # Update the display
             pygame.display.flip()
