@@ -121,7 +121,6 @@ class Game:
         self.group.update()
         for sprite in self.group.sprites():
             if sprite.feet.collidelist(self.collisions) > -1:
-                print("collision detected")
                 sprite.move_back()
 
     def run(self):
