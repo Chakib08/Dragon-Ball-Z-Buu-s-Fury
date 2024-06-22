@@ -21,6 +21,57 @@
       },
 
       {
+        "AnimationName": "IDLE Right",
+        "x": 1,
+        "y": 34,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {
+        "AnimationName": "IDLE Left",
+        "x": 1,
+        "y": 34,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {
+        "AnimationName": "IDLE Up",
+        "x": 1,
+        "y": 68,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 64,
+          "B": 64
+        }
+      },
+
+      {
         "AnimationName": "Walk Up 0",
         "x": 28,
         "y": 67,

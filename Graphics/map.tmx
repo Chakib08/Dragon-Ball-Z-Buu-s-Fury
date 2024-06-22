@@ -93,7 +93,7 @@
   <object id="147" type="collision" x="344.5" y="359.5" width="52" height="17"/>
   <object id="148" type="collision" x="399" y="349.5" width="22.5" height="11"/>
   <object id="149" type="collision" x="421" y="335.5" width="19" height="15"/>
-  <object id="150" type="collision" x="435" y="320" width="16.5" height="14"/>
+  <object id="150" type="collision" x="435" y="315" width="18" height="19"/>
   <object id="152" type="collision" x="442" y="273" width="22.5" height="40"/>
   <object id="153" type="collision" x="456.5" y="104" width="29" height="80.5"/>
   <object id="155" type="collision" x="463" y="185.5" width="22.5" height="88"/>

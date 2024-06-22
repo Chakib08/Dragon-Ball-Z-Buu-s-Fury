@@ -48,8 +48,6 @@ class Game:
             if obj.type == "collision":
                 self.collisions.append(pygame.Rect(
                     obj.x, obj.y, obj.width, obj.height))
-                # print("{} {} {} {}".format(obj.x, obj.y, obj.width, obj.height))
-                # print("\n")
 
         # Draw layers groups
         self.group = pyscroll.PyscrollGroup(
@@ -111,11 +109,20 @@ class Game:
                 current_dir.parent / "Graphics/Image_charac/Goku/goku.png")
 
             if self.character.isTransofrmed == False:
-                self.character.image = self.character.get_image_by_animation_name(
-                    "IDLE Down")
+                if "Down" in self.character.animation_name:
+                    self.character.image = self.character.get_image_by_animation_name("IDLE Down")
+                elif "Right" in self.character.animation_name:
+                    self.character.image = self.character.get_image_by_animation_name("IDLE Right")
+                elif "Left" in self.character.animation_name:
+                    self.character.image = self.character.get_image_by_animation_name("IDLE Left")
+                    self.character.image = pygame.transform.flip(self.character.image, True, False)
+                else:
+                    self.character.image = self.character.get_image_by_animation_name("IDLE Up")
             else:
-                self.character.image = self.character.get_image_by_animation_name(
-                    "IDLE SSJ Down")
+                if "Down" in self.character.animation_name:
+                    self.character.image = self.character.get_image_by_animation_name("IDLE SSJ Down")
+                elif "Right" in self.character.animation_name:
+                    self.character.image = self.character.get_image_by_animation_name("IDLE SSJ Down")
 
     def update(self):
         self.group.update()

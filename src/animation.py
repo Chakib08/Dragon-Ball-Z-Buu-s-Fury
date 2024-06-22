@@ -53,4 +53,7 @@ class Animation(pygame.sprite.Sprite):
 
         if(self.current_animation_index == len(self.images)):
             self.current_animation_index = 0
+            
+        # Retreive last Animation marco
+        self.animation_name = animation_macro
         pygame.time.delay(100)

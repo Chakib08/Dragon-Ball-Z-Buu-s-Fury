@@ -4,8 +4,9 @@
 * Add HP and Mana
 * Create Goku's house
 * Refactore code
-* Woalking diagonally
+* Walking diagonally
 * Vs NPCs / Talking to NPCs
 * Update collisions
 * Button start to check profile and items
 * OSTs handeling
+* Standing character and sides
