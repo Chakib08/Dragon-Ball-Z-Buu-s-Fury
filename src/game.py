@@ -1,21 +1,21 @@
 import pygame
 import pytmx
 import pyscroll
-from pathlib import Path
-
+from pathmanager import PathManager
 from saiyan import Saiyan
 from menu import Menu
 
 
-current_dir = Path(__file__).resolve().parent
+#TODO : Remove Global variables
 
 # Define all constants here
 walk_animation_nbr = 4
 transform_ssj_nbr = 12
 
+pathManager = PathManager()
 goku_ssj_isTransformed = False
-goku_base_json_file = current_dir.parent / "Config/Goku/Base/goku.json"
-goku_ssj_sprite_path = current_dir.parent / "Graphics/assets/Goku/GokuSS1.png"
+goku_base_json_file = pathManager.character_json_path("goku")
+#goku_ssj_sprite_path = current_dir.parent / "Graphics/assets/Goku/GokuSS1.png"
 
 
 class Game:
@@ -25,8 +25,7 @@ class Game:
         self.caption = caption
         
         # Default map
-        current_dir = Path(__file__).resolve().parent
-        tmx_map = current_dir.parent / 'Graphics/maps/map.tmx'
+        tmx_map = pathManager.map_path("map")
         self.tmx_map = tmx_map
         
         self.map = "map"
@@ -66,10 +65,6 @@ class Game:
         self.enter_house_rect = pygame.Rect(
             enter_house.x, enter_house.y, enter_house.width, enter_house.height)
 
-        # Spawn charcter house entery
-        # spawn_enter_house = tmx_data.get_object_by_name("spawn_house")
-        # self.character.position[0] = spawn_enter_house.x
-        # self.character.position[1] = spawn_enter_house.y
 
     def set_mode(self):
         return pygame.display.set_mode(self.resolution)
@@ -112,16 +107,11 @@ class Game:
                 self.character.animate("Run Left", walk_animation_nbr)
             else:
                 self.character.animate("Walk Left", walk_animation_nbr)
-        elif isPressed[pygame.K_s]:
-            self.character.sprit_sheet = pygame.image.load(
-                goku_ssj_sprite_path)
-            self.character.animate("Transform SSJ Down", transform_ssj_nbr)
-            self.character.isTransofrmed = True
         else:
             self.character.images = []  # Reset the animation frames
             self.character.current_animation_index = 0
-            self.character.sprit_sheet = pygame.image.load(
-                current_dir.parent / "Graphics/assets/Goku/goku.png")
+            # self.character.sprit_sheet = pygame.image.load(
+            #     current_dir.parent / "Graphics/assets/Goku/goku.png")
 
             if self.character.isTransofrmed == False:
                 if "Down" in self.character.animation_name:
@@ -138,13 +128,7 @@ class Game:
                 else:
                     self.character.image = self.character.get_image_by_animation_name(
                         "IDLE Up")
-            else:
-                if "Down" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name(
-                        "IDLE SSJ Down")
-                elif "Right" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name(
-                        "IDLE SSJ Down")
+
 
     def update(self):
         self.group.update()
@@ -164,9 +148,8 @@ class Game:
                 sprite.move_back()
 
     def run(self):
-        main_theme = current_dir.parent / "Sounds/DBZ-Buus-Fury-Soundtrack-Theme.wav"
-        goku_home_theme = current_dir.parent / \
-            "Sounds/DBZ-Buus-Fury-Soundtrack-Gokus-Home.wav"
+        main_theme = pathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Theme")
+        goku_home_theme = pathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home")
         self.play_music(main_theme)
         clock = pygame.time.Clock()
         self.music_changed = True
@@ -191,17 +174,13 @@ class Game:
                     self.isRunning = False
                 elif event.type == pygame.MOUSEMOTION:
                     if image_start_rect.collidepoint(event.pos):
-                        mainMenu.image_start = pygame.image.load(
-                            current_dir.parent / "Graphics/menu/start-active.png")
+                        mainMenu.image_start = pygame.image.load(pathManager.menu_image_path("start-active.png"))
                     else:
-                        mainMenu.image_start = pygame.image.load(
-                            current_dir.parent / "Graphics/menu/start-inactive.png")
+                        mainMenu.image_start = pygame.image.load(pathManager.menu_image_path("start-inactive.png"))
                     if image_options_rect.collidepoint(event.pos):
-                        mainMenu.image_options = pygame.image.load(
-                            current_dir.parent / "Graphics/menu/options-active.png")
+                        mainMenu.image_options =  pygame.image.load(pathManager.menu_image_path("options-active.png"))
                     else:
-                        mainMenu.image_options = pygame.image.load(
-                            current_dir.parent / "Graphics/menu/options-inactive.png")
+                        mainMenu.image_options = pygame.image.load(pathManager.menu_image_path("options-inactive.png"))
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if image_start_rect.collidepoint(event.pos):
                         self.isPlaying = True
@@ -233,8 +212,7 @@ class Game:
 
     def switch_house(self):
         # Load tmx utils to handle the game's map
-        current_dir = Path(__file__).resolve().parent
-        tmx_map = current_dir.parent / 'Graphics/maps/house.tmx'
+        tmx_map = pathManager.map_path("house")
         self.map = "house"
 
         tmx_data = pytmx.load_pygame(tmx_map)
@@ -269,8 +247,7 @@ class Game:
 
     def switch_world(self):
         # Load tmx utils to handle the game's map
-        current_dir = Path(__file__).resolve().parent
-        tmx_map = current_dir.parent / 'Graphics/maps/map.tmx'
+        tmx_map = pathManager.map_path("map")
         self.map = "map"
 
         tmx_data = pytmx.load_pygame(tmx_map)

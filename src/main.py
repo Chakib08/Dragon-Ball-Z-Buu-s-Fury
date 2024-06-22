@@ -9,6 +9,5 @@ def main():
     app = Game(resolution, caption)
     app.run()
 
-
 if __name__ == '__main__':
     main()
