@@ -25,6 +25,7 @@ class Game:
         self.resolution = resolution
         self.caption = caption
         self.tmx_map = tmx_map
+        self.map = "map"
         self.screen = self.set_mode()
         self.set_caption()
 
@@ -55,6 +56,16 @@ class Game:
 
         # Add your layers here (like characters etc.)
         self.group.add(self.character)
+
+        # Define house entery
+        enter_house = tmx_data.get_object_by_name("enter_house")
+        self.enter_house_rect = pygame.Rect(
+            enter_house.x, enter_house.y, enter_house.width, enter_house.height)
+
+        # Spawn charcter house entery
+        # spawn_enter_house = tmx_data.get_object_by_name("spawn_house")
+        # self.character.position[0] = spawn_enter_house.x
+        # self.character.position[1] = spawn_enter_house.y
 
     def set_mode(self):
         return pygame.display.set_mode(self.resolution)
@@ -110,43 +121,64 @@ class Game:
 
             if self.character.isTransofrmed == False:
                 if "Down" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE Down")
+                    self.character.image = self.character.get_image_by_animation_name(
+                        "IDLE Down")
                 elif "Right" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE Right")
+                    self.character.image = self.character.get_image_by_animation_name(
+                        "IDLE Right")
                 elif "Left" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE Left")
-                    self.character.image = pygame.transform.flip(self.character.image, True, False)
+                    self.character.image = self.character.get_image_by_animation_name(
+                        "IDLE Left")
+                    self.character.image = pygame.transform.flip(
+                        self.character.image, True, False)
                 else:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE Up")
+                    self.character.image = self.character.get_image_by_animation_name(
+                        "IDLE Up")
             else:
                 if "Down" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE SSJ Down")
+                    self.character.image = self.character.get_image_by_animation_name(
+                        "IDLE SSJ Down")
                 elif "Right" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE SSJ Down")
+                    self.character.image = self.character.get_image_by_animation_name(
+                        "IDLE SSJ Down")
 
     def update(self):
         self.group.update()
+
+        if self.map == "map" and self.character.feet.colliderect(self.enter_house_rect):
+            self.switch_house()
+            self.map = "house"
+
+
+        if self.map == "house" and self.character.feet.colliderect(self.exit_house_rect):
+            self.switch_world()
+            self.map = "map"
+
+
         for sprite in self.group.sprites():
             if sprite.feet.collidelist(self.collisions) > -1:
                 sprite.move_back()
 
     def run(self):
         main_theme = current_dir.parent / "Sounds/DBZ-Buus-Fury-Soundtrack-Theme.wav"
-        goku_home_theme = current_dir.parent / "Sounds/DBZ-Buus-Fury-Soundtrack-Gokus-Home.wav"
+        goku_home_theme = current_dir.parent / \
+            "Sounds/DBZ-Buus-Fury-Soundtrack-Gokus-Home.wav"
         self.play_music(main_theme)
         clock = pygame.time.Clock()
         self.music_changed = True
-        
+
         # Initialize Menu
         mainMenu = Menu(self.resolution)
 
         # Set up the start image rect
         image_start_rect = mainMenu.image_start.get_rect()
-        image_start_rect.center = (self.resolution[0] / 2, self.resolution[1] / 1.5)
-        
+        image_start_rect.center = (
+            self.resolution[0] / 2, self.resolution[1] / 1.5)
+
         image_options_rect = mainMenu.image_options.get_rect()
-        image_options_rect.center = (self.resolution[0] / 2, self.resolution[1] / 1.42)
-        
+        image_options_rect.center = (
+            self.resolution[0] / 2, self.resolution[1] / 1.42)
+
         self.isPlaying = False
 
         while self.isRunning:
@@ -155,13 +187,17 @@ class Game:
                     self.isRunning = False
                 elif event.type == pygame.MOUSEMOTION:
                     if image_start_rect.collidepoint(event.pos):
-                        mainMenu.image_start = pygame.image.load(current_dir.parent / "Graphics/menu/start-active.png")
+                        mainMenu.image_start = pygame.image.load(
+                            current_dir.parent / "Graphics/menu/start-active.png")
                     else:
-                        mainMenu.image_start = pygame.image.load(current_dir.parent / "Graphics/menu/start-inactive.png")
+                        mainMenu.image_start = pygame.image.load(
+                            current_dir.parent / "Graphics/menu/start-inactive.png")
                     if image_options_rect.collidepoint(event.pos):
-                        mainMenu.image_options = pygame.image.load(current_dir.parent / "Graphics/menu/options-active.png")
+                        mainMenu.image_options = pygame.image.load(
+                            current_dir.parent / "Graphics/menu/options-active.png")
                     else:
-                        mainMenu.image_options = pygame.image.load(current_dir.parent / "Graphics/menu/options-inactive.png")
+                        mainMenu.image_options = pygame.image.load(
+                            current_dir.parent / "Graphics/menu/options-inactive.png")
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if image_start_rect.collidepoint(event.pos):
                         self.isPlaying = True
@@ -178,8 +214,10 @@ class Game:
                 self.group.draw(self.screen)
             else:
                 self.screen.blit(mainMenu.image_menu, (0, 0))
-                self.screen.blit(mainMenu.image_start, image_start_rect.topleft)
-                self.screen.blit(mainMenu.image_options, image_options_rect.topleft)
+                self.screen.blit(mainMenu.image_start,
+                                 image_start_rect.topleft)
+                self.screen.blit(mainMenu.image_options,
+                                 image_options_rect.topleft)
 
             # Update the display
             pygame.display.flip()
@@ -188,5 +226,75 @@ class Game:
             clock.tick(60)
 
         pygame.quit()
-        
-        
+
+    def switch_house(self):
+        # Load tmx utils to handle the game's map
+        current_dir = Path(__file__).resolve().parent
+        tmx_map = current_dir.parent / 'Graphics/house.tmx'
+        self.map = "house"
+
+        tmx_data = pytmx.load_pygame(tmx_map)
+        map_data = pyscroll.data.TiledMapData(tmx_data)
+        map_layer = pyscroll.orthographic.BufferedRenderer(
+            map_data, self.resolution)
+        map_layer.zoom = 3
+
+        self.collisions = []
+
+        for obj in tmx_data.objects:
+            if obj.type == "collision":
+                self.collisions.append(pygame.Rect(
+                    obj.x, obj.y, obj.width, obj.height))
+
+        # Draw layers groups
+        self.group = pyscroll.PyscrollGroup(
+            map_layer=map_layer, default_layer=1)
+
+        # Add your layers here (like characters etc.)
+        self.group.add(self.character)
+
+        # Define house exit
+        exit_house = tmx_data.get_object_by_name("exit_house")
+        self.exit_house_rect = pygame.Rect(
+            exit_house.x, exit_house.y, exit_house.width, exit_house.height)
+
+        # Spawn charcter house entery
+        spawn_enter_house = tmx_data.get_object_by_name("spawn_house")
+        self.character.position[0] = spawn_enter_house.x - 10
+        self.character.position[1] = spawn_enter_house.y - 20
+
+    def switch_world(self):
+        # Load tmx utils to handle the game's map
+        current_dir = Path(__file__).resolve().parent
+        tmx_map = current_dir.parent / 'Graphics/map.tmx'
+        self.map = "map"
+
+        tmx_data = pytmx.load_pygame(tmx_map)
+        map_data = pyscroll.data.TiledMapData(tmx_data)
+        map_layer = pyscroll.orthographic.BufferedRenderer(
+            map_data, self.resolution)
+        map_layer.zoom = 3
+
+        self.collisions = []
+
+        for obj in tmx_data.objects:
+            if obj.type == "collision":
+                self.collisions.append(pygame.Rect(
+                    obj.x, obj.y, obj.width, obj.height))
+
+        # Draw layers groups
+        self.group = pyscroll.PyscrollGroup(
+            map_layer=map_layer, default_layer=1)
+
+        # Add your layers here (like characters etc.)
+        self.group.add(self.character)
+
+        # Define house exit
+        enter_house = tmx_data.get_object_by_name("enter_house")
+        self.enter_house_rect = pygame.Rect(
+            enter_house.x, enter_house.y, enter_house.width, enter_house.height)
+
+        # Spawn charcter house entery
+        spawn_enter_house = tmx_data.get_object_by_name("spawn_world")
+        self.character.position[0] = spawn_enter_house.x - 10
+        self.character.position[1] = spawn_enter_house.y - 20
