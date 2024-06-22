@@ -19,11 +19,16 @@ goku_ssj_sprite_path = current_dir.parent / "Graphics/assets/Goku/GokuSS1.png"
 
 
 class Game:
-    def __init__(self, resolution, caption, tmx_map):
+    def __init__(self, resolution, caption):
         # Initialize game window
         self.resolution = resolution
         self.caption = caption
+        
+        # Default map
+        current_dir = Path(__file__).resolve().parent
+        tmx_map = current_dir.parent / 'Graphics/maps/map.tmx'
         self.tmx_map = tmx_map
+        
         self.map = "map"
         self.screen = self.set_mode()
         self.set_caption()
