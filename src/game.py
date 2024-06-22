@@ -15,8 +15,7 @@ transform_ssj_nbr = 12
 
 goku_ssj_isTransformed = False
 goku_base_json_file = current_dir.parent / "Config/Goku/Base/goku.json"
-goku_ssj_sprite_path = current_dir.parent / \
-    "Graphics/Image_charac/Goku/GokuSS1.png"
+goku_ssj_sprite_path = current_dir.parent / "Graphics/assets/Goku/GokuSS1.png"
 
 
 class Game:
@@ -117,7 +116,7 @@ class Game:
             self.character.images = []  # Reset the animation frames
             self.character.current_animation_index = 0
             self.character.sprit_sheet = pygame.image.load(
-                current_dir.parent / "Graphics/Image_charac/Goku/goku.png")
+                current_dir.parent / "Graphics/assets/Goku/goku.png")
 
             if self.character.isTransofrmed == False:
                 if "Down" in self.character.animation_name:
@@ -230,7 +229,7 @@ class Game:
     def switch_house(self):
         # Load tmx utils to handle the game's map
         current_dir = Path(__file__).resolve().parent
-        tmx_map = current_dir.parent / 'Graphics/house.tmx'
+        tmx_map = current_dir.parent / 'Graphics/maps/house.tmx'
         self.map = "house"
 
         tmx_data = pytmx.load_pygame(tmx_map)
@@ -266,7 +265,7 @@ class Game:
     def switch_world(self):
         # Load tmx utils to handle the game's map
         current_dir = Path(__file__).resolve().parent
-        tmx_map = current_dir.parent / 'Graphics/map.tmx'
+        tmx_map = current_dir.parent / 'Graphics/maps/map.tmx'
         self.map = "map"
 
         tmx_data = pytmx.load_pygame(tmx_map)

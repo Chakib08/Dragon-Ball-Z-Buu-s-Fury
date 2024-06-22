@@ -8,7 +8,7 @@ resolution = (1000, 1000)
 caption = "Dragon Ball Z Buu's Fury"
 
 # Tmx data
-tmx_map = current_dir.parent / 'Graphics/map.tmx'
+tmx_map = current_dir.parent / 'Graphics/maps/map.tmx'
 
 if __name__ == '__main__':
     # Initialize Pygame
