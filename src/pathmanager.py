@@ -10,8 +10,8 @@ class PathManager:
         return self.directory / path
     
     # Maps
-    def map_path(self, map_path):
-        return self.directory.parent / f"Graphics/maps/{map_path}.tmx"
+    def map_path(self, map):
+        return self.directory.parent / f"Graphics/maps/{map}.tmx"
 
     # Assets Config JSON
     def character_json_path(self, character_name):

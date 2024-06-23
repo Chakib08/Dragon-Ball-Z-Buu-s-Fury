@@ -22,7 +22,7 @@ class Character(Animation):
         self.feet.midbottom = self.rect.midbottom
         #self.rect.topleft = self.rect.midbottom
     
-    def move(self, side, speed):
+    def move(self, side):
         self.side = side
         
         if(self.side == "Right"):

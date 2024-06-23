@@ -10,8 +10,8 @@ class Saiyan(Character):
         self.isTransofrmed = isTransformed
         self.rect = self.image.get_rect()
 
-    def move(self, side, speed):
-        super().move(side, speed)
+    def move(self, side):
+        super().move(side)
     
     
     def animate(self, animation_macro, animation_nbr):
@@ -26,10 +26,8 @@ class Saiyan(Character):
                 
         if macro == "Walk":
             self.speed = 4
-            self.move(side, self.speed)
+            self.move(side)
         elif macro == "Run":
             self.speed = 8
-            self.move(side, self.speed)
+            self.move(side)
         # TODO: Implement Attack
-        
-

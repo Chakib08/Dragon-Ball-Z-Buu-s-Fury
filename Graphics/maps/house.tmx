@@ -32,7 +32,7 @@
  </layer>
  <objectgroup id="2" name="Object">
   <object id="1" name="exit_house" type="collision" x="203" y="373.5" width="31" height="9.5"/>
-  <object id="2" name="spawn_house" type="collision" x="217" y="355.5">
+  <object id="2" name="spawn_house" type="collision" x="218.865" y="404.46">
    <point/>
   </object>
   <object id="4" type="collision" x="123.667" y="325.333" width="15.3333" height="25.6667"/>

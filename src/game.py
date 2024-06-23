@@ -1,10 +1,11 @@
 import pygame
 import pytmx
 import pyscroll
+
 from pathmanager import PathManager
 from saiyan import Saiyan
 from menu import Menu
-
+from map import MapManager
 
 #TODO : Remove Global variables
 
@@ -13,7 +14,6 @@ walk_animation_nbr = 4
 transform_ssj_nbr = 12
 
 pathManager = PathManager()
-goku_ssj_isTransformed = False
 goku_base_json_file = pathManager.character_json_path("goku")
 #goku_ssj_sprite_path = current_dir.parent / "Graphics/assets/Goku/GokuSS1.png"
 
@@ -23,47 +23,13 @@ class Game:
         # Initialize game window
         self.resolution = resolution
         self.caption = caption
-        
-        # Default map
-        tmx_map = pathManager.map_path("map")
-        self.tmx_map = tmx_map
-        
-        self.map = "map"
         self.screen = self.set_mode()
-        self.set_caption()
-
-        # Load tmx utils to handle the game's map
-        tmx_data = pytmx.load_pygame(self.tmx_map)
-        map_data = pyscroll.data.TiledMapData(tmx_data)
-        map_layer = pyscroll.orthographic.BufferedRenderer(
-            map_data, self.resolution)
-        map_layer.zoom = 3
-
-        # Get Goku postion from tmx map
-        goku_postion = tmx_data.get_object_by_name("goku")
 
         # Intancite Goku character
-        self.character = Saiyan(
-            goku_postion.x, goku_postion.y, goku_ssj_isTransformed, goku_base_json_file)
-
-        self.collisions = []
-
-        for obj in tmx_data.objects:
-            if obj.type == "collision":
-                self.collisions.append(pygame.Rect(
-                    obj.x, obj.y, obj.width, obj.height))
-
-        # Draw layers groups
-        self.group = pyscroll.PyscrollGroup(
-            map_layer=map_layer, default_layer=1)
-
-        # Add your layers here (like characters etc.)
-        self.group.add(self.character)
-
-        # Define house entery
-        enter_house = tmx_data.get_object_by_name("enter_house")
-        self.enter_house_rect = pygame.Rect(
-            enter_house.x, enter_house.y, enter_house.width, enter_house.height)
+        self.character = Saiyan(240, 345, False, goku_base_json_file)
+        
+        # Manage map
+        self.map_manager = MapManager(self.screen, self.character)
 
 
     def set_mode(self):
@@ -131,21 +97,7 @@ class Game:
 
 
     def update(self):
-        self.group.update()
-
-        if self.map == "map" and self.character.feet.colliderect(self.enter_house_rect):
-            self.switch_house()
-            self.map = "house"
-
-
-        if self.map == "house" and self.character.feet.colliderect(self.exit_house_rect):
-            self.switch_world()
-            self.map = "map"
-
-
-        for sprite in self.group.sprites():
-            if sprite.feet.collidelist(self.collisions) > -1:
-                sprite.move_back()
+        self.map_manager.update()
 
     def run(self):
         main_theme = pathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Theme")
@@ -193,8 +145,7 @@ class Game:
                 self.character.save_location()
                 self.keyBoard_input()
                 self.update()
-                self.group.center(self.character.rect.center)
-                self.group.draw(self.screen)
+                self.map_manager.draw()
             else:
                 self.screen.blit(mainMenu.image_menu, (0, 0))
                 self.screen.blit(mainMenu.image_start,
@@ -210,72 +161,72 @@ class Game:
 
         pygame.quit()
 
-    def switch_house(self):
-        # Load tmx utils to handle the game's map
-        tmx_map = pathManager.map_path("house")
-        self.map = "house"
+    # def switch_house(self):
+    #     # Load tmx utils to handle the game's map
+    #     tmx_map = pathManager.map_path("house")
+    #     self.map = "house"
 
-        tmx_data = pytmx.load_pygame(tmx_map)
-        map_data = pyscroll.data.TiledMapData(tmx_data)
-        map_layer = pyscroll.orthographic.BufferedRenderer(
-            map_data, self.resolution)
-        map_layer.zoom = 3
+    #     tmx_data = pytmx.load_pygame(tmx_map)
+    #     map_data = pyscroll.data.TiledMapData(tmx_data)
+    #     map_layer = pyscroll.orthographic.BufferedRenderer(
+    #         map_data, self.resolution)
+    #     map_layer.zoom = 3
 
-        self.collisions = []
+    #     self.collisions = []
 
-        for obj in tmx_data.objects:
-            if obj.type == "collision":
-                self.collisions.append(pygame.Rect(
-                    obj.x, obj.y, obj.width, obj.height))
+    #     for obj in tmx_data.objects:
+    #         if obj.type == "collision":
+    #             self.collisions.append(pygame.Rect(
+    #                 obj.x, obj.y, obj.width, obj.height))
 
-        # Draw layers groups
-        self.group = pyscroll.PyscrollGroup(
-            map_layer=map_layer, default_layer=1)
+    #     # Draw layers groups
+    #     self.group = pyscroll.PyscrollGroup(
+    #         map_layer=map_layer, default_layer=1)
 
-        # Add your layers here (like characters etc.)
-        self.group.add(self.character)
+    #     # Add your layers here (like characters etc.)
+    #     self.group.add(self.character)
 
-        # Define house exit
-        exit_house = tmx_data.get_object_by_name("exit_house")
-        self.exit_house_rect = pygame.Rect(
-            exit_house.x, exit_house.y, exit_house.width, exit_house.height)
+    #     # Define house exit
+    #     exit_house = tmx_data.get_object_by_name("exit_house")
+    #     self.exit_house_rect = pygame.Rect(
+    #         exit_house.x, exit_house.y, exit_house.width, exit_house.height)
 
-        # Spawn charcter house entery
-        spawn_enter_house = tmx_data.get_object_by_name("spawn_house")
-        self.character.position[0] = spawn_enter_house.x - 10
-        self.character.position[1] = spawn_enter_house.y - 20
+    #     # Spawn charcter house entery
+    #     spawn_enter_house = tmx_data.get_object_by_name("spawn_house")
+    #     self.character.position[0] = spawn_enter_house.x - 10
+    #     self.character.position[1] = spawn_enter_house.y - 20
 
-    def switch_world(self):
-        # Load tmx utils to handle the game's map
-        tmx_map = pathManager.map_path("map")
-        self.map = "map"
+    # def switch_world(self):
+    #     # Load tmx utils to handle the game's map
+    #     tmx_map = pathManager.map_path("map")
+    #     self.map = "map"
 
-        tmx_data = pytmx.load_pygame(tmx_map)
-        map_data = pyscroll.data.TiledMapData(tmx_data)
-        map_layer = pyscroll.orthographic.BufferedRenderer(
-            map_data, self.resolution)
-        map_layer.zoom = 3
+    #     tmx_data = pytmx.load_pygame(tmx_map)
+    #     map_data = pyscroll.data.TiledMapData(tmx_data)
+    #     map_layer = pyscroll.orthographic.BufferedRenderer(
+    #         map_data, self.resolution)
+    #     map_layer.zoom = 3
 
-        self.collisions = []
+    #     self.collisions = []
 
-        for obj in tmx_data.objects:
-            if obj.type == "collision":
-                self.collisions.append(pygame.Rect(
-                    obj.x, obj.y, obj.width, obj.height))
+    #     for obj in tmx_data.objects:
+    #         if obj.type == "collision":
+    #             self.collisions.append(pygame.Rect(
+    #                 obj.x, obj.y, obj.width, obj.height))
 
-        # Draw layers groups
-        self.group = pyscroll.PyscrollGroup(
-            map_layer=map_layer, default_layer=1)
+    #     # Draw layers groups
+    #     self.group = pyscroll.PyscrollGroup(
+    #         map_layer=map_layer, default_layer=1)
 
-        # Add your layers here (like characters etc.)
-        self.group.add(self.character)
+    #     # Add your layers here (like characters etc.)
+    #     self.group.add(self.character)
 
-        # Define house exit
-        enter_house = tmx_data.get_object_by_name("enter_house")
-        self.enter_house_rect = pygame.Rect(
-            enter_house.x, enter_house.y, enter_house.width, enter_house.height)
+    #     # Define house exit
+    #     enter_house = tmx_data.get_object_by_name("enter_house")
+    #     self.enter_house_rect = pygame.Rect(
+    #         enter_house.x, enter_house.y, enter_house.width, enter_house.height)
 
-        # Spawn charcter house entery
-        spawn_enter_house = tmx_data.get_object_by_name("spawn_world")
-        self.character.position[0] = spawn_enter_house.x - 10
-        self.character.position[1] = spawn_enter_house.y - 20
+    #     # Spawn charcter house entery
+    #     spawn_enter_house = tmx_data.get_object_by_name("spawn_world")
+    #     self.character.position[0] = spawn_enter_house.x - 10
+    #     self.character.position[1] = spawn_enter_house.y - 20
