@@ -91,6 +91,10 @@ class MapManager:
                         self.transition_alpha = 0
                         break  # Exit after first valid portal collision
 
+            # Handle collisions
+            if self.character.feet.collidelist(self.get_collisions()) > -1:
+                self.character.move_back()
+
     def get_map(self): return self.maps[self.current_map]
 
     def get_group(self): return self.get_map().group
