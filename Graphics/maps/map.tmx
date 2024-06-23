@@ -189,7 +189,7 @@
   <object id="266" type="collision" x="581" y="611" width="9.5" height="25.5"/>
   <object id="267" type="collision" x="568" y="626" width="11" height="12.5"/>
   <object id="268" name="enter_house" x="254.667" y="186" width="22.3333" height="32.6667"/>
-  <object id="269" name="spawn_world" x="256.348" y="226.061">
+  <object id="269" name="spawn_world" x="264.348" y="225.561">
    <point/>
   </object>
  </objectgroup>
