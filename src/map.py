@@ -32,8 +32,8 @@ class MapManager:
         
     def position_character(self, name):
         pos = self.get_object(name)
-        self.character.position[0] = pos.x
-        self.character.position[1] = pos.y
+        self.character.position[0] = pos.x - 10
+        self.character.position[1] = pos.y - 20
         self.character.save_location()
         
     def register_map(self, name, portals=[]):
