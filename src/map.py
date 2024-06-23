@@ -89,6 +89,7 @@ class MapManager:
                         self.new_map = portal.target_map
                         self.new_position = portal.target_point
                         self.transition_alpha = 0
+                        self.input_enabled = False
                         break  # Exit after first valid portal collision
 
             # Handle collisions

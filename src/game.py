@@ -143,7 +143,9 @@ class Game:
                     self.play_music(goku_home_theme)
                     self.music_changed = False
                 self.character.save_location()
-                self.keyBoard_input()
+                print(self.map_manager.input_enabled)
+                if self.map_manager.input_enabled:
+                    self.keyBoard_input()
                 self.update()
                 self.map_manager.draw()
             else:
