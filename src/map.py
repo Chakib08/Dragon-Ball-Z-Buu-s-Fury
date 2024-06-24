@@ -44,8 +44,15 @@ class MapManager:
         # Registering the maps
         self.register_map(default_map, portals=[Portal(
             "map", "enter_house", "house", "spawn_house")])
-        self.register_map("house", portals=[Portal(
-            "house", "exit_house", "map", "spawn_world")])
+        
+        self.register_map("house", portals=
+        [
+            Portal("house", "exit_house", "map", "spawn_world"), 
+            Portal("house", "enter_hall", "hall", "spawn_hall")
+        ])
+        
+        self.register_map("hall", portals=[Portal(
+            "hall", "exit_hall", "house", "spawn_from_hall_to_house")])
 
     def position_character(self, name):
         pos = self.get_object(name)

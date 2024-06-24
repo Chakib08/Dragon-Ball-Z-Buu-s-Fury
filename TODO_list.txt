@@ -1,12 +1,13 @@
 * Add other goku's position
 * Add Option in the menu
 * Add Fighting mechanics
-* Add HP and Mana
-* Create Goku's house
+* Add HP and KI
+* Create Goku's house [Kitchen, Principal room, Gohan and Goten's room]
 * Refactore code
 * Walking diagonally
 * Vs NPCs / Talking to NPCs
 * Update collisions
 * Button start to check profile and items
 * OSTs handeling
-* Standing character and sides
+* Standing character and sides [DONE]
+* Add start menu that shows item and character power
