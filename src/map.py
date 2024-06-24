@@ -11,10 +11,9 @@ from pathmanager import PathManager
 class Portal:
     src_map: str        # Map where the character is located
     src_point: str      # Point where the character location will be changed when he enter in collision witht this point
-    # Map where the chacter is going to spawn after a collision with the refering point
-    target_map: str
-    # Point where the charcter is going to spawn after being in the target map
-    target_point: str
+    target_map: str     # Map where the chacter is going to spawn after a collision with the refering point
+    target_point: str   # Point where the charcter is going to spawn after being in the target map
+    
 
 
 @dataclass
@@ -32,14 +31,17 @@ class MapManager:
         self.current_map = default_map
         self.screen = screen
         self.character = character
-        self.input_enabled = True
-        self.transition_alpha = 0
-        self.transitioning = False
-        self.transitioning_in = True
         
+        # Black transition parameters
+        self.input_enabled = True       # Boolean to handle keyboard inputs
+        self.transition_alpha = 0       # Alpha value to manage black fading
+        self.transitioning = False      # Indicate a transition is starting
+        self.transitioning_in = True    # Indicate the beginning of the fade-in phase
+        # Fill the screen with black
         self.black_screen = pygame.Surface(screen.get_size())
         self.black_screen.fill((0, 0, 0))
 
+        # Registering the maps
         self.register_map(default_map, portals=[Portal(
             "map", "enter_house", "house", "spawn_house")])
         self.register_map("house", portals=[Portal(
@@ -61,12 +63,8 @@ class MapManager:
             map_data, self.screen.get_size())
         map_layer.zoom = 3
 
-        collisions = []
-
-        for obj in tmx_data.objects:
-            if obj.type == "collision":
-                collisions.append(pygame.Rect(
-                    obj.x, obj.y, obj.width, obj.height))
+        # List of collision in tmx map
+        collisions = [pygame.Rect(obj.x, obj.y, obj.width, obj.height) for obj in tmx_data.objects if obj.type == "collision"]
 
         # Draw layers groups
         group = pyscroll.PyscrollGroup(map_layer=map_layer, default_layer=1)
@@ -116,21 +114,21 @@ class MapManager:
 
     def update(self):
         if self.transitioning:
-            if self.transitioning_in:
-                self.transition_alpha += 10
-                if self.transition_alpha >= 255:
-                    self.transition_alpha = 255
-                    self.transitioning_in = False
-                    self.current_map = self.new_map
-                    self.position_character(self.new_position)
-            else:
-                self.transition_alpha -= 10
-                if self.transition_alpha <= 0:
-                    self.transition_alpha = 0
-                    self.transitioning = False
-                    self.input_enabled = True
+            self.black_transition()
         self.get_group().update()
         self.check_collisions()
         
-    def toggle_input(self, enable):
-        self.input_enabled = enable
+    def black_transition(self):
+        if self.transitioning_in:
+            self.transition_alpha += 10
+            if self.transition_alpha >= 255:
+                self.transition_alpha = 255
+                self.transitioning_in = False
+                self.current_map = self.new_map
+                self.position_character(self.new_position)
+        else:
+            self.transition_alpha -= 10
+            if self.transition_alpha <= 0:
+                self.transition_alpha = 0
+                self.transitioning = False
+                self.input_enabled = True
