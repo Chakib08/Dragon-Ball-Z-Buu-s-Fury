@@ -143,7 +143,6 @@ class Game:
                     self.play_music(goku_home_theme)
                     self.music_changed = False
                 self.character.save_location()
-                print(self.map_manager.input_enabled)
                 if self.map_manager.input_enabled:
                     self.keyBoard_input()
                 self.update()
@@ -162,73 +161,3 @@ class Game:
             clock.tick(60)
 
         pygame.quit()
-
-    # def switch_house(self):
-    #     # Load tmx utils to handle the game's map
-    #     tmx_map = pathManager.map_path("house")
-    #     self.map = "house"
-
-    #     tmx_data = pytmx.load_pygame(tmx_map)
-    #     map_data = pyscroll.data.TiledMapData(tmx_data)
-    #     map_layer = pyscroll.orthographic.BufferedRenderer(
-    #         map_data, self.resolution)
-    #     map_layer.zoom = 3
-
-    #     self.collisions = []
-
-    #     for obj in tmx_data.objects:
-    #         if obj.type == "collision":
-    #             self.collisions.append(pygame.Rect(
-    #                 obj.x, obj.y, obj.width, obj.height))
-
-    #     # Draw layers groups
-    #     self.group = pyscroll.PyscrollGroup(
-    #         map_layer=map_layer, default_layer=1)
-
-    #     # Add your layers here (like characters etc.)
-    #     self.group.add(self.character)
-
-    #     # Define house exit
-    #     exit_house = tmx_data.get_object_by_name("exit_house")
-    #     self.exit_house_rect = pygame.Rect(
-    #         exit_house.x, exit_house.y, exit_house.width, exit_house.height)
-
-    #     # Spawn charcter house entery
-    #     spawn_enter_house = tmx_data.get_object_by_name("spawn_house")
-    #     self.character.position[0] = spawn_enter_house.x - 10
-    #     self.character.position[1] = spawn_enter_house.y - 20
-
-    # def switch_world(self):
-    #     # Load tmx utils to handle the game's map
-    #     tmx_map = pathManager.map_path("map")
-    #     self.map = "map"
-
-    #     tmx_data = pytmx.load_pygame(tmx_map)
-    #     map_data = pyscroll.data.TiledMapData(tmx_data)
-    #     map_layer = pyscroll.orthographic.BufferedRenderer(
-    #         map_data, self.resolution)
-    #     map_layer.zoom = 3
-
-    #     self.collisions = []
-
-    #     for obj in tmx_data.objects:
-    #         if obj.type == "collision":
-    #             self.collisions.append(pygame.Rect(
-    #                 obj.x, obj.y, obj.width, obj.height))
-
-    #     # Draw layers groups
-    #     self.group = pyscroll.PyscrollGroup(
-    #         map_layer=map_layer, default_layer=1)
-
-    #     # Add your layers here (like characters etc.)
-    #     self.group.add(self.character)
-
-    #     # Define house exit
-    #     enter_house = tmx_data.get_object_by_name("enter_house")
-    #     self.enter_house_rect = pygame.Rect(
-    #         enter_house.x, enter_house.y, enter_house.width, enter_house.height)
-
-    #     # Spawn charcter house entery
-    #     spawn_enter_house = tmx_data.get_object_by_name("spawn_world")
-    #     self.character.position[0] = spawn_enter_house.x - 10
-    #     self.character.position[1] = spawn_enter_house.y - 20

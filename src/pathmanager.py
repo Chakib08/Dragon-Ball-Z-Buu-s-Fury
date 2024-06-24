@@ -24,6 +24,9 @@ class PathManager:
     # Music theme
     def soundtrack(self, name):
         return self.directory.parent / f"Sounds/{name}.wav"
+    
+    def dir(self):
+        return self.directory
         
     
     

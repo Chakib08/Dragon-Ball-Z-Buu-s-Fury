@@ -1,14 +1,14 @@
 import pygame
 import json
 from pathlib import Path
+from pathmanager import PathManager
               
 class Animation(pygame.sprite.Sprite):
     def __init__(self, json_file):
         super().__init__()
         self.character_name = self.parse_data(json_file, "Character")
-        
-        parent_dir = Path(__file__).resolve().parent.parent
-        self.sprit_sheet =  pygame.image.load(parent_dir / self.parse_data(json_file, "Image path"))
+        self.path_manager = PathManager()
+        self.sprit_sheet =  pygame.image.load(self.path_manager.dir().parent / self.parse_data(json_file, "Image path"))
         self.animations = self.parse_data(json_file, "Animations")
         self.current_animation_index = 0
         self.animation_name = "IDLE Down"
@@ -57,3 +57,5 @@ class Animation(pygame.sprite.Sprite):
         # Retreive last Animation marco
         self.animation_name = animation_macro
         pygame.time.delay(100)
+
+    def get_character_name(self): return self.character_name
