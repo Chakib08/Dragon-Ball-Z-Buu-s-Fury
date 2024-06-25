@@ -23,6 +23,7 @@ class Game:
         # Initialize game window
         self.resolution = resolution
         self.caption = caption
+        self.set_caption()
         self.screen = self.set_mode()
 
         # Intancite Goku character

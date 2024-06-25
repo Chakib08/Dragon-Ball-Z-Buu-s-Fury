@@ -48,11 +48,27 @@ class MapManager:
         self.register_map("house", portals=
         [
             Portal("house", "exit_house", "map", "spawn_world"), 
-            Portal("house", "enter_hall", "hall", "spawn_hall")
+            Portal("house", "enter_hall", "hall", "spawn_from_house_to_hall"),
+            Portal("house", "enter_kitchen", "kitchen", "spawn_kitchen")
         ])
         
-        self.register_map("hall", portals=[Portal(
-            "hall", "exit_hall", "house", "spawn_from_hall_to_house")])
+        self.register_map("hall", portals=
+        [
+            Portal("hall", "exit_hall", "house", "spawn_from_hall_to_house"),
+            Portal("hall", "gohan_goten_room_enter", "gohan_goten_room", "spawn_gohan_goten_room"),
+            Portal("hall", "enter_chichi_room", "chichi_room", "spawn_chichi_room")
+        ])
+        
+        self.register_map("gohan_goten_room", portals=[Portal
+            ("gohan_goten_room", "exit_gohan_goten_room", "hall", "spawn_from_room_to_hall")
+        ])
+        
+        self.register_map("chichi_room", portals=[Portal(
+            "chichi_room", "exit_chichi_room", "hall", "spawn_from_room_to_hall")])
+        
+        self.register_map("kitchen", portals=[Portal(
+            "kitchen", "exit_kitchen", "house", "spawn_from_kitchen_to_house")])
+        
 
     def position_character(self, name):
         pos = self.get_object(name)
