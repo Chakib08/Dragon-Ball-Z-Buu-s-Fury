@@ -13,8 +13,6 @@ from map import MapManager
 walk_animation_nbr = 4
 transform_ssj_nbr = 12
 
-pathManager = PathManager()
-goku_base_json_file = pathManager.character_json_path("goku")
 #goku_ssj_sprite_path = current_dir.parent / "Graphics/assets/Goku/GokuSS1.png"
 
 
@@ -27,6 +25,8 @@ class Game:
         self.screen = self.set_mode()
 
         # Intancite Goku character
+        goku_base_json_file = PathManager.character_json_path("goku")
+        print(goku_base_json_file)
         self.character = Saiyan(240, 345, False, goku_base_json_file)
         
         # Manage map
@@ -101,8 +101,8 @@ class Game:
         self.map_manager.update()
 
     def run(self):
-        main_theme = pathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Theme")
-        goku_home_theme = pathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home")
+        main_theme = PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Theme")
+        goku_home_theme = PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home")
         self.play_music(main_theme)
         clock = pygame.time.Clock()
         self.music_changed = True
@@ -127,13 +127,13 @@ class Game:
                     self.isRunning = False
                 elif event.type == pygame.MOUSEMOTION:
                     if image_start_rect.collidepoint(event.pos):
-                        mainMenu.image_start = pygame.image.load(pathManager.menu_image_path("start-active.png"))
+                        mainMenu.image_start = pygame.image.load(PathManager.menu_image_path("start-active.png"))
                     else:
-                        mainMenu.image_start = pygame.image.load(pathManager.menu_image_path("start-inactive.png"))
+                        mainMenu.image_start = pygame.image.load(PathManager.menu_image_path("start-inactive.png"))
                     if image_options_rect.collidepoint(event.pos):
-                        mainMenu.image_options =  pygame.image.load(pathManager.menu_image_path("options-active.png"))
+                        mainMenu.image_options =  pygame.image.load(PathManager.menu_image_path("options-active.png"))
                     else:
-                        mainMenu.image_options = pygame.image.load(pathManager.menu_image_path("options-inactive.png"))
+                        mainMenu.image_options = pygame.image.load(PathManager.menu_image_path("options-inactive.png"))
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     if image_start_rect.collidepoint(event.pos):
                         self.isPlaying = True

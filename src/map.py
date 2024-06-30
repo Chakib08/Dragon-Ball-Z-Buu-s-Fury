@@ -78,8 +78,7 @@ class MapManager:
 
     def register_map(self, name, portals=[]):
         # Load tmx utils to handle the game's map
-        pathManager = PathManager()
-        tmx_map = pathManager.map_path(name)
+        tmx_map = PathManager.map_path(name)
         tmx_data = pytmx.load_pygame(tmx_map)
         map_data = pyscroll.data.TiledMapData(tmx_data)
         map_layer = pyscroll.orthographic.BufferedRenderer(

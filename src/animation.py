@@ -7,8 +7,7 @@ class Animation(pygame.sprite.Sprite):
     def __init__(self, json_file):
         super().__init__()
         self.character_name = self.parse_data(json_file, "Character")
-        self.path_manager = PathManager()
-        self.sprit_sheet =  pygame.image.load(self.path_manager.dir().parent / self.parse_data(json_file, "Image path"))
+        self.sprit_sheet =  pygame.image.load(PathManager.dir() / self.parse_data(json_file, "Image path"))
         self.animations = self.parse_data(json_file, "Animations")
         self.current_animation_index = 0
         self.animation_name = "IDLE Down"

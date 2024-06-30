@@ -1,32 +1,31 @@
 from pathlib import Path
 
-class PathManager:
-    def __init__(self, directory = Path(__file__).resolve().parent):
-        self.directory = directory
-        if not self.directory.exists() or not self.directory.is_dir():
-            raise ValueError(f"The directory {directory} does not exist or is not a directory.")
+DEFAULT_DIR_PATH = Path(__file__).resolve().parent.parent
 
-    def custom_path(self, path):
-        return self.directory / path
-    
+class PathManager: 
     # Maps
+    @classmethod
     def map_path(self, map):
-        return self.directory.parent / f"Graphics/maps/{map}.tmx"
+        return DEFAULT_DIR_PATH / f"Graphics/maps/{map}.tmx"
 
     # Assets Config JSON
+    @classmethod
     def character_json_path(self, character_name):
-        return self.directory.parent / f"Config/{character_name}/Base/{character_name}.json"
+        print(DEFAULT_DIR_PATH)
+        return DEFAULT_DIR_PATH  / f"Config/{character_name}/Base/{character_name}.json"
     
     # Menu
+    @classmethod
     def menu_image_path(self, image_name):
-        return self.directory.parent / f"Graphics/menu/{image_name}"
+        return DEFAULT_DIR_PATH  / f"Graphics/menu/{image_name}"
     
     # Music theme
+    @classmethod
     def soundtrack(self, name):
-        return self.directory.parent / f"Sounds/{name}.wav"
-    
+        return DEFAULT_DIR_PATH  / f"Sounds/{name}.wav"
+    @classmethod
     def dir(self):
-        return self.directory
+        return DEFAULT_DIR_PATH
         
     
     
