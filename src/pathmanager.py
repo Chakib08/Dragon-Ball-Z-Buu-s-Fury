@@ -11,7 +11,6 @@ class PathManager:
     # Assets Config JSON
     @classmethod
     def character_json_path(self, character_name):
-        print(DEFAULT_DIR_PATH)
         return DEFAULT_DIR_PATH  / f"Config/{character_name}/Base/{character_name}.json"
     
     # Menu

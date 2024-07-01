@@ -26,7 +26,6 @@ class Game:
 
         # Intancite Goku character
         goku_base_json_file = PathManager.character_json_path("goku")
-        print(goku_base_json_file)
         self.character = Saiyan(240, 345, False, goku_base_json_file)
         
         # Manage map
