@@ -57,6 +57,6 @@ class Animation(pygame.sprite.Sprite):
             
         # Retreive last Animation marco
         self.animation_name = animation_macro
-        pygame.time.delay(100)
+        
 
     def get_character_name(self): return self.character_name

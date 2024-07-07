@@ -25,7 +25,7 @@ class Game:
         self.screen = self.set_mode()
 
         # Intancite Goku character
-        self.character = Saiyan(240, 345, False, "goku")
+        self.character = Saiyan(159, 289, False, "goku")
         
         # Manage map
         self.map_manager = MapManager(self.screen, self.character)
@@ -97,6 +97,7 @@ class Game:
 
     def update(self):
         self.map_manager.update()
+        pygame.time.delay(100)
 
     def run(self):
         main_theme = PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Theme")
