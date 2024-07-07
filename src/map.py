@@ -5,6 +5,7 @@ import pytmx
 import pyscroll
 
 from pathmanager import PathManager
+from npc import NPC
 
 
 @dataclass
@@ -23,6 +24,7 @@ class Map:
     group: pyscroll.PyscrollGroup   # The group of objects (ex: character)
     tmx_data: pytmx.TiledMap        # TMX Map data
     portals: List[Portal]           # List of portals
+    npcs: List[NPC]
 
 
 class MapManager:
@@ -43,7 +45,7 @@ class MapManager:
 
         # Registering the maps
         self.register_map(default_map, portals=[Portal(
-            "map", "enter_house", "house", "spawn_house")])
+            "map", "enter_house", "house", "spawn_house")], npcs=[NPC(99, 345, False, "vegeta", 4)])
         
         self.register_map("house", portals=
         [
@@ -69,6 +71,8 @@ class MapManager:
         self.register_map("kitchen", portals=[Portal(
             "kitchen", "exit_kitchen", "house", "spawn_from_kitchen_to_house")])
         
+        self.teleport_npcs()
+        
 
     def position_character(self, name):
         pos = self.get_object(name)
@@ -76,7 +80,7 @@ class MapManager:
         self.character.position[1] = pos.y - 20
         self.character.save_location()
 
-    def register_map(self, name, portals=[]):
+    def register_map(self, name, portals=[], npcs=[]):
         # Load tmx utils to handle the game's map
         tmx_map = PathManager.map_path(name)
         tmx_data = pytmx.load_pygame(tmx_map)
@@ -93,8 +97,12 @@ class MapManager:
 
         # Add your layers here (like characters etc.)
         group.add(self.character)
+        
+        # Get NPCs
+        for npc in npcs:
+            group.add(npc)
 
-        self.maps[name] = Map(name, collisions, group, tmx_data, portals)
+        self.maps[name] = Map(name, collisions, group, tmx_data, portals, npcs)
 
     def check_collisions(self):
         if not self.transitioning:
@@ -126,6 +134,14 @@ class MapManager:
 
     def get_rect(self, object): return pygame.Rect(
         object.x, object.y, object.width, object.height)
+    
+    def teleport_npcs(self):
+        for map in self.maps:
+            map_data = self.maps[map]
+            npcs = map_data.npcs
+            for npc in npcs:
+                npc.load_points(self)
+                npc.teleport_spawn()
 
     def draw(self):
         self.get_group().draw(self.screen)
@@ -139,6 +155,9 @@ class MapManager:
             self.black_transition()
         self.get_group().update()
         self.check_collisions()
+        
+        for npc in self.get_map().npcs:
+            npc.move_npc()
         
     def black_transition(self):
         if self.transitioning_in:

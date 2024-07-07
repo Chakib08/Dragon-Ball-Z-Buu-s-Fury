@@ -4,16 +4,18 @@ from pathlib import Path
 from pathmanager import PathManager
               
 class Animation(pygame.sprite.Sprite):
-    def __init__(self, json_file):
+    def __init__(self, name):
         super().__init__()
-        self.character_name = self.parse_data(json_file, "Character")
-        self.sprit_sheet =  pygame.image.load(PathManager.dir() / self.parse_data(json_file, "Image path"))
-        self.animations = self.parse_data(json_file, "Animations")
+        self.json_file = PathManager.character_json_path(name)
+        self.character_name = self.parse_data(self.json_file, "Character")
+        self.sprit_sheet =  pygame.image.load(PathManager.dir() / self.parse_data(self.json_file, "Image path"))
+        self.animations = self.parse_data(self.json_file, "Animations")
         self.current_animation_index = 0
         self.animation_name = "IDLE Down"
         self.image = self.get_image_by_animation_name(self.animation_name)
         self.images = []
         self.rect = self.image.get_rect()
+        
 
     def parse_data(self, json_file, key):
         with open(json_file) as file:

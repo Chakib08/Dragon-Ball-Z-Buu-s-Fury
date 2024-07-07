@@ -25,8 +25,7 @@ class Game:
         self.screen = self.set_mode()
 
         # Intancite Goku character
-        goku_base_json_file = PathManager.character_json_path("goku")
-        self.character = Saiyan(240, 345, False, goku_base_json_file)
+        self.character = Saiyan(240, 345, False, "goku")
         
         # Manage map
         self.map_manager = MapManager(self.screen, self.character)
