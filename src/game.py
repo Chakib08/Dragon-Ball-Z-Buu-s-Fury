@@ -97,7 +97,6 @@ class Game:
 
     def update(self):
         self.map_manager.update()
-        pygame.time.delay(100)
 
     def run(self):
         main_theme = PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Theme")
@@ -158,6 +157,6 @@ class Game:
             pygame.display.flip()
 
             # Cap the frame rate
-            clock.tick(60)
+            clock.tick(10)
 
         pygame.quit()
