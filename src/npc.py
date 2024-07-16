@@ -38,15 +38,11 @@ class NPC(Character):
 
         if current_rect.y < target_rect.y and abs(current_rect.x - target_rect.x) < 20:
             self.animate("Walk Down", 4)
-            print("down")
         elif current_rect.y > target_rect.y and abs(current_rect.x - target_rect.x) < 20:
             self.animate("Walk Up", 4)
-            print("up")
         elif current_rect.x > target_rect.x and abs(current_rect.y - target_rect.y) < 20:
             self.animate("Walk Left", 4)
-            print("left")
         elif current_rect.x < target_rect.x and abs(current_rect.y - target_rect.y) < 20:
-            print("right")
             self.animate("Walk Right", 4)
 
         if self.rect.colliderect(target_rect):
