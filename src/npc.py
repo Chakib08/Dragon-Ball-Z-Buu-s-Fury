@@ -1,4 +1,5 @@
 from character import Character
+import pygame
 
 
 class NPC(Character):
@@ -11,6 +12,7 @@ class NPC(Character):
         self.nb_points = nb_points
         self.points = []
         self.current_point = 0
+        self.speed = 1
 
     def teleport_spawn(self):
         location = self.points[self.current_point]
@@ -37,13 +39,26 @@ class NPC(Character):
         target_rect = self.points[target_point]
 
         if current_rect.y < target_rect.y and abs(current_rect.x - target_rect.x) < 20:
-            self.animate("Walk Down", 4)
+            if self.speed == 0:
+                self.image = self.get_image_by_animation_name("IDLE Down")
+            else:
+                self.animate("Walk Down", 4)
         elif current_rect.y > target_rect.y and abs(current_rect.x - target_rect.x) < 20:
-            self.animate("Walk Up", 4)
+            if self.speed == 0:
+                self.image = self.get_image_by_animation_name("IDLE Up")
+            else:
+                self.animate("Walk Up", 4)
         elif current_rect.x > target_rect.x and abs(current_rect.y - target_rect.y) < 20:
-            self.animate("Walk Left", 4)
+            if self.speed == 0:
+                self.image = self.get_image_by_animation_name("IDLE Left")
+                self.image = pygame.transform.flip(self.image, True, False)
+            else:
+                self.animate("Walk Left", 4)
         elif current_rect.x < target_rect.x and abs(current_rect.y - target_rect.y) < 20:
-            self.animate("Walk Right", 4)
+            if self.speed == 0:
+                self.image = self.get_image_by_animation_name("IDLE Right")
+            else:
+                self.animate("Walk Right", 4)
 
         if self.rect.colliderect(target_rect):
             self.current_point = target_point
@@ -58,7 +73,6 @@ class NPC(Character):
             macro, side = animation_macro.split()
 
         if macro == "Walk":
-            self.speed = 1
             self.move(side)
         elif macro == "Run":
             self.speed = 2

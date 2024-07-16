@@ -121,8 +121,15 @@ class MapManager:
                         break  # Exit after first valid portal collision
 
             # Handle collisions
-            if self.character.feet.collidelist(self.get_collisions()) > -1:
-                self.character.move_back()
+            for sprite in self.get_group().sprites():
+                if type(sprite) is NPC:
+                    if sprite.feet.colliderect(self.character.rect):
+                        sprite.speed = 0
+                    else:
+                        sprite.speed = 1
+                        
+                if self.character.feet.collidelist(self.get_collisions()) > -1:
+                    self.character.move_back()
 
     def get_map(self): return self.maps[self.current_map]
 
