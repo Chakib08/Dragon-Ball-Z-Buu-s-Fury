@@ -87,7 +87,7 @@ class MapManager:
         map_data = pyscroll.data.TiledMapData(tmx_data)
         map_layer = pyscroll.orthographic.BufferedRenderer(
             map_data, self.screen.get_size())
-        map_layer.zoom = 3
+        map_layer.zoom = 4
 
         # List of collision in tmx map
         collisions = [pygame.Rect(obj.x, obj.y, obj.width, obj.height) for obj in tmx_data.objects if obj.type == "collision"]
