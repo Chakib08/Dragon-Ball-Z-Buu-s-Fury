@@ -161,7 +161,7 @@ class MapManager:
         
     def black_transition(self):
         if self.transitioning_in:
-            self.transition_alpha += 30
+            self.transition_alpha += 7
             if self.transition_alpha >= 255:
                 self.transition_alpha = 255
                 self.transitioning_in = False

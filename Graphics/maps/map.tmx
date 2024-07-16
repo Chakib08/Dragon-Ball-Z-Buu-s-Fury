@@ -194,10 +194,10 @@
   </object>
  </objectgroup>
  <objectgroup id="6" name="NPC_Paths">
-  <object id="271" name="vegeta_path_0" x="231.167" y="337.333" width="15.75" height="15"/>
-  <object id="272" name="vegeta_path_1" x="268.25" y="335.083" width="16" height="16.5"/>
-  <object id="273" name="vegeta_path_2" x="269.167" y="297.5" width="14.75" height="14"/>
-  <object id="274" name="vegeta_path_3" x="232.167" y="297.25" width="16" height="14"/>
+  <object id="271" name="vegeta_path_0" x="174.5" y="374.666" width="15.75" height="15"/>
+  <object id="272" name="vegeta_path_1" x="268.917" y="367.083" width="16" height="16.5"/>
+  <object id="273" name="vegeta_path_2" x="266.5" y="314.833" width="14.75" height="14"/>
+  <object id="274" name="vegeta_path_3" x="171.5" y="314.583" width="16" height="14"/>
  </objectgroup>
  <layer id="2" name="Water" width="50" height="50">
   <data encoding="csv">

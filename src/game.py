@@ -157,6 +157,6 @@ class Game:
             pygame.display.flip()
 
             # Cap the frame rate
-            clock.tick(10)
+            clock.tick(60)
 
         pygame.quit()

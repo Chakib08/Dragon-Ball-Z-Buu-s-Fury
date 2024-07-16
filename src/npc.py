@@ -36,13 +36,17 @@ class NPC(Character):
         current_rect = self.points[current_point]
         target_rect = self.points[target_point]
 
-        if current_rect.y < target_rect.y and abs(current_rect.x - target_rect.x) < 3:
+        if current_rect.y < target_rect.y and abs(current_rect.x - target_rect.x) < 20:
             self.animate("Walk Down", 4)
-        elif current_rect.y > target_rect.y and abs(current_rect.x - target_rect.x) < 3:
+            print("down")
+        elif current_rect.y > target_rect.y and abs(current_rect.x - target_rect.x) < 20:
             self.animate("Walk Up", 4)
-        elif current_rect.x > target_rect.x and abs(current_rect.y - target_rect.y) < 3:
+            print("up")
+        elif current_rect.x > target_rect.x and abs(current_rect.y - target_rect.y) < 20:
             self.animate("Walk Left", 4)
-        elif current_rect.x < target_rect.x and abs(current_rect.y - target_rect.y) < 3:
+            print("left")
+        elif current_rect.x < target_rect.x and abs(current_rect.y - target_rect.y) < 20:
+            print("right")
             self.animate("Walk Right", 4)
 
         if self.rect.colliderect(target_rect):
@@ -51,7 +55,6 @@ class NPC(Character):
     def animate(self, animation_macro, animation_nbr):
         super().animate(animation_macro, animation_nbr)
 
-
         # Check if the Transofrm string is in the animation macro retreived from the json file
         if "Transform" in animation_macro:
             macro, level, side = animation_macro.split()
@@ -59,9 +62,9 @@ class NPC(Character):
             macro, side = animation_macro.split()
 
         if macro == "Walk":
-            self.speed = 4
+            self.speed = 1
             self.move(side)
         elif macro == "Run":
-            self.speed = 8
+            self.speed = 2
             self.move(side)
         # TODO: Implement Attack

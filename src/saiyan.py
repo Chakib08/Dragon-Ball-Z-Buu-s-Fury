@@ -25,9 +25,9 @@ class Saiyan(Character):
             macro, side = animation_macro.split()
                 
         if macro == "Walk":
-            self.speed = 4
+            self.speed = 1
             self.move(side)
         elif macro == "Run":
-            self.speed = 8
+            self.speed = 2
             self.move(side)
         # TODO: Implement Attack
