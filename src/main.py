@@ -1,7 +1,7 @@
 import pygame
 from game import Game
 
-resolution = (1000, 1000)
+resolution = (1200, 1000)
 caption = "Dragon Ball Z Buu's Fury Pygame DP"
 
 def main():

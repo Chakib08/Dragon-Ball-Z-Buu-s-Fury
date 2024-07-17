@@ -22,6 +22,12 @@ class PathManager:
     @classmethod
     def soundtrack(self, name):
         return DEFAULT_DIR_PATH  / f"Sounds/{name}.wav"
+    
+    # Dialog
+    @classmethod
+    def dialogFile(self, filename):
+        return DEFAULT_DIR_PATH / f"Graphics/dialog/{filename}"
+    
     @classmethod
     def dir(self):
         return DEFAULT_DIR_PATH

@@ -130,6 +130,12 @@ class MapManager:
                         
                 if self.character.feet.collidelist(self.get_collisions()) > -1:
                     self.character.move_back()
+                    
+    def check_npc_collisions(self, dialogBox):
+        for sprite in self.get_group().sprites():
+            if sprite.feet.colliderect(self.character.rect) and type(sprite) is NPC:
+                dialogBox.open()
+        
 
     def get_map(self): return self.maps[self.current_map]
 

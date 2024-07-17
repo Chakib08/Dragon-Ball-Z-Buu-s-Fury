@@ -6,6 +6,7 @@ from pathmanager import PathManager
 from saiyan import Saiyan
 from menu import Menu
 from map import MapManager
+from dialog.dialogbox import DialogBox
 
 #TODO : Remove Global variables
 
@@ -29,6 +30,9 @@ class Game:
         
         # Manage map
         self.map_manager = MapManager(self.screen, self.character)
+        
+        # Create dialog box
+        self.dialogBox = DialogBox()
 
 
     def set_mode(self):
@@ -123,6 +127,9 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self.isRunning = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_t:
+                        self.map_manager.check_npc_collisions(self.dialogBox)
                 elif event.type == pygame.MOUSEMOTION:
                     if image_start_rect.collidepoint(event.pos):
                         mainMenu.image_start = pygame.image.load(PathManager.menu_image_path("start-active.png"))
@@ -146,6 +153,7 @@ class Game:
                     self.keyBoard_input()
                 self.update()
                 self.map_manager.draw()
+                self.dialogBox.render(self.screen)
             else:
                 self.screen.blit(mainMenu.image_menu, (0, 0))
                 self.screen.blit(mainMenu.image_start,
