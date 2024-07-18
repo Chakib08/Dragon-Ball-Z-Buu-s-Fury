@@ -3,7 +3,7 @@ import pygame
 
 
 class NPC(Character):
-    def __init__(self, pos_x, pos_y, isTransformed, name, nb_points):
+    def __init__(self, pos_x, pos_y, isTransformed, name, nb_points, dialog_texts):
         super().__init__(pos_x, pos_y, name)
 
         self.isTransofrmed = isTransformed
@@ -13,6 +13,7 @@ class NPC(Character):
         self.points = []
         self.current_point = 0
         self.speed = 1
+        self.dialog_texts = dialog_texts
 
     def teleport_spawn(self):
         location = self.points[self.current_point]

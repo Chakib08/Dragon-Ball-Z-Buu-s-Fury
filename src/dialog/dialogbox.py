@@ -44,9 +44,10 @@ class DialogBox:
         if(self.text_idx >= len(self.texts)):
             self.isBoxOpened = False
     
-    def open(self):
+    def open(self, dialog_texts=[]):
         if self.isBoxOpened:
             self.next_text()
         else:
             self.isBoxOpened = True
             self.text_idx = 0
+            self.texts = dialog_texts

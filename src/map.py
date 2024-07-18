@@ -45,7 +45,7 @@ class MapManager:
 
         # Registering the maps
         self.register_map(default_map, portals=[Portal(
-            "map", "enter_house", "house", "spawn_house")], npcs=[NPC(99, 345, False, "vegeta", 4)])
+            "map", "enter_house", "house", "spawn_house")], npcs=[NPC(99, 345, False, "vegeta", 4, ["KAKAROT !!", "I want my revenge !!"])])
         
         self.register_map("house", portals=
         [
@@ -134,7 +134,7 @@ class MapManager:
     def check_npc_collisions(self, dialogBox):
         for sprite in self.get_group().sprites():
             if sprite.feet.colliderect(self.character.rect) and type(sprite) is NPC:
-                dialogBox.open()
+                dialogBox.open(sprite.dialog_texts)
         
 
     def get_map(self): return self.maps[self.current_map]
