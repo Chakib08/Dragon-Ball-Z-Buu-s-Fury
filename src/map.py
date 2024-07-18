@@ -3,9 +3,11 @@ from typing import List
 import pygame
 import pytmx
 import pyscroll
+import copy
 
 from pathmanager import PathManager
 from npc import NPC
+from pygamehelper import PygameHelper
 
 
 @dataclass
@@ -24,7 +26,8 @@ class Map:
     group: pyscroll.PyscrollGroup   # The group of objects (ex: character)
     tmx_data: pytmx.TiledMap        # TMX Map data
     portals: List[Portal]           # List of portals
-    npcs: List[NPC]
+    npcs: List[NPC]                 # List of NPCs
+    music: str                      # Soudtrack specific to a map
 
 
 class MapManager:
@@ -42,35 +45,40 @@ class MapManager:
         # Fill the screen with black
         self.black_screen = pygame.Surface(screen.get_size())
         self.black_screen.fill((0, 0, 0))
+        self.isMusicChanged = False
 
         # Registering the maps
-        self.register_map(default_map, portals=[Portal(
-            "map", "enter_house", "house", "spawn_house")], npcs=[NPC(99, 345, False, "vegeta", 4, ["KAKAROT !!", "I want my revenge !!"])])
+        self.register_map(default_map, 
+                          portals=[Portal("map", "enter_house", "house", "spawn_house")], 
+                          npcs=[NPC(99, 345, False, "vegeta", 4, ["KAKAROT !!", "I want my revenge !!"])], 
+                          music=PathManager.soundtrack("legacy-of-goku-II/The Legacy Of Goku 2 OST - The Imperfect Cell")
+            )
         
-        self.register_map("house", portals=
-        [
-            Portal("house", "exit_house", "map", "spawn_world"), 
-            Portal("house", "enter_hall", "hall", "spawn_from_house_to_hall"),
-            Portal("house", "enter_kitchen", "kitchen", "spawn_kitchen")
-        ])
+        self.register_map("house", 
+                          portals=[Portal("house", "exit_house", "map", "spawn_world"), 
+                                Portal("house", "enter_hall", "hall", "spawn_from_house_to_hall"),
+                                Portal("house", "enter_kitchen", "kitchen", "spawn_kitchen")],
+                          music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
         
         self.register_map("hall", portals=
         [
             Portal("hall", "exit_hall", "house", "spawn_from_hall_to_house"),
             Portal("hall", "gohan_goten_room_enter", "gohan_goten_room", "spawn_gohan_goten_room"),
             Portal("hall", "enter_chichi_room", "chichi_room", "spawn_chichi_room")
-        ])
+        ],music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
         
         self.register_map("gohan_goten_room", portals=[Portal
             ("gohan_goten_room", "exit_gohan_goten_room", "hall", "spawn_from_room_to_hall")
-        ])
+        ], music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
         
         self.register_map("chichi_room", portals=[Portal(
-            "chichi_room", "exit_chichi_room", "hall", "spawn_from_room_to_hall")])
+            "chichi_room", "exit_chichi_room", "hall", "spawn_from_room_to_hall")], music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
         
         self.register_map("kitchen", portals=[Portal(
-            "kitchen", "exit_kitchen", "house", "spawn_from_kitchen_to_house")])
+            "kitchen", "exit_kitchen", "house", "spawn_from_kitchen_to_house")
+                                              ], music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
         
+        self.current_music = self.maps[self.current_map].music
         self.teleport_npcs()
         
 
@@ -80,7 +88,7 @@ class MapManager:
         self.character.position[1] = pos.y - 20
         self.character.save_location()
 
-    def register_map(self, name, portals=[], npcs=[]):
+    def register_map(self, name, portals=[], npcs=[], music=None):
         # Load tmx utils to handle the game's map
         tmx_map = PathManager.map_path(name)
         tmx_data = pytmx.load_pygame(tmx_map)
@@ -88,6 +96,10 @@ class MapManager:
         map_layer = pyscroll.orthographic.BufferedRenderer(
             map_data, self.screen.get_size())
         map_layer.zoom = 4
+        
+        # Play map music theme
+        if music is not None:
+            PygameHelper.play_music(music)
 
         # List of collision in tmx map
         collisions = [pygame.Rect(obj.x, obj.y, obj.width, obj.height) for obj in tmx_data.objects if obj.type == "collision"]
@@ -102,7 +114,7 @@ class MapManager:
         for npc in npcs:
             group.add(npc)
 
-        self.maps[name] = Map(name, collisions, group, tmx_data, portals, npcs)
+        self.maps[name] = Map(name, collisions, group, tmx_data, portals, npcs, music)
 
     def check_collisions(self):
         if not self.transitioning:
@@ -164,10 +176,19 @@ class MapManager:
             self.screen.blit(self.black_screen, (0, 0))
 
     def update(self):
+        previous_music = copy.copy(self.current_music)
         if self.transitioning:
             self.black_transition()
         self.get_group().update()
         self.check_collisions()
+        
+        
+        self.current_music = self.maps[self.current_map].music
+        if(self.current_music == previous_music):
+            self.isMusicChanged = False
+        else:
+            self.isMusicChanged = True
+        
         
         for npc in self.get_map().npcs:
             npc.move_npc()
@@ -185,4 +206,4 @@ class MapManager:
             if self.transition_alpha <= 0:
                 self.transition_alpha = 0
                 self.transitioning = False
-                self.input_enabled = True
+                self.input_enabled = True        

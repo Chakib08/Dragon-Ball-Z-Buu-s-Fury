@@ -104,10 +104,10 @@ class Game:
 
     def run(self):
         main_theme = PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Theme")
-        goku_home_theme = PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home")
+        onlyOnce = True
+
         self.play_music(main_theme)
         clock = pygame.time.Clock()
-        self.music_changed = True
 
         # Initialize Menu
         mainMenu = Menu(self.resolution)
@@ -145,15 +145,17 @@ class Game:
 
             # Update game state and draw
             if self.isPlaying:
-                if self.music_changed:
-                    self.play_music(goku_home_theme)
-                    self.music_changed = False
-                self.character.save_location()
-                if self.map_manager.input_enabled:
-                    self.keyBoard_input()
+                if(onlyOnce):
+                    self.play_music(self.map_manager.current_music)
+                    onlyOnce = False
                 self.update()
                 self.map_manager.draw()
                 self.dialogBox.render(self.screen)
+                if self.map_manager.isMusicChanged:
+                    self.play_music(self.map_manager.current_music)
+                self.character.save_location()
+                if self.map_manager.input_enabled:
+                    self.keyBoard_input()
             else:
                 self.screen.blit(mainMenu.image_menu, (0, 0))
                 self.screen.blit(mainMenu.image_start,
