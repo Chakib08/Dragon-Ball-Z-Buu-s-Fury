@@ -14,17 +14,16 @@ from dialog.dialogbox import DialogBox
 walk_animation_nbr = 4
 transform_ssj_nbr = 12
 
-#goku_ssj_sprite_path = current_dir.parent / "Graphics/assets/Goku/GokuSS1.png"
-
-
 class Game:
     def __init__(self, resolution, caption):
-        # Initialize game window
+        # Initialize game
+        pygame.init() 
         self.resolution = resolution
         self.caption = caption
-        self.set_caption()
-        self.screen = self.set_mode()
-
+        self.isRunning = True
+        pygame.display.set_caption(self.caption)
+        self.screen = pygame.display.set_mode(self.resolution)
+        
         # Intanciate Goku character
         self.character = Saiyan(159, 289, False, "goku")
         
@@ -32,19 +31,11 @@ class Game:
         self.map_manager = MapManager(self.screen, self.character)
         
         # Create dialog box
-        self.dialogBox = DialogBox()
-
-
-    def set_mode(self):
-        return pygame.display.set_mode(self.resolution)
-
-    def set_caption(self):
-        pygame.display.set_caption(self.caption)
+        self.dialogBox = DialogBox()        
 
     def play_music(self, music):
         # Load the sound file
         pygame.mixer.music.stop()
-        self.isRunning = True
         self.music = music
         pygame.mixer.music.load(self.music)
         # Play the sound
@@ -79,9 +70,6 @@ class Game:
         else:
             self.character.images = []  # Reset the animation frames
             self.character.current_animation_index = 0
-            # self.character.sprit_sheet = pygame.image.load(
-            #     current_dir.parent / "Graphics/assets/Goku/goku.png")
-
             if self.character.isTransofrmed == False:
                 if "Down" in self.character.animation_name:
                     self.character.image = self.character.get_image_by_animation_name(
@@ -103,51 +91,32 @@ class Game:
         self.map_manager.update()
 
     def run(self):
-        main_theme = PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Theme")
+        # Init clock and other attributes
         onlyOnce = True
-
-        self.play_music(main_theme)
         clock = pygame.time.Clock()
+        fps = 60
 
         # Initialize Menu
         mainMenu = Menu(self.resolution)
-
-        # Set up the start image rect
-        image_start_rect = mainMenu.image_start.get_rect()
-        image_start_rect.center = (
-            self.resolution[0] / 2, self.resolution[1] / 1.5)
-
-        image_options_rect = mainMenu.image_options.get_rect()
-        image_options_rect.center = (
-            self.resolution[0] / 2, self.resolution[1] / 1.42)
-
-        self.isPlaying = False
+        # Play main theme        
+        self.play_music(PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Theme"))
 
         while self.isRunning:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.isRunning = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_t:
-                        self.map_manager.check_npc_collisions(self.dialogBox)
-                elif event.type == pygame.MOUSEMOTION:
-                    if image_start_rect.collidepoint(event.pos):
-                        mainMenu.image_start = pygame.image.load(PathManager.menu_image_path("start-active.png"))
-                    else:
-                        mainMenu.image_start = pygame.image.load(PathManager.menu_image_path("start-inactive.png"))
-                    if image_options_rect.collidepoint(event.pos):
-                        mainMenu.image_options =  pygame.image.load(PathManager.menu_image_path("options-active.png"))
-                    else:
-                        mainMenu.image_options = pygame.image.load(PathManager.menu_image_path("options-inactive.png"))
-                elif event.type == pygame.MOUSEBUTTONDOWN:
-                    if image_start_rect.collidepoint(event.pos):
-                        self.isPlaying = True
-
-            # Update game state and draw
-            if self.isPlaying:
+            # Get all the pygame events
+            events = pygame.event.get()
+            # Launch main menu
+            if not mainMenu.isPlaying:
+                mainMenu.launch_menu(self.screen, self.resolution, events)
+            # Start the game
+            else:
+                for event in events:
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_t:
+                            self.map_manager.check_npc_collisions(self.dialogBox)
                 if(onlyOnce):
                     self.play_music(self.map_manager.current_music)
                     onlyOnce = False
+                # Update game state and draw map groups
                 self.update()
                 self.map_manager.draw()
                 self.dialogBox.render(self.screen)
@@ -156,17 +125,14 @@ class Game:
                 self.character.save_location()
                 if self.map_manager.input_enabled:
                     self.keyBoard_input()
-            else:
-                self.screen.blit(mainMenu.image_menu, (0, 0))
-                self.screen.blit(mainMenu.image_start,
-                                 image_start_rect.topleft)
-                self.screen.blit(mainMenu.image_options,
-                                 image_options_rect.topleft)
 
+            # Common events
+            for event in events:
+                if event.type == pygame.QUIT:
+                    self.isRunning = False
             # Update the display
             pygame.display.flip()
-
             # Cap the frame rate
-            clock.tick(60)
+            clock.tick(fps)
 
         pygame.quit()

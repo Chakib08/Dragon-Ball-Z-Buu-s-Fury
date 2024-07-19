@@ -15,8 +15,7 @@ class Animation(pygame.sprite.Sprite):
         self.image = self.get_image_by_animation_name(self.animation_name)
         self.images = []
         self.rect = self.image.get_rect()
-        self.clock = 0
-        
+        self.clock = 0   
 
     def parse_data(self, json_file, key):
         with open(json_file) as file:

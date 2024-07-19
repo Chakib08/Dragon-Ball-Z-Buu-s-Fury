@@ -1,5 +1,11 @@
 import pygame
 
+################################################
+#                                              #
+#   THE CLASS SAIYAN IS NOT PYGAMEHELPER YET   #
+#                                              #
+################################################
+
 class PygameHelper:
     
     @classmethod
