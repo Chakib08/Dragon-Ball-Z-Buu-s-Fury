@@ -25,7 +25,7 @@ class Game:
         self.set_caption()
         self.screen = self.set_mode()
 
-        # Intancite Goku character
+        # Intanciate Goku character
         self.character = Saiyan(159, 289, False, "goku")
         
         # Manage map
