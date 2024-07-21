@@ -6,7 +6,7 @@ X_POS = 50
 Y_POS = 650
 
 WHITE = (255, 255, 255)
-FRONT_SIZE = 40
+FONT_SIZE = 40
 
 class DialogBox:
     def __init__(self) -> None:
@@ -17,7 +17,7 @@ class DialogBox:
         self.texts = ["KAKAROT !!!", "I want my revenge !!"]
         self.text_idx = 0
         self.letter_idx = 0
-        self.font = pygame.font.Font(PathManager.dialogFile("dialog_font.ttf"), FRONT_SIZE)
+        self.font = pygame.font.Font(PathManager.dialogFile("dialog_font.ttf"), FONT_SIZE)
         self.isBoxOpened = False
         
     def render(self, screen):
@@ -30,7 +30,7 @@ class DialogBox:
             screen.blit(text, (X_POS + 30, Y_POS + 20))
             screen.blit(self.portrait, (X_POS + 700, Y_POS))
     
-    def get_image(self, img_path: str, bg : tuple, pos : tuple, size :tuple) -> pygame.Surface:
+    def get_image(self, img_path: str, bg: tuple, pos: tuple, size: tuple) -> pygame.Surface:
         full_img = pygame.image.load(img_path)
         img = pygame.Surface(size)
         img.blit(full_img, (0, 0), pos)
