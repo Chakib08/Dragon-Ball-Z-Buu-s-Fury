@@ -1,14 +1,15 @@
 import pygame
 import json
-from pathlib import Path
+import os
 from pathmanager import PathManager
+from utils.config import Config
               
 class Animation(pygame.sprite.Sprite):
     def __init__(self, name):
         super().__init__()
-        self.json_file = PathManager.character_json_path(name)
+        self.json_file = PathManager.character_json_path(name, "base")
         self.character_name = self.parse_data(self.json_file, "Character")
-        self.sprit_sheet =  pygame.image.load(PathManager.dir() / self.parse_data(self.json_file, "Image path"))
+        self.sprit_sheet =  pygame.image.load(os.path.join(Config.ROOT_DIR, self.parse_data(self.json_file, "Image path")))
         self.animations = self.parse_data(self.json_file, "Animations")
         self.current_animation_index = 0
         self.animation_name = "IDLE Down"

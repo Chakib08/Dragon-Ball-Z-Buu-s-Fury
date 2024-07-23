@@ -1,10 +1,13 @@
 import pygame
+from utils.config import Config
 from game import Game
 
-resolution = (1200, 1000)
-caption = "Dragon Ball Z Buu's Fury Pygame DP"
+
 
 def main():
+    Config.init()
+    resolution = (Config.WIDTH, Config.HEIGHT)
+    caption = Config.CAPTION
     app = Game(resolution, caption)
     app.run()
 
