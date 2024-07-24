@@ -47,7 +47,15 @@ class Config:
         cls.CONFIG_DIR = os.path.join(cls.ROOT_DIR,cls.get_config_value("CONFIG_DIR"))
         cls.MENU_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("MENU_DIR"))
         cls.SOUNDS_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("SOUNDS_DIR"))
-        cls.DIALOG_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("DIALOG_DIR"))  
+        cls.DIALOG_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("DIALOG_DIR"))
+        
+        # Game Settings
+        # Animations
+        cls.CLOCK_SPEED = cls.get_config_value("CLOCK_SPEED")  
+        cls.CLOCK_LIMIT = cls.get_config_value("CLOCK_LIMIT")
+        # Main
+        cls.FPS = cls.get_config_value("FPS")
+        
     
     @staticmethod
     def get_filename(filename: str, default=None, basename=None):

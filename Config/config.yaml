@@ -20,3 +20,15 @@ CONFIG_DIR:  "Config/characters/"
 MENU_DIR:  "Graphics/menu/"  
 SOUNDS_DIR: "Sounds/"
 DIALOG_DIR: "Graphics/dialog/"
+
+###################################
+#                                 #
+#          GAME SETTINGS          #
+#                                 #
+###################################
+
+# Animation
+CLOCK_SPEED: 14
+CLOCK_LIMIT: 100
+# Main settings
+FPS: 60

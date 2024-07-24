@@ -1,8 +1,5 @@
-import pygame
 from utils.config import Config
 from game import Game
-
-
 
 def main():
     Config.init()

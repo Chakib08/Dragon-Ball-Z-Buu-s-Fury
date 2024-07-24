@@ -16,7 +16,8 @@ class Animation(pygame.sprite.Sprite):
         self.image = self.get_image_by_animation_name(self.animation_name)
         self.images = []
         self.rect = self.image.get_rect()
-        self.clock = 0   
+        self.clock = 0
+        self.clock_speed = Config.CLOCK_SPEED   
 
     def parse_data(self, json_file, key):
         with open(json_file) as file:
@@ -52,8 +53,8 @@ class Animation(pygame.sprite.Sprite):
         if "Left" in animation_macro:
             self.image = pygame.transform.flip(self.image, True, False)
         
-        self.clock += 14
-        if self.clock >= 100:
+        self.clock += self.clock_speed
+        if self.clock >= Config.CLOCK_LIMIT:
             self.current_animation_index += 1
 
             if(self.current_animation_index == len(self.images)):

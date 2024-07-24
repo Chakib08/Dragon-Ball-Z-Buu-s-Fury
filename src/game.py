@@ -7,6 +7,7 @@ from saiyan import Saiyan
 from menu import Menu
 from map import MapManager
 from dialog.dialogbox import DialogBox
+from utils.config import Config
 
 #TODO : Remove Global variables
 
@@ -94,7 +95,7 @@ class Game:
         # Init clock and other attributes
         onlyOnce = True
         clock = pygame.time.Clock()
-        fps = 60
+        fps = Config.FPS
 
         # Initialize Menu
         mainMenu = Menu(self.resolution)

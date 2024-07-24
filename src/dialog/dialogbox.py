@@ -8,6 +8,8 @@ Y_POS = 650
 WHITE = (255, 255, 255)
 FONT_SIZE = 40
 
+# TODO: Remove magic numbers and retreive the from a YAML or JSON config file
+
 class DialogBox:
     def __init__(self) -> None:
         self.box = self.get_image(PathManager.dialog_file("dialogbox.png"), (68, 140, 203), (6, 16, 160, 64), (160,64))
