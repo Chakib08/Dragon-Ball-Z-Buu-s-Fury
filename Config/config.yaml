@@ -1,0 +1,34 @@
+###################################
+#                                 #
+#        WINDOW SETTINGS          #
+#                                 #
+###################################
+
+caption: "Dragon Ball Z Buu's Fury Pygame DP FAN Remake"
+resolution:
+  width: 1200
+  heigth: 1000
+
+###################################
+#                                 #
+#           MEDIA PATHS           #
+#                                 #
+###################################
+
+MAP_DIR: "Graphics/maps/"
+CONFIG_DIR:  "Config/characters/"
+MENU_DIR:  "Graphics/menu/"  
+SOUNDS_DIR: "Sounds/"
+DIALOG_DIR: "Graphics/dialog/"
+
+###################################
+#                                 #
+#          GAME SETTINGS          #
+#                                 #
+###################################
+
+# Animation
+CLOCK_SPEED: 14
+CLOCK_LIMIT: 100
+# Main settings
+FPS: 60

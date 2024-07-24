@@ -1,7 +1,6 @@
 from character import Character
 import pygame
 
-
 class NPC(Character):
     def __init__(self, pos_x, pos_y, isTransformed, name, nb_points, dialog_texts):
         super().__init__(pos_x, pos_y, name)
@@ -63,19 +62,3 @@ class NPC(Character):
 
         if self.rect.colliderect(target_rect):
             self.current_point = target_point
-
-    def animate(self, animation_macro, animation_nbr):
-        super().animate(animation_macro, animation_nbr)
-
-        # Check if the Transofrm string is in the animation macro retreived from the json file
-        if "Transform" in animation_macro:
-            macro, level, side = animation_macro.split()
-        else:
-            macro, side = animation_macro.split()
-
-        if macro == "Walk":
-            self.move(side)
-        elif macro == "Run":
-            self.speed = 2
-            self.move(side)
-        # TODO: Implement Attack

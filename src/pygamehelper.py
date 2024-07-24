@@ -1,5 +1,11 @@
 import pygame
 
+####################################################
+#                                                  #
+#   THE CLASS PYGAMEHELPER IS NOT YET IMPLEMENTED  #
+#                                                  #
+####################################################
+
 class PygameHelper:
     
     @classmethod

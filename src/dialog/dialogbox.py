@@ -6,18 +6,20 @@ X_POS = 50
 Y_POS = 650
 
 WHITE = (255, 255, 255)
-FRONT_SIZE = 40
+FONT_SIZE = 40
+
+# TODO: Remove magic numbers and retreive the from a YAML or JSON config file
 
 class DialogBox:
     def __init__(self) -> None:
-        self.box = self.get_image(PathManager.dialogFile("dialogbox.png"), (68, 140, 203), (6, 16, 160, 64), (160,64))
+        self.box = self.get_image(PathManager.dialog_file("dialogbox.png"), (68, 140, 203), (6, 16, 160, 64), (160,64))
         self.box = pygame.transform.scale(self.box, (700, 300))
-        self.portrait = self.get_image(PathManager.dialogFile("portraits.png"), (255, 174, 201), (171, 607, 64, 64), (64, 64))
+        self.portrait = self.get_image(PathManager.dialog_file("portraits.png"), (255, 174, 201), (171, 607, 64, 64), (64, 64))
         self.portrait = pygame.transform.scale(self.portrait, (300, 300))
         self.texts = ["KAKAROT !!!", "I want my revenge !!"]
         self.text_idx = 0
         self.letter_idx = 0
-        self.font = pygame.font.Font(PathManager.dialogFile("dialog_font.ttf"), FRONT_SIZE)
+        self.font = pygame.font.Font(PathManager.dialog_file("dialog_font.ttf"), FONT_SIZE)
         self.isBoxOpened = False
         
     def render(self, screen):
@@ -30,7 +32,7 @@ class DialogBox:
             screen.blit(text, (X_POS + 30, Y_POS + 20))
             screen.blit(self.portrait, (X_POS + 700, Y_POS))
     
-    def get_image(self, img_path: str, bg : tuple, pos : tuple, size :tuple) -> pygame.Surface:
+    def get_image(self, img_path: str, bg: tuple, pos: tuple, size: tuple) -> pygame.Surface:
         full_img = pygame.image.load(img_path)
         img = pygame.Surface(size)
         img.blit(full_img, (0, 0), pos)

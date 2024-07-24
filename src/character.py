@@ -7,7 +7,7 @@ class Character(Animation):
         
         # self.hp = hp
         # self.ki = ki
-        self.speed = 5
+        self.speed = 0
         self.position = [pos_x, pos_y]
         self.rect = self.image.get_rect()
         self.feet = pygame.Rect(0, 0, self.rect.width / 4, 4)
@@ -35,8 +35,7 @@ class Character(Animation):
             self.position[1] += self.speed
 
         elif(self.side == "Up"):
-            self.position[1] -= self.speed
-            
+            self.position[1] -= self.speed      
         else:
             pass
     
@@ -45,6 +44,14 @@ class Character(Animation):
             
     def animate(self, animation_macro, animation_nbr):
         super().animate(animation_macro, animation_nbr)
+        macro, side = animation_macro.split()
+        if macro == "Walk":
+            self.speed = 1
+            self.move(side)
+        elif macro == "Run":
+            self.speed = 2
+            self.move(side)
+        # TODO: Implement Attack
 
     def save_location(self):
         self.old_position = self.position.copy()

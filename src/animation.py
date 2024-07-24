@@ -1,14 +1,15 @@
 import pygame
 import json
-from pathlib import Path
+import os
 from pathmanager import PathManager
+from utils.config import Config
               
 class Animation(pygame.sprite.Sprite):
     def __init__(self, name):
         super().__init__()
-        self.json_file = PathManager.character_json_path(name)
+        self.json_file = PathManager.character_json_path(name, "base")
         self.character_name = self.parse_data(self.json_file, "Character")
-        self.sprit_sheet =  pygame.image.load(PathManager.dir() / self.parse_data(self.json_file, "Image path"))
+        self.sprit_sheet =  pygame.image.load(os.path.join(Config.ROOT_DIR, self.parse_data(self.json_file, "Image path")))
         self.animations = self.parse_data(self.json_file, "Animations")
         self.current_animation_index = 0
         self.animation_name = "IDLE Down"
@@ -16,7 +17,7 @@ class Animation(pygame.sprite.Sprite):
         self.images = []
         self.rect = self.image.get_rect()
         self.clock = 0
-        
+        self.clock_speed = Config.CLOCK_SPEED   
 
     def parse_data(self, json_file, key):
         with open(json_file) as file:
@@ -52,8 +53,8 @@ class Animation(pygame.sprite.Sprite):
         if "Left" in animation_macro:
             self.image = pygame.transform.flip(self.image, True, False)
         
-        self.clock += 14
-        if self.clock >= 100:
+        self.clock += self.clock_speed
+        if self.clock >= Config.CLOCK_LIMIT:
             self.current_animation_index += 1
 
             if(self.current_animation_index == len(self.images)):
