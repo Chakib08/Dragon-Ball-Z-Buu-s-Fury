@@ -40,7 +40,7 @@ class Menu:
         image_options_rect.center = (680, resolution[1] / 1.35)
         
         image_arrow_rect = self.image_arrow.get_rect()
-        image_arrow_rect.center = (570, resolution[1] / 1.35)
+        #image_arrow_rect.center = (570, resolution[1] / 1.35)
         
         screen.blit(self.image_menu, (0, 0))
         screen.blit(self.image_start, image_start_rect.topleft)
@@ -51,17 +51,25 @@ class Menu:
         if self.arrow_visible and current_time - self.arrow_last_time >= 200:
             self.arrow_visible = False
         
-        if self.arrow_visible:
-            screen.blit(self.image_arrow, image_arrow_rect.topleft)
+        # if self.arrow_visible:
+        #     screen.blit(self.image_arrow, image_arrow_rect.topleft)
         
         for event in events:
             if event.type == pygame.MOUSEMOTION:
                 if image_start_rect.collidepoint(event.pos):
                     self.image_start = pygame.image.load(PathManager.menu_image_path("start-active.png"))
+                    if self.arrow_visible:
+                        image_arrow_rect.center = (570, resolution[1] / 1.5)
+                        screen.blit(self.image_arrow, image_arrow_rect.topleft)
+
                 else:
                     self.image_start = pygame.image.load(PathManager.menu_image_path("start-inactive.png"))
                 if image_options_rect.collidepoint(event.pos):
                     self.image_options = pygame.image.load(PathManager.menu_image_path("options-active.png"))
+                    if self.arrow_visible:
+                        image_arrow_rect.center = (570, resolution[1] / 1.35)
+                        screen.blit(self.image_arrow, image_arrow_rect.topleft)
+
                 else:
                     self.image_options = pygame.image.load(PathManager.menu_image_path("options-inactive.png"))
             elif event.type == pygame.MOUSEBUTTONDOWN:
