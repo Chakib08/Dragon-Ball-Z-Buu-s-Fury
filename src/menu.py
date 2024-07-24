@@ -12,6 +12,11 @@ class Menu:
         # Start and options
         self.image_start = pygame.image.load(PathManager.menu_image_path("start-inactive.png"))
         self.image_options = pygame.image.load(PathManager.menu_image_path("options-inactive.png"))
+
+        # Arrow selector image
+        self.image_arrow = pygame.image.load(PathManager.menu_image_path("arrow.png"))
+        self.image_arrow = pygame.transform.scale(self.image_arrow, (50, 50))
+
         
         self.isPlaying = False
         
@@ -19,15 +24,20 @@ class Menu:
         # Set up the start image rect
         image_start_rect = self.image_start.get_rect()
         image_start_rect.center = (
-            resolution[0] / 2, resolution[1] / 1.5)
+            680, resolution[1] / 1.5)
 
         image_options_rect = self.image_options.get_rect()
         image_options_rect.center = (
-            resolution[0] / 2, resolution[1] / 1.42)
+            680, resolution[1] / 1.35)
+        
+        image_arrow_rect = self.image_arrow.get_rect()
+        image_arrow_rect.center = (
+            570, resolution[1] / 1.35)
         
         screen.blit(self.image_menu, (0, 0))
         screen.blit(self.image_start, image_start_rect.topleft)
         screen.blit(self.image_options, image_options_rect.topleft)
+        screen.blit(self.image_arrow, image_arrow_rect.topleft)
         
         for event in events:
             if event.type == pygame.MOUSEMOTION:
