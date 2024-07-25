@@ -10,12 +10,10 @@ ARROW_BLIT_EVENT = pygame.USEREVENT + 1
 class State(Enum):
     START = 1
     OPTIONS = 2
-    
+
+# TODO: Remove magic numbers, retreive the latters from config.yaml   
 class Menu:
     def __init__(self, resolution) -> None:
-        # Initialize Pygame and set up the timer for the arrow blit event
-        pygame.init()
-        
         # Main menu image
         self.menu_image = pygame.image.load(PathManager.menu_image_path("menu_image_box.png"))
         self.menu_image = pygame.transform.scale(self.menu_image, resolution)
@@ -41,13 +39,13 @@ class Menu:
     def launch_menu(self, screen: pygame.Surface, resolution: tuple, events: List[pygame.event.Event]) -> None:
         # Set up the start image rect
         image_start_rect = self.start_image.get_rect()
-        image_start_rect.center = (680, resolution[1] / 1.5)
-
+        image_start_rect.center = (resolution[0] - 520, resolution[1] / 1.5)
+        # Set up the options image rect
         image_options_rect = self.options_image.get_rect()
-        image_options_rect.center = (680, resolution[1] / 1.35)
-        
+        image_options_rect.center = (resolution[0] - 520, resolution[1] / 1.35)
+        # Set up the arrow image rect
         image_arrow_rect = self.arrow_image.get_rect()
-        
+        # Blit images
         screen.blit(self.menu_image, (0, 0))
         screen.blit(self.start_image, image_start_rect.topleft)
         screen.blit(self.options_image, image_options_rect.topleft)
@@ -56,7 +54,8 @@ class Menu:
         current_time = pygame.time.get_ticks()
         if self.arrow_visible and current_time - self.arrow_last_time >= 200:
             self.arrow_visible = False
-            
+        
+        # Update Start and Options color according to the user selection    
         if self.state == State.START:
                 self.start_image = pygame.image.load(PathManager.menu_image_path("start-active.png"))
                 self.options_image = pygame.image.load(PathManager.menu_image_path("options-inactive.png"))
@@ -64,14 +63,14 @@ class Menu:
             self.start_image = pygame.image.load(PathManager.menu_image_path("start-inactive.png"))
             self.options_image = pygame.image.load(PathManager.menu_image_path("options-active.png"))
             
-        
+        # Blit the arrow image according to the selected state
         if self.arrow_visible:
             if self.state == State.START:
                 image_arrow_rect.center = (590, resolution[1] / 1.5)
             elif self.state == State.OPTIONS:
                 image_arrow_rect.center = (565, resolution[1] / 1.35)
             screen.blit(self.arrow_image, image_arrow_rect.topleft)
-                
+        # Handle events according to the player selection        
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_UP:
