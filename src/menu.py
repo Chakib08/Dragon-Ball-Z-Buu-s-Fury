@@ -23,6 +23,7 @@ class Menu:
         self.image_arrow = pygame.transform.scale(self.image_arrow, (50, 50))
         
         self.isPlaying = False
+        self.selection = "start"
         
         # Set the timer to trigger the event every second (1000 milliseconds)
         pygame.time.set_timer(ARROW_BLIT_EVENT, 500)
@@ -40,7 +41,6 @@ class Menu:
         image_options_rect.center = (680, resolution[1] / 1.35)
         
         image_arrow_rect = self.image_arrow.get_rect()
-        #image_arrow_rect.center = (570, resolution[1] / 1.35)
         
         screen.blit(self.image_menu, (0, 0))
         screen.blit(self.image_start, image_start_rect.topleft)
@@ -50,31 +50,32 @@ class Menu:
         current_time = pygame.time.get_ticks()
         if self.arrow_visible and current_time - self.arrow_last_time >= 200:
             self.arrow_visible = False
+            
+        if self.selection == "start":
+                self.image_start = pygame.image.load(PathManager.menu_image_path("start-active.png"))
+                self.image_options = pygame.image.load(PathManager.menu_image_path("options-inactive.png"))
+        elif self.selection == "options":
+            self.image_start = pygame.image.load(PathManager.menu_image_path("start-inactive.png"))
+            self.image_options = pygame.image.load(PathManager.menu_image_path("options-active.png"))
+            
         
-        # if self.arrow_visible:
-        #     screen.blit(self.image_arrow, image_arrow_rect.topleft)
-        
+        if self.arrow_visible:
+            if self.selection == "start":
+                image_arrow_rect.center = (590, resolution[1] / 1.5)
+            elif self.selection == "options":
+                image_arrow_rect.center = (565, resolution[1] / 1.35)
+            else:
+                pass
+            screen.blit(self.image_arrow, image_arrow_rect.topleft)
+                
         for event in events:
-            if event.type == pygame.MOUSEMOTION:
-                if image_start_rect.collidepoint(event.pos):
-                    self.image_start = pygame.image.load(PathManager.menu_image_path("start-active.png"))
-                    if self.arrow_visible:
-                        image_arrow_rect.center = (570, resolution[1] / 1.5)
-                        screen.blit(self.image_arrow, image_arrow_rect.topleft)
-
-                else:
-                    self.image_start = pygame.image.load(PathManager.menu_image_path("start-inactive.png"))
-                if image_options_rect.collidepoint(event.pos):
-                    self.image_options = pygame.image.load(PathManager.menu_image_path("options-active.png"))
-                    if self.arrow_visible:
-                        image_arrow_rect.center = (570, resolution[1] / 1.35)
-                        screen.blit(self.image_arrow, image_arrow_rect.topleft)
-
-                else:
-                    self.image_options = pygame.image.load(PathManager.menu_image_path("options-inactive.png"))
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if image_start_rect.collidepoint(event.pos):
-                    self.isPlaying = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    self.selection = "start"
+                if event.key == pygame.K_RETURN and self.selection == "start":
+                    self.isPlaying = True   
+                elif event.key == pygame.K_DOWN:
+                    self.selection = "options"                                                 
             elif event.type == ARROW_BLIT_EVENT:
                 self.arrow_visible = True
                 self.arrow_last_time = current_time
