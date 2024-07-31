@@ -1,4 +1,5 @@
 from animation import Animation
+from utils.config import Config
 import pygame
 
 class Character(Animation):
@@ -46,11 +47,15 @@ class Character(Animation):
         super().animate(animation_macro, animation_nbr)
         macro, side = animation_macro.split()
         if macro == "Walk":
+            self.clock_speed = Config.CLOCK_SPEED
             self.speed = 1
             self.move(side)
         elif macro == "Run":
+            self.clock_speed = Config.CLOCK_SPEED
             self.speed = 2
             self.move(side)
+        elif macro == "Attack":
+            self.clock_speed = 20
         # TODO: Implement Attack
 
     def save_location(self):

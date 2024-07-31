@@ -45,10 +45,8 @@ class Animation(pygame.sprite.Sprite):
         return img
     
     def animate(self, animation_macro, animation_nbr):
-        self.images = []
-        for i in range(animation_nbr):
-            self.images.append(self.get_image_by_animation_name(animation_macro + " " + str(i)))
-
+        self.images = [self.get_image_by_animation_name(f"{animation_macro} {i}") for i in range(animation_nbr)]
+        
         self.image = self.images[self.current_animation_index]
         if "Left" in animation_macro:
             self.image = pygame.transform.flip(self.image, True, False)
@@ -56,11 +54,9 @@ class Animation(pygame.sprite.Sprite):
         self.clock += self.clock_speed
         if self.clock >= Config.CLOCK_LIMIT:
             self.current_animation_index += 1
-
-            if(self.current_animation_index == len(self.images)):
+            if self.current_animation_index >= len(self.images):
                 self.current_animation_index = 0
                 
-            # Retreive last Animation marco
             self.animation_name = animation_macro
             self.clock = 0
         

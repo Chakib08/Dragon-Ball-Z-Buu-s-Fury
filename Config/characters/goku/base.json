@@ -617,6 +617,856 @@
       },
 
       {   
+        "AnimationName": "Attack Up 0",
+        "x": 45,
+        "y": 262,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 1",
+        "x": 76,
+        "y": 260,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 2",
+        "x": 112,
+        "y": 260,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 3",
+        "x": 146,
+        "y": 260,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 4",
+        "x": 183,
+        "y": 258,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 27,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 5",
+        "x": 220,
+        "y": 257,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 22,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 6",
+        "x": 251,
+        "y": 256,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 33
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 7",
+        "x": 283,
+        "y": 257,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 8",
+        "x": 322,
+        "y": 253,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 22,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 9",
+        "x": 352,
+        "y": 253,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 10",
+        "x": 384,
+        "y": 253,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Up 11",
+        "x": 415,
+        "y": 253,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 21,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 0",
+        "x": 37,
+        "y": 164,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 1",
+        "x": 69,
+        "y": 165,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 2",
+        "x": 108,
+        "y": 168,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 28
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 3",
+        "x": 142,
+        "y": 167,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 29
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 4",
+        "x": 180,
+        "y": 164,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 5",
+        "x": 214,
+        "y": 164,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 6",
+        "x": 252,
+        "y": 165,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 7",
+        "x": 291,
+        "y": 166,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 8",
+        "x": 324,
+        "y": 164,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 9",
+        "x": 356,
+        "y": 165,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 10",
+        "x": 392,
+        "y": 168,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 28
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Down 11",
+        "x": 426,
+        "y": 167,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 29
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 0",
+        "x": 41,
+        "y": 211,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 1",
+        "x": 72,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 1",
+        "x": 72,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 2",
+        "x": 106,
+        "y": 213,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 29,
+          "Height": 29
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 3",
+        "x": 143,
+        "y": 211,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 4",
+        "x": 184,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 5",
+        "x": 214,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 6",
+        "x": 250,
+        "y": 212,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 7",
+        "x": 282,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 8",
+        "x": 320,
+        "y": 211,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 9",
+        "x": 351,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 22,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 10",
+        "x": 382,
+        "y": 213,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 28,
+          "Height": 29
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Right 11",
+        "x": 417,
+        "y": 211,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 0",
+        "x": 41,
+        "y": 211,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 1",
+        "x": 72,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 1",
+        "x": 72,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 2",
+        "x": 106,
+        "y": 213,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 29,
+          "Height": 29
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 3",
+        "x": 143,
+        "y": 211,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 4",
+        "x": 184,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 5",
+        "x": 214,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 26,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 6",
+        "x": 250,
+        "y": 212,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 30
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 7",
+        "x": 282,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 23,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 8",
+        "x": 320,
+        "y": 211,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 24,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 9",
+        "x": 351,
+        "y": 210,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 22,
+          "Height": 32
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 10",
+        "x": 382,
+        "y": 213,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 28,
+          "Height": 29
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
+        "AnimationName": "Attack Left 11",
+        "x": 417,
+        "y": 211,
+        "Area Width": 32,
+        "Area Height": 32,
+        "Size": {
+          "Width": 25,
+          "Height": 31
+        },
+        "Background": {
+          "R": 0,
+          "G": 156,
+          "B": 255
+        }
+      },
+
+      {   
         "AnimationName": "Transform SSJ Down 0",
         "x": 6,
         "y": 377,

@@ -1,6 +1,7 @@
 import pygame
 import pytmx
 import pyscroll
+from typing import List
 
 from pathmanager import PathManager
 from saiyan import Saiyan
@@ -44,10 +45,12 @@ class Game:
             pygame.mixer.music.play(-1)  # Play music indefinitely
         else:
             pygame.mixer.music.stop()
+    
 
-    def keyBoard_input(self):
+    def keyBoard_input(self, events: List[pygame.event.Event]):
         isPressed = pygame.key.get_pressed()
 
+        # Character movement
         if isPressed[pygame.K_UP]:
             if isPressed[pygame.K_SPACE]:
                 self.character.animate("Run Up", walk_animation_nbr)
@@ -68,24 +71,32 @@ class Game:
                 self.character.animate("Run Left", walk_animation_nbr)
             else:
                 self.character.animate("Walk Left", walk_animation_nbr)
+                
+        # Character attacks
+        elif isPressed[pygame.K_a]:
+            if "Up" in self.character.animation_name:
+                self.character.animate("Attack Up", 12)
+            elif "Down" in self.character.animation_name:
+                self.character.animate("Attack Down", 12)
+            elif "Right" in self.character.animation_name:
+                self.character.animate("Attack Right", 12)
+            elif "Left" in self.character.animation_name:
+                self.character.animate("Attack Left", 12)
+        
         else:
             self.character.images = []  # Reset the animation frames
             self.character.current_animation_index = 0
-            if self.character.isTransofrmed == False:
+            if not self.character.isTransofrmed:
                 if "Down" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name(
-                        "IDLE Down")
+                    self.character.image = self.character.get_image_by_animation_name("IDLE Down")
                 elif "Right" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name(
-                        "IDLE Right")
+                    self.character.image = self.character.get_image_by_animation_name("IDLE Right")
                 elif "Left" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name(
-                        "IDLE Left")
-                    self.character.image = pygame.transform.flip(
-                        self.character.image, True, False)
+                    self.character.image = self.character.get_image_by_animation_name("IDLE Left")
+                    self.character.image = pygame.transform.flip(self.character.image, True, False)
                 else:
-                    self.character.image = self.character.get_image_by_animation_name(
-                        "IDLE Up")
+                    self.character.image = self.character.get_image_by_animation_name("IDLE Up")
+
 
 
     def update(self):
@@ -125,7 +136,7 @@ class Game:
                     self.play_music(self.map_manager.current_music)
                 self.character.save_location()
                 if self.map_manager.input_enabled:
-                    self.keyBoard_input()
+                    self.keyBoard_input(events)
 
             # Common events
             for event in events:
