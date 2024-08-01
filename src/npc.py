@@ -1,10 +1,11 @@
-from character import Character
 import pygame
+
+from character import Character
+from constants import *
 
 class NPC(Character):
     def __init__(self, pos_x, pos_y, isTransformed, name, nb_points, dialog_texts):
         super().__init__(pos_x, pos_y, name)
-
         self.isTransofrmed = isTransformed
         self.rect = self.image.get_rect()
         self.name = name
@@ -40,25 +41,25 @@ class NPC(Character):
 
         if current_rect.y < target_rect.y and abs(current_rect.x - target_rect.x) < 20:
             if self.speed == 0:
-                self.image = self.get_image_by_animation_name("IDLE Down")
+                self.image = self.get_image_by_animation_name(C_IDLE_DOWN)
             else:
-                self.animate("Walk Down", 4)
+                self.move(C_WALK_DOWN, C_WALK_ANIMATION_COUNT)
         elif current_rect.y > target_rect.y and abs(current_rect.x - target_rect.x) < 20:
             if self.speed == 0:
-                self.image = self.get_image_by_animation_name("IDLE Up")
+                self.image = self.get_image_by_animation_name(C_IDLE_UP)
             else:
-                self.animate("Walk Up", 4)
+                self.move(C_WALK_UP, C_WALK_ANIMATION_COUNT)
         elif current_rect.x > target_rect.x and abs(current_rect.y - target_rect.y) < 20:
             if self.speed == 0:
-                self.image = self.get_image_by_animation_name("IDLE Left")
+                self.image = self.get_image_by_animation_name(C_IDLE_LEFT)
                 self.image = pygame.transform.flip(self.image, True, False)
             else:
-                self.animate("Walk Left", 4)
+                self.move(C_WALK_LEFT, C_WALK_ANIMATION_COUNT)
         elif current_rect.x < target_rect.x and abs(current_rect.y - target_rect.y) < 20:
             if self.speed == 0:
-                self.image = self.get_image_by_animation_name("IDLE Right")
+                self.image = self.get_image_by_animation_name(C_IDLE_RIGHT)
             else:
-                self.animate("Walk Right", 4)
+                self.move(C_WALK_RIGHT, C_WALK_ANIMATION_COUNT)
 
         if self.rect.colliderect(target_rect):
             self.current_point = target_point

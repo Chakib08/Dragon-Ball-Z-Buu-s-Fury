@@ -9,12 +9,8 @@ from menu import Menu
 from map import MapManager
 from dialog.dialogbox import DialogBox
 from utils.config import Config
-
-#TODO : Remove Global variables
-
-# Define all constants here
-walk_animation_nbr = 4
-transform_ssj_nbr = 12
+from constants import *
+from animation import AnimationType, AnimationDirection
 
 class Game:
     def __init__(self, resolution, caption):
@@ -53,49 +49,49 @@ class Game:
         # Character movement
         if isPressed[pygame.K_UP]:
             if isPressed[pygame.K_SPACE]:
-                self.character.animate("Run Up", walk_animation_nbr)
+                self.character.move(C_RUN_UP, C_RUN_ANIMATION_COUNT)
             else:
-                self.character.animate("Walk Up", walk_animation_nbr)
+                self.character.move(C_WALK_UP, C_WALK_ANIMATION_COUNT)
         elif isPressed[pygame.K_DOWN]:
             if isPressed[pygame.K_SPACE]:
-                self.character.animate("Run Down", walk_animation_nbr)
+                self.character.move(C_RUN_DOWN, C_RUN_ANIMATION_COUNT)
             else:
-                self.character.animate("Walk Down", walk_animation_nbr)
+                self.character.move(C_WALK_DOWN, C_WALK_ANIMATION_COUNT)
         elif isPressed[pygame.K_RIGHT]:
             if isPressed[pygame.K_SPACE]:
-                self.character.animate("Run Right", walk_animation_nbr)
+                self.character.move(C_RUN_RIGHT, C_RUN_ANIMATION_COUNT)
             else:
-                self.character.animate("Walk Right", walk_animation_nbr)
+                self.character.move(C_WALK_RIGHT, C_WALK_ANIMATION_COUNT)
         elif isPressed[pygame.K_LEFT]:
             if isPressed[pygame.K_SPACE]:
-                self.character.animate("Run Left", walk_animation_nbr)
+                self.character.move(C_RUN_LEFT, C_RUN_ANIMATION_COUNT)
             else:
-                self.character.animate("Walk Left", walk_animation_nbr)
+                self.character.move(C_WALK_LEFT, C_WALK_ANIMATION_COUNT)
                 
         # Character attacks
         elif isPressed[pygame.K_a]:
-            if "Up" in self.character.animation_name:
-                self.character.animate("Attack Up", 12)
-            elif "Down" in self.character.animation_name:
-                self.character.animate("Attack Down", 12)
-            elif "Right" in self.character.animation_name:
-                self.character.animate("Attack Right", 12)
-            elif "Left" in self.character.animation_name:
-                self.character.animate("Attack Left", 12)
+            if AnimationDirection.UP.value in self.character.animation_name:
+                self.character.attack(C_ATTACK_UP, C_ATTACK_ANIMATION_COUNT)
+            elif AnimationDirection.DOWN.value in self.character.animation_name:
+                self.character.attack(C_ATTACK_DOWN, C_ATTACK_ANIMATION_COUNT)
+            elif AnimationDirection.RIGHT.value in self.character.animation_name:
+                self.character.attack(C_ATTACK_RIGHT, C_ATTACK_ANIMATION_COUNT)
+            elif AnimationDirection.LEFT.value in self.character.animation_name:
+                self.character.attack(C_ATTACK_LEFT, C_ATTACK_ANIMATION_COUNT)
         
         else:
             self.character.images = []  # Reset the animation frames
             self.character.current_animation_index = 0
             if not self.character.isTransofrmed:
-                if "Down" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE Down")
-                elif "Right" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE Right")
-                elif "Left" in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE Left")
+                if AnimationDirection.DOWN.value in self.character.animation_name:
+                    self.character.image = self.character.get_image_by_animation_name(C_IDLE_DOWN)
+                elif AnimationDirection.RIGHT.value in self.character.animation_name:
+                    self.character.image = self.character.get_image_by_animation_name(C_IDLE_RIGHT)
+                elif AnimationDirection.LEFT.value in self.character.animation_name:
+                    self.character.image = self.character.get_image_by_animation_name(C_IDLE_LEFT)
                     self.character.image = pygame.transform.flip(self.character.image, True, False)
                 else:
-                    self.character.image = self.character.get_image_by_animation_name("IDLE Up")
+                    self.character.image = self.character.get_image_by_animation_name(C_IDLE_UP)
 
 
 

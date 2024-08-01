@@ -1,8 +1,21 @@
 import pygame
 import json
 import os
+from enum import Enum
+
 from pathmanager import PathManager
 from utils.config import Config
+ 
+class AnimationType(Enum):
+    WALK = "Walk"
+    RUN = "Run"
+    ATTACK = "Attack"
+    
+class AnimationDirection(Enum):
+    UP = "Up"
+    DOWN = "Down"
+    LEFT = "Left"
+    RIGHT = "Right"
               
 class Animation(pygame.sprite.Sprite):
     def __init__(self, name):
