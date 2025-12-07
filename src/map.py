@@ -185,7 +185,7 @@ class MapManager:
         else:
             self.isMusicChanged = True
         
-        
+        # Handle NPC animations      
         for npc in self.get_map().npcs:
             npc.move_npc()
         
