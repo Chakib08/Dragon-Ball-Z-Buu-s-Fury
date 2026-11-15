@@ -11,7 +11,7 @@ class State(Enum):
     START = 1
     OPTIONS = 2
 
-# TODO: Remove magic numbers, retreive the latters from config.yaml   
+# TODO: Remove magic numbers, retreive the latters from the app config
 class Menu:
     def __init__(self, resolution) -> None:
         # Main menu image

@@ -13,6 +13,8 @@ The purpose of this repository is to reproduce Dragon Ball Z Buu's Fury from Gam
 Install pip if it's not already installed and install the requirements using pip
 `$ pip3 install -r requirements.txt`
 
+Application settings are stored in `Config/config.json`.
+
 Launch the game
 `cd Dragon-Ball-Z-Buu-s-Fury/`
 `python3 src/main.py`

@@ -22,6 +22,14 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
+      - name: Check out python-for-android
+        uses: actions/checkout@v4
+        with:
+          repository: kivy/python-for-android
+          ref: 5865575d81d53617784428ee29f57be2716311ea
+          path: .p4a
+          fetch-depth: 0
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:

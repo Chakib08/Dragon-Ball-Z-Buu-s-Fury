@@ -1,0 +1,15 @@
+{
+  "caption": "Dragon Ball Z Buu's Fury Pygame DP FAN Remake",
+  "resolution": {
+    "width": 1200,
+    "heigth": 1000
+  },
+  "MAP_DIR": "Graphics/maps/",
+  "CONFIG_DIR": "Config/characters/",
+  "MENU_DIR": "Graphics/menu/",
+  "SOUNDS_DIR": "Sounds/",
+  "DIALOG_DIR": "Graphics/dialog/",
+  "CLOCK_SPEED": 14,
+  "CLOCK_LIMIT": 100,
+  "FPS": 60
+}

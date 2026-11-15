@@ -1,16 +1,16 @@
 import os
 import sys
-import yaml
+import json
 
 class Config:
-    CONFIG_FILE = 'Config/config.yaml'
+    CONFIG_FILE = 'Config/config.json'
     
     @classmethod
     def load_config(cls):
         config_path = cls.get_filename(cls.CONFIG_FILE)
         if os.path.exists(config_path):
             with open(config_path, 'r') as file:
-                cls.config_data = yaml.safe_load(file)
+                cls.config_data = json.load(file)
         else:
             cls.config_data = {}
     
@@ -32,7 +32,7 @@ class Config:
     
     @classmethod
     def init(cls):
-        # Load config.yaml 
+        # Load application settings
         cls.load_config()
                 
         # Retreive window settings
