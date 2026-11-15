@@ -25,6 +25,7 @@ class Animation(pygame.sprite.Sprite):
         self.sprit_sheet =  pygame.image.load(os.path.join(Config.ROOT_DIR, self.parse_data(self.json_file, "Image path")))
         self.animations = self.parse_data(self.json_file, "Animations")
         self.current_animation_index = 0
+        self.current_animation_macro = None
         self.animation_name = "IDLE Down"
         self.image = self.get_image_by_animation_name(self.animation_name)
         self.images = []
@@ -61,8 +62,22 @@ class Animation(pygame.sprite.Sprite):
         return img
     
     def animate(self, animation_macro, animation_nbr):
-        self.images = [self.get_image_by_animation_name(f"{animation_macro} {i}") for i in range(animation_nbr)]
-        
+        if self.current_animation_macro != animation_macro:
+            self.images = [
+                self.get_image_by_animation_name(f"{animation_macro} {i}")
+                for i in range(animation_nbr)
+            ]
+            self.current_animation_macro = animation_macro
+            self.current_animation_index = 0
+            self.clock = 0
+        elif len(self.images) != animation_nbr:
+            self.images = [
+                self.get_image_by_animation_name(f"{animation_macro} {i}")
+                for i in range(animation_nbr)
+            ]
+            self.current_animation_index %= len(self.images)
+
+        self.animation_name = animation_macro
         self.image = self.images[self.current_animation_index]
         if "Left" in animation_macro:
             self.image = pygame.transform.flip(self.image, True, False)
@@ -73,7 +88,6 @@ class Animation(pygame.sprite.Sprite):
             if self.current_animation_index >= len(self.images):
                 self.current_animation_index = 0
                 
-            self.animation_name = animation_macro
             self.clock = 0
         
 

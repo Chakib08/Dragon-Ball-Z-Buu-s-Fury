@@ -39,3 +39,4 @@ buildozer android debug
 - **Attacking**: Press **A** or the on-screen **A** button.
 - **Talking to NPCs**: Press **T** or the on-screen **T** button while near an NPC.
 - **Menu**: Select Start or Options with the keyboard or tap. Options shows the control guide; press Esc or tap to return.
+- **Combat resources**: The HUD shows HP and KI (mana). Attacks cost KI, which regenerates over time; nearby hostile NPCs pursue and attack back.

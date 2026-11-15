@@ -15,6 +15,11 @@ class Character(Animation):
         self.rect = self.image.get_rect()
         self.feet = pygame.Rect(0, 0, self.rect.width / 4, 4)
         self.old_position = self.position.copy()
+        self.max_hp = 100
+        self.hp = self.max_hp
+        self.max_ki = 100
+        self.ki = self.max_ki
+        self.facing = AnimationDirection.DOWN.value
         
     def update(self):
         self.rect.topleft = self.position
@@ -27,6 +32,7 @@ class Character(Animation):
     
     def move(self, animation_macro, animation_count, movement=None):
         macro, side = animation_macro.split()
+        self.facing = side
         if macro == AnimationType.WALK.value:
             self.clock_speed = Config.CLOCK_SPEED
             self.speed = 1
@@ -54,19 +60,25 @@ class Character(Animation):
         
     def attack(self, animation_macro, animation_count):
         macro, side = animation_macro.split()
+        self.facing = side
         if not self.has_animation(f"{animation_macro} 0"):
             self.images = []
+            self.current_animation_macro = None
             self.current_animation_index = 0
+            self.clock = 0
             self.image = self.get_image_by_animation_name(f"IDLE {side}")
             if side == AnimationDirection.LEFT.value:
                 self.image = pygame.transform.flip(self.image, True, False)
             self.animation_name = f"IDLE {side}"
             return
 
-        self.animate(animation_macro, animation_count)
         if macro is not None and macro == AnimationType.ATTACK.value:
             self.clock_speed = 20
+        self.animate(animation_macro, animation_count)
 
     def save_location(self):
         self.old_position = self.position.copy()
+
+    def take_damage(self, amount):
+        self.hp = max(0, self.hp - amount)
         

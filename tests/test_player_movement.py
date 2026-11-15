@@ -30,6 +30,17 @@ class PlayerMovementTests(unittest.TestCase):
         self.assertAlmostEqual(character.position[1] - 20, 2 ** -0.5)
         self.assertEqual(character.old_position, [10, 20])
 
+    def test_animation_and_facing_update_immediately_when_direction_changes(self):
+        character = Character(10, 20, "goku")
+        character.move("Walk Right", 4)
+
+        self.assertEqual(character.animation_name, "Walk Right")
+        self.assertEqual(character.facing, "Right")
+
+        character.move("Walk Up", 4)
+        self.assertEqual(character.animation_name, "Walk Up")
+        self.assertEqual(character.facing, "Up")
+
     def test_all_roster_characters_support_movement_and_safe_attacks(self):
         for name in ("goku", "goten", "vegeta", "gohan"):
             with self.subTest(character=name):
