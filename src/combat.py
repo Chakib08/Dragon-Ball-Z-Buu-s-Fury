@@ -4,6 +4,7 @@ import heapq
 import pygame
 
 from animation import AnimationDirection
+from constants import C_ATTACK_ANIMATION_COUNT
 from movement import resolve_movement_collisions
 
 
@@ -51,6 +52,9 @@ class CombatSystem:
                 npc.chase_path = []
                 npc.chase_target = None
                 npc.chase_stuck_frames = 0
+                if was_engaged:
+                    # The player got away: go back to the patrol path
+                    npc.resume_patrol()
                 continue
 
             if not was_engaged:
@@ -62,6 +66,8 @@ class CombatSystem:
             if self._npc_in_attack_range(npc):
                 npc.chase_stuck_frames = 0
                 npc.chase_path = []
+                # Keep fighting (animated) even when the player stands still
+                npc.attack(f"Attack {npc.facing}", C_ATTACK_ANIMATION_COUNT)
                 if now - npc.last_attack_ms >= npc.attack_cooldown_ms:
                     npc.last_attack_ms = now
                     self.player.take_damage(npc.attack_damage)

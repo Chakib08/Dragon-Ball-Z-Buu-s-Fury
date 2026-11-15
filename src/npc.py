@@ -1,3 +1,5 @@
+import math
+
 import pygame
 
 from character import Character
@@ -38,45 +40,59 @@ class NPC(Character):
             self.save_location()
 
 
+    # Distance (in pixels) under which the NPC considers a patrol point reached
+    PATROL_ARRIVAL_DISTANCE = 2
+
+    def _target_index(self):
+        return (self.current_point + 1) % len(self.points)
+
+    def resume_patrol(self):
+        """Head back to the closest patrol point (called when a fight is over).
+
+        After a chase the NPC can be far away from its path. The patrol logic
+        steers toward the next waypoint from the NPC's *actual* position, so it
+        just needs to know which waypoint to go back to.
+        """
+        if not self.points:
+            return
+        nearest = min(
+            range(len(self.points)),
+            key=lambda index: math.hypot(
+                self.points[index].x - self.position[0],
+                self.points[index].y - self.position[1],
+            ),
+        )
+        # current_point is the last point reached, the target is the next one
+        self.current_point = (nearest - 1) % len(self.points)
+
+    def _face_idle(self, direction):
+        self.facing = direction
+        self.image = self.get_image_by_animation_name(f"IDLE {direction}")
+        if direction == "Left":
+            self.image = pygame.transform.flip(self.image, True, False)
+
     def move_npc(self):
+        """Walk the patrol path, independently of what the player is doing."""
         if self.is_defeated or self.combat_engaged or not self.points:
             return
 
-        current_point = self.current_point
-        target_point = current_point + 1
+        # Stand still while touching the player (so he can be talked to)
+        if self.speed == 0:
+            self._face_idle(self.facing)
+            return
 
-        # Ensure target_point is within the bounds of the points list
-        if target_point >= len(self.points):
-            target_point = 0  # Reset to the first point or handle appropriately
+        target_rect = self.points[self._target_index()]
+        # The patrol points are expressed in the same coordinates as the
+        # sprite position (see teleport_spawn), so steer from the real position
+        dx = target_rect.x - self.position[0]
+        dy = target_rect.y - self.position[1]
 
-        current_rect = self.points[current_point]
-        target_rect = self.points[target_point]
+        if math.hypot(dx, dy) <= self.PATROL_ARRIVAL_DISTANCE:
+            self.current_point = self._target_index()
+            return
 
-        if current_rect.y < target_rect.y and abs(current_rect.x - target_rect.x) < 20:
-            if self.speed == 0:
-                self.image = self.get_image_by_animation_name(C_IDLE_DOWN)
-                self.facing = "Down"
-            else:
-                self.move(C_WALK_DOWN, C_WALK_ANIMATION_COUNT)
-        elif current_rect.y > target_rect.y and abs(current_rect.x - target_rect.x) < 20:
-            if self.speed == 0:
-                self.image = self.get_image_by_animation_name(C_IDLE_UP)
-                self.facing = "Up"
-            else:
-                self.move(C_WALK_UP, C_WALK_ANIMATION_COUNT)
-        elif current_rect.x > target_rect.x and abs(current_rect.y - target_rect.y) < 20:
-            if self.speed == 0:
-                self.image = self.get_image_by_animation_name(C_IDLE_LEFT)
-                self.image = pygame.transform.flip(self.image, True, False)
-                self.facing = "Left"
-            else:
-                self.move(C_WALK_LEFT, C_WALK_ANIMATION_COUNT)
-        elif current_rect.x < target_rect.x and abs(current_rect.y - target_rect.y) < 20:
-            if self.speed == 0:
-                self.image = self.get_image_by_animation_name(C_IDLE_RIGHT)
-                self.facing = "Right"
-            else:
-                self.move(C_WALK_RIGHT, C_WALK_ANIMATION_COUNT)
-
-        if self.rect.colliderect(target_rect):
-            self.current_point = target_point
+        if abs(dx) >= abs(dy):
+            direction = "Right" if dx > 0 else "Left"
+        else:
+            direction = "Down" if dy > 0 else "Up"
+        self.move(f"Walk {direction}", C_WALK_ANIMATION_COUNT, (dx, dy))
