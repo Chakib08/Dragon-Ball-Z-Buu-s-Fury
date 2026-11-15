@@ -33,9 +33,8 @@ buildozer android debug
 
 ### Controls
 
-- **Movement**: 
-  - Use the arrow keys to walk in the corresponding direction.
-- **Running**: 
-  - Hold down the spacebar while pressing the arrow keys to run.
-- **Talking to NPCs**:
-  - Press the `T` key while near an NPC to initiate a conversation.
+- **Movement**: Use the arrow keys, or the on-screen D-pad on a touch device. Diagonal movement is supported.
+- **Running**: Hold Space while moving, or hold the on-screen **R** button.
+- **Attacking**: Press **A** or the on-screen **A** button.
+- **Talking to NPCs**: Press **T** or the on-screen **T** button while near an NPC.
+- **Menu**: Select Start or Options with the keyboard or tap. Options shows the control guide; press Esc or tap to return.

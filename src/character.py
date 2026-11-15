@@ -25,7 +25,7 @@ class Character(Animation):
         self.feet.midbottom = self.rect.midbottom
         #self.rect.topleft = self.rect.midbottom
     
-    def move(self, animation_macro, animation_count):
+    def move(self, animation_macro, animation_count, movement=None):
         macro, side = animation_macro.split()
         if macro == AnimationType.WALK.value:
             self.clock_speed = Config.CLOCK_SPEED
@@ -33,21 +33,24 @@ class Character(Animation):
         elif macro == AnimationType.RUN.value:
             self.clock_speed = Config.CLOCK_SPEED
             self.speed = 2
-            
+
+        if movement is None:
+            movement = {
+                AnimationDirection.RIGHT.value: (1, 0),
+                AnimationDirection.LEFT.value: (-1, 0),
+                AnimationDirection.DOWN.value: (0, 1),
+                AnimationDirection.UP.value: (0, -1),
+            }[side]
+
+        length = (movement[0] ** 2 + movement[1] ** 2) ** 0.5
+        if length == 0:
+            return
+
+        self.old_position = self.position.copy()
+        self.position[0] += movement[0] / length * self.speed
+        self.position[1] += movement[1] / length * self.speed
+
         self.animate(animation_macro, animation_count)
-
-        if(side == AnimationDirection.RIGHT.value):
-            self.position[0] += self.speed
-
-        elif(side == AnimationDirection.LEFT.value):
-            self.position[0] -= self.speed
-
-        elif(side == AnimationDirection.DOWN.value):
-            self.position[1] += self.speed
-
-        elif(side == AnimationDirection.UP.value):
-            self.position[1] -= self.speed
-        
         
     def attack(self, animation_macro, animation_count):
         macro, side = animation_macro.split()

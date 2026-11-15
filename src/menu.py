@@ -19,8 +19,20 @@ class Menu:
         self.menu_image = pygame.transform.scale(self.menu_image, resolution)
         
         # Start and options
-        self.start_image = pygame.image.load(PathManager.menu_image_path("start-inactive.png"))
-        self.options_image = pygame.image.load(PathManager.menu_image_path("options-inactive.png"))
+        self.menu_images = {
+            State.START: {
+                False: pygame.image.load(PathManager.menu_image_path("start-inactive.png")),
+                True: pygame.image.load(PathManager.menu_image_path("start-active.png")),
+            },
+            State.OPTIONS: {
+                False: pygame.image.load(PathManager.menu_image_path("options-inactive.png")),
+                True: pygame.image.load(PathManager.menu_image_path("options-active.png")),
+            },
+        }
+        self.start_image = self.menu_images[State.START][False]
+        self.options_image = self.menu_images[State.OPTIONS][False]
+        self.options_font = pygame.font.Font(None, 42)
+        self.options_title_font = pygame.font.Font(None, 58)
 
         # Arrow selector image
         self.arrow_image = pygame.image.load(PathManager.menu_image_path("arrow.png"))
@@ -45,6 +57,18 @@ class Menu:
         image_options_rect.center = (resolution[0] - 520, resolution[1] / 1.35)
         # Set up the arrow image rect
         image_arrow_rect = self.arrow_image.get_rect()
+        if self.state == State.OPTIONS:
+            self._draw_options(screen, resolution)
+            for event in events:
+                if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_RETURN):
+                    self.state = State.START
+                elif self._is_tap(event, resolution):
+                    self.state = State.START
+            return
+
+        self.start_image = self.menu_images[State.START][self.state == State.START]
+        self.options_image = self.menu_images[State.OPTIONS][self.state == State.OPTIONS]
+
         # Blit images
         screen.blit(self.menu_image, (0, 0))
         screen.blit(self.start_image, image_start_rect.topleft)
@@ -55,14 +79,6 @@ class Menu:
         if self.arrow_visible and current_time - self.arrow_last_time >= 200:
             self.arrow_visible = False
         
-        # Update Start and Options color according to the user selection    
-        if self.state == State.START:
-                self.start_image = pygame.image.load(PathManager.menu_image_path("start-active.png"))
-                self.options_image = pygame.image.load(PathManager.menu_image_path("options-inactive.png"))
-        elif self.state == State.OPTIONS:
-            self.start_image = pygame.image.load(PathManager.menu_image_path("start-inactive.png"))
-            self.options_image = pygame.image.load(PathManager.menu_image_path("options-active.png"))
-            
         # Blit the arrow image according to the selected state
         if self.arrow_visible:
             if self.state == State.START:
@@ -70,15 +86,52 @@ class Menu:
             elif self.state == State.OPTIONS:
                 image_arrow_rect.center = (565, resolution[1] / 1.35)
             screen.blit(self.arrow_image, image_arrow_rect.topleft)
-        # Handle events according to the player selection        
+        # Handle keyboard and touch selection.
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP:
+                if event.key in (pygame.K_UP, pygame.K_w):
                     self.state = State.START
                 if event.key == pygame.K_RETURN and self.state == State.START:
                     self.isPlaying = True   
-                elif event.key == pygame.K_DOWN:
+                elif event.key in (pygame.K_DOWN, pygame.K_s):
                     self.state = State.OPTIONS                                                 
             elif event.type == ARROW_BLIT_EVENT:
                 self.arrow_visible = True
                 self.arrow_last_time = current_time
+            elif self._is_tap(event, resolution):
+                position = self._event_position(event, resolution)
+                if image_start_rect.collidepoint(position):
+                    self.state = State.START
+                    self.isPlaying = True
+                elif image_options_rect.collidepoint(position):
+                    self.state = State.OPTIONS
+
+    def _draw_options(self, screen, resolution):
+        screen.blit(self.menu_image, (0, 0))
+        lines = [
+            "Controls",
+            "Move: Arrow keys or on-screen D-pad",
+            "Run: Hold Space or the R button",
+            "Attack: A key or the A button",
+            "Talk: T key or the T button",
+            "Press Esc or tap to return",
+        ]
+        y = resolution[1] * 0.30
+        for index, line in enumerate(lines):
+            font = self.options_title_font if index == 0 else self.options_font
+            color = (255, 230, 120) if index == 0 else (255, 255, 255)
+            text = font.render(line, True, color)
+            screen.blit(text, text.get_rect(center=(resolution[0] / 2, y)))
+            y += 68 if index == 0 else 52
+
+    @staticmethod
+    def _is_tap(event, resolution):
+        return (
+            event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
+        ) or event.type == pygame.FINGERDOWN
+
+    @staticmethod
+    def _event_position(event, resolution):
+        if event.type == pygame.FINGERDOWN:
+            return event.x * resolution[0], event.y * resolution[1]
+        return event.pos

@@ -128,16 +128,38 @@ class MapManager:
                         self.input_enabled = False
                         break  # Exit after first valid portal collision
 
-            # Handle collisions
+            # Handle collisions and slide along walls instead of undoing the whole step.
+            x, y = self.character.position
+            old_x, old_y = self.character.old_position
+            foot_width = self.character.feet.width
+            foot_height = self.character.feet.height
+            x_offset = (self.character.rect.width - foot_width) / 2
+            y_offset = self.character.rect.height - foot_height
+
+            def feet_at(position_x, position_y):
+                return pygame.Rect(
+                    position_x + x_offset,
+                    position_y + y_offset,
+                    foot_width,
+                    foot_height,
+                )
+
+            collisions = self.get_collisions()
+            if any(feet_at(x, old_y).colliderect(rect) for rect in collisions):
+                x = old_x
+            if any(feet_at(x, y).colliderect(rect) for rect in collisions):
+                y = old_y
+
+            self.character.position = [x, y]
+            self.character.update()
+            self.character.save_location()
+
             for sprite in self.get_group().sprites():
                 if type(sprite) is NPC:
                     if sprite.feet.colliderect(self.character.rect):
                         sprite.speed = 0
                     else:
                         sprite.speed = 1
-                        
-                if self.character.feet.collidelist(self.get_collisions()) > -1:
-                    self.character.move_back()
                     
     def check_npc_collisions(self, dialogBox):
         for sprite in self.get_group().sprites():

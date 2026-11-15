@@ -11,6 +11,7 @@ from dialog.dialogbox import DialogBox
 from utils.config import Config
 from constants import *
 from animation import AnimationType, AnimationDirection
+from touch_controls import TouchControls
 
 class Game:
     def __init__(self, resolution, caption):
@@ -30,6 +31,7 @@ class Game:
         
         # Create dialog box
         self.dialogBox = DialogBox()        
+        self.touch_controls = TouchControls(self.resolution)
 
     def play_music(self, music):
         # Load the sound file
@@ -44,32 +46,24 @@ class Game:
     
 
     def keyBoard_input(self, events: List[pygame.event.Event]):
-        isPressed = pygame.key.get_pressed()
+        for event in events:
+            self.touch_controls.handle_event(event)
 
-        # Character movement
-        if isPressed[pygame.K_UP]:
-            if isPressed[pygame.K_SPACE]:
-                self.character.move(C_RUN_UP, C_RUN_ANIMATION_COUNT)
-            else:
-                self.character.move(C_WALK_UP, C_WALK_ANIMATION_COUNT)
-        elif isPressed[pygame.K_DOWN]:
-            if isPressed[pygame.K_SPACE]:
-                self.character.move(C_RUN_DOWN, C_RUN_ANIMATION_COUNT)
-            else:
-                self.character.move(C_WALK_DOWN, C_WALK_ANIMATION_COUNT)
-        elif isPressed[pygame.K_RIGHT]:
-            if isPressed[pygame.K_SPACE]:
-                self.character.move(C_RUN_RIGHT, C_RUN_ANIMATION_COUNT)
-            else:
-                self.character.move(C_WALK_RIGHT, C_WALK_ANIMATION_COUNT)
-        elif isPressed[pygame.K_LEFT]:
-            if isPressed[pygame.K_SPACE]:
-                self.character.move(C_RUN_LEFT, C_RUN_ANIMATION_COUNT)
-            else:
-                self.character.move(C_WALK_LEFT, C_WALK_ANIMATION_COUNT)
-                
-        # Character attacks
-        elif isPressed[pygame.K_a]:
+        is_pressed = pygame.key.get_pressed()
+        touch_directions = self.touch_controls.directions
+        dx = int(is_pressed[pygame.K_RIGHT] or "right" in touch_directions) - int(
+            is_pressed[pygame.K_LEFT] or "left" in touch_directions
+        )
+        dy = int(is_pressed[pygame.K_DOWN] or "down" in touch_directions) - int(
+            is_pressed[pygame.K_UP] or "up" in touch_directions
+        )
+        interact_pressed = self.touch_controls.consume_action("interact")
+        attack_pressed = self.touch_controls.consume_action("attack")
+
+        if any(event.type == pygame.KEYDOWN and event.key == pygame.K_t for event in events) or interact_pressed:
+            self.map_manager.check_npc_collisions(self.dialogBox)
+
+        if is_pressed[pygame.K_a] or self.touch_controls.attacking or attack_pressed:
             if AnimationDirection.UP.value in self.character.animation_name:
                 self.character.attack(C_ATTACK_UP, C_ATTACK_ANIMATION_COUNT)
             elif AnimationDirection.DOWN.value in self.character.animation_name:
@@ -78,10 +72,19 @@ class Game:
                 self.character.attack(C_ATTACK_RIGHT, C_ATTACK_ANIMATION_COUNT)
             elif AnimationDirection.LEFT.value in self.character.animation_name:
                 self.character.attack(C_ATTACK_LEFT, C_ATTACK_ANIMATION_COUNT)
-        
+        elif dx or dy:
+            running = is_pressed[pygame.K_SPACE] or self.touch_controls.running
+            animation = AnimationType.RUN.value if running else AnimationType.WALK.value
+            count = C_RUN_ANIMATION_COUNT if running else C_WALK_ANIMATION_COUNT
+            if abs(dx) > abs(dy):
+                direction = AnimationDirection.RIGHT.value if dx > 0 else AnimationDirection.LEFT.value
+            else:
+                direction = AnimationDirection.DOWN.value if dy > 0 else AnimationDirection.UP.value
+            self.character.move(f"{animation} {direction}", count, (dx, dy))
         else:
             self.character.images = []  # Reset the animation frames
             self.character.current_animation_index = 0
+            self.character.save_location()
             if not self.character.isTransofrmed:
                 if AnimationDirection.DOWN.value in self.character.animation_name:
                     self.character.image = self.character.get_image_by_animation_name(C_IDLE_DOWN)
@@ -92,8 +95,6 @@ class Game:
                     self.character.image = pygame.transform.flip(self.character.image, True, False)
                 else:
                     self.character.image = self.character.get_image_by_animation_name(C_IDLE_UP)
-
-
 
     def update(self):
         self.map_manager.update()
@@ -117,22 +118,20 @@ class Game:
                 mainMenu.launch_menu(self.screen, self.resolution, events)
             # Start the game
             else:
-                for event in events:
-                    if event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_t:
-                            self.map_manager.check_npc_collisions(self.dialogBox)
                 if(onlyOnce):
                     self.play_music(self.map_manager.current_music)
                     onlyOnce = False
+                if self.map_manager.input_enabled:
+                    self.keyBoard_input(events)
+                else:
+                    self.touch_controls.clear()
                 # Update game state and draw map groups
                 self.update()
                 self.map_manager.draw()
                 self.dialogBox.render(self.screen)
+                self.touch_controls.draw(self.screen)
                 if self.map_manager.isMusicChanged:
                     self.play_music(self.map_manager.current_music)
-                self.character.save_location()
-                if self.map_manager.input_enabled:
-                    self.keyBoard_input(events)
 
             # Common events
             for event in events:
