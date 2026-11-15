@@ -17,6 +17,16 @@ Launch the game
 `cd Dragon-Ball-Z-Buu-s-Fury/`
 `python3 src/main.py`
 
+## Android APK
+
+The **Build Android APK** GitHub Actions workflow builds a debug APK on pushes to `main`, pull requests targeting `main`, and manual runs. Download the `android-apk` artifact from the completed workflow run. Pushing a version tag such as `v1.0.0` also attaches the APK to a GitHub Release.
+
+To build locally, install [Buildozer](https://buildozer.readthedocs.io/) and run:
+
+```sh
+buildozer android debug
+```
+
 ## Game Mechanics
 
 ### Controls

@@ -1,7 +1,6 @@
 import os
 import sys
 import yaml
-import pandas as pd
 
 class Config:
     CONFIG_FILE = 'Config/config.yaml'
@@ -65,7 +64,7 @@ class Config:
         basedir = os.path.realpath(basename)
         basedir = os.path.dirname(basedir) if os.path.isfile(basedir) else basedir
 
-        if filename is None or pd.isna(filename):
+        if filename is None:
             return_filename = os.path.join(basedir, default)
         else:
             return_filename = filename if os.path.isabs(filename) else os.path.join(basedir, filename)
