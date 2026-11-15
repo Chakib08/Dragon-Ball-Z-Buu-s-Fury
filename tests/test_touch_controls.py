@@ -76,7 +76,7 @@ class TouchControlsTests(unittest.TestCase):
         self.assertEqual(self.controls.pointers, {})
         self.assertFalse(self.controls.consume_action("interact"))
 
-    def test_menu_start_and_options_can_be_selected_by_touch(self):
+    def test_character_selection_and_options_can_be_opened_by_touch(self):
         resolution = (1200, 1000)
         screen = pygame.Surface(resolution)
         menu = Menu(resolution)
@@ -93,6 +93,22 @@ class TouchControlsTests(unittest.TestCase):
                 )
             ],
         )
+        self.assertEqual(menu.state, State.CHARACTER_SELECT)
+        menu.launch_menu(screen, resolution, [])
+        goten_rect = menu.character_rects["goten"]
+        menu.launch_menu(
+            screen,
+            resolution,
+            [
+                pygame.event.Event(
+                    pygame.FINGERDOWN,
+                    finger_id=5,
+                    x=goten_rect.centerx / resolution[0],
+                    y=goten_rect.centery / resolution[1],
+                )
+            ],
+        )
+        self.assertEqual(menu.selected_character, "goten")
         self.assertTrue(menu.isPlaying)
 
         menu = Menu(resolution)
@@ -110,6 +126,31 @@ class TouchControlsTests(unittest.TestCase):
             ],
         )
         self.assertEqual(menu.state, State.OPTIONS)
+
+    def test_keyboard_can_cycle_and_confirm_character_selection(self):
+        resolution = (1200, 1000)
+        screen = pygame.Surface(resolution)
+        menu = Menu(resolution)
+        menu.launch_menu(
+            screen,
+            resolution,
+            [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)],
+        )
+        self.assertEqual(menu.state, State.CHARACTER_SELECT)
+
+        menu.launch_menu(
+            screen,
+            resolution,
+            [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT)],
+        )
+        self.assertEqual(menu.selected_character, "goten")
+
+        menu.launch_menu(
+            screen,
+            resolution,
+            [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)],
+        )
+        self.assertTrue(menu.isPlaying)
 
 
 if __name__ == "__main__":

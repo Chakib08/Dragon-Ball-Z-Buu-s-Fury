@@ -30,6 +30,16 @@ class PlayerMovementTests(unittest.TestCase):
         self.assertAlmostEqual(character.position[1] - 20, 2 ** -0.5)
         self.assertEqual(character.old_position, [10, 20])
 
+    def test_all_roster_characters_support_movement_and_safe_attacks(self):
+        for name in ("goku", "goten", "vegeta", "gohan"):
+            with self.subTest(character=name):
+                character = Character(10, 20, name)
+                self.assertEqual(character.character_name, name)
+                character.move("Walk Down", 4)
+                character.move("Run Right", 4)
+                for direction in ("Up", "Down", "Left", "Right"):
+                    character.attack(f"Attack {direction}", 12)
+
     def test_collision_resolution_keeps_unblocked_axis_movement(self):
         class FakeCharacter:
             def __init__(self):

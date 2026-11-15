@@ -3,6 +3,7 @@ from typing import List
 from enum import Enum
 
 from pathmanager import PathManager
+from animation import Animation
 
 # Define a custom event for the arrow blitting
 ARROW_BLIT_EVENT = pygame.USEREVENT + 1
@@ -10,6 +11,7 @@ ARROW_BLIT_EVENT = pygame.USEREVENT + 1
 class State(Enum):
     START = 1
     OPTIONS = 2
+    CHARACTER_SELECT = 3
 
 # TODO: Remove magic numbers, retreive the latters from the app config
 class Menu:
@@ -40,6 +42,17 @@ class Menu:
         
         self.isPlaying = False
         self.state = State.START
+        self.character_names = ("goku", "goten", "vegeta", "gohan")
+        self.selected_character = "goku"
+        self.character_font = pygame.font.Font(None, 42)
+        self.character_title_font = pygame.font.Font(None, 58)
+        self.character_previews = {}
+        self.character_rects = {}
+        for character_name in self.character_names:
+            preview = Animation(character_name).image
+            self.character_previews[character_name] = pygame.transform.scale(
+                preview, (preview.get_width() * 4, preview.get_height() * 4)
+            )
         
         # Set the timer to trigger the event every specific laps of time
         pygame.time.set_timer(ARROW_BLIT_EVENT, 500)
@@ -64,6 +77,27 @@ class Menu:
                     self.state = State.START
                 elif self._is_tap(event, resolution):
                     self.state = State.START
+            return
+
+        if self.state == State.CHARACTER_SELECT:
+            self._draw_character_select(screen, resolution)
+            for event in events:
+                if event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_LEFT, pygame.K_a):
+                        self._cycle_character(-1)
+                    elif event.key in (pygame.K_RIGHT, pygame.K_d):
+                        self._cycle_character(1)
+                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+                        self.isPlaying = True
+                    elif event.key == pygame.K_ESCAPE:
+                        self.state = State.START
+                elif self._is_tap(event, resolution):
+                    position = self._event_position(event, resolution)
+                    for character_name, rect in self.character_rects.items():
+                        if rect.collidepoint(position):
+                            self.selected_character = character_name
+                            self.isPlaying = True
+                            break
             return
 
         self.start_image = self.menu_images[State.START][self.state == State.START]
@@ -92,7 +126,7 @@ class Menu:
                 if event.key in (pygame.K_UP, pygame.K_w):
                     self.state = State.START
                 if event.key == pygame.K_RETURN and self.state == State.START:
-                    self.isPlaying = True   
+                    self.state = State.CHARACTER_SELECT
                 elif event.key in (pygame.K_DOWN, pygame.K_s):
                     self.state = State.OPTIONS                                                 
             elif event.type == ARROW_BLIT_EVENT:
@@ -101,10 +135,54 @@ class Menu:
             elif self._is_tap(event, resolution):
                 position = self._event_position(event, resolution)
                 if image_start_rect.collidepoint(position):
-                    self.state = State.START
-                    self.isPlaying = True
+                    self.state = State.CHARACTER_SELECT
                 elif image_options_rect.collidepoint(position):
                     self.state = State.OPTIONS
+
+    def _cycle_character(self, direction):
+        current_index = self.character_names.index(self.selected_character)
+        self.selected_character = self.character_names[
+            (current_index + direction) % len(self.character_names)
+        ]
+
+    def _draw_character_select(self, screen, resolution):
+        screen.blit(self.menu_image, (0, 0))
+        title = self.character_title_font.render("Choose your character", True, (255, 230, 120))
+        screen.blit(title, title.get_rect(center=(resolution[0] / 2, resolution[1] * 0.22)))
+
+        card_width = min(220, resolution[0] // (len(self.character_names) + 1))
+        card_height = min(300, resolution[1] // 2)
+        spacing = (resolution[0] - card_width * len(self.character_names)) / (len(self.character_names) + 1)
+        top = resolution[1] * 0.36
+        self.character_rects.clear()
+
+        for index, character_name in enumerate(self.character_names):
+            rect = pygame.Rect(
+                spacing * (index + 1) + card_width * index,
+                top,
+                card_width,
+                card_height,
+            )
+            self.character_rects[character_name] = rect
+            selected = character_name == self.selected_character
+            pygame.draw.rect(screen, (80, 60, 25) if selected else (20, 20, 30), rect, border_radius=12)
+            pygame.draw.rect(
+                screen,
+                (255, 220, 100) if selected else (180, 180, 190),
+                rect,
+                width=4 if selected else 2,
+                border_radius=12,
+            )
+
+            preview = self.character_previews[character_name]
+            screen.blit(preview, preview.get_rect(center=(rect.centerx, rect.top + card_height * 0.48)))
+            label = self.character_font.render(character_name.title(), True, (255, 255, 255))
+            screen.blit(label, label.get_rect(center=(rect.centerx, rect.bottom - 42)))
+
+        instructions = self.character_font.render(
+            "Tap a character, or use Left/Right and Enter", True, (255, 255, 255)
+        )
+        screen.blit(instructions, instructions.get_rect(center=(resolution[0] / 2, resolution[1] * 0.83)))
 
     def _draw_options(self, screen, resolution):
         screen.blit(self.menu_image, (0, 0))

@@ -33,6 +33,7 @@ buildozer android debug
 
 ### Controls
 
+- **Choose a character**: Select Goku, Goten, Vegeta, or Gohan from the character screen after choosing Start. Use Left/Right and Enter, or tap a character.
 - **Movement**: Use the arrow keys, or the on-screen D-pad on a touch device. Diagonal movement is supported.
 - **Running**: Hold Space while moving, or hold the on-screen **R** button.
 - **Attacking**: Press **A** or the on-screen **A** button.

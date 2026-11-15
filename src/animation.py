@@ -42,6 +42,9 @@ class Animation(pygame.sprite.Sprite):
             if animation["AnimationName"] == animation_name:
                 return animation
         return None
+
+    def has_animation(self, animation_name):
+        return self.get_animation_by_name(animation_name) is not None
             
     def get_image_by_animation_name(self, animation_name):
         animation = self.get_animation_by_name(animation_name)

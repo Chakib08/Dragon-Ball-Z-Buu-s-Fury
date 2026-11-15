@@ -54,6 +54,15 @@ class Character(Animation):
         
     def attack(self, animation_macro, animation_count):
         macro, side = animation_macro.split()
+        if not self.has_animation(f"{animation_macro} 0"):
+            self.images = []
+            self.current_animation_index = 0
+            self.image = self.get_image_by_animation_name(f"IDLE {side}")
+            if side == AnimationDirection.LEFT.value:
+                self.image = pygame.transform.flip(self.image, True, False)
+            self.animation_name = f"IDLE {side}"
+            return
+
         self.animate(animation_macro, animation_count)
         if macro is not None and macro == AnimationType.ATTACK.value:
             self.clock_speed = 20

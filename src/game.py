@@ -118,6 +118,9 @@ class Game:
                 mainMenu.launch_menu(self.screen, self.resolution, events)
             # Start the game
             else:
+                if self.character.character_name != mainMenu.selected_character:
+                    self.character = Saiyan(159, 289, False, mainMenu.selected_character)
+                    self.map_manager = MapManager(self.screen, self.character)
                 if(onlyOnce):
                     self.play_music(self.map_manager.current_music)
                     onlyOnce = False
