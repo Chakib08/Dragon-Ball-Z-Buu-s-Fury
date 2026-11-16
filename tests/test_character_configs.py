@@ -66,6 +66,41 @@ class CharacterConfigTests(unittest.TestCase):
                         (0, 64, 64),
                     )
 
+    def test_every_character_has_hurt_special_and_transform_frames(self):
+        for name in ROSTER:
+            animation = Animation(name)
+            self.assertTrue(animation.has_form("ssj"), name)
+            for form in ("base", "ssj"):
+                animation.set_form(form)
+                for direction in DIRECTIONS:
+                    for macro in (f"Hurt {direction}", f"Special {direction}"):
+                        with self.subTest(character=name, form=form, animation=macro):
+                            self.assertGreaterEqual(animation.frame_count(macro), 2)
+            animation.set_form("base")
+            self.assertGreaterEqual(animation.frame_count("Transform"), 4)
+
+    def test_super_saiyan_form_has_every_movement_and_attack_frame(self):
+        for name in ROSTER:
+            animation = Animation(name)
+            animation.set_form("ssj")
+            sheet = animation.sprit_sheet
+            required = [f"IDLE {d}" for d in DIRECTIONS]
+            for direction in DIRECTIONS:
+                required += [f"Walk {direction} {i}" for i in range(4)]
+                required += [f"Run {direction} {i}" for i in range(4)]
+                required += [f"Attack {direction} {i}" for i in range(12)]
+            for animation_name in required:
+                with self.subTest(character=name, animation=animation_name):
+                    self.assertTrue(animation.has_animation(animation_name))
+            for frame in animation.animations:
+                with self.subTest(character=name, animation=frame["AnimationName"]):
+                    size = frame["Size"]
+                    rect = pygame.Rect(frame["x"], frame["y"], size["Width"], size["Height"])
+                    self.assertTrue(sheet.get_rect().contains(rect))
+                    crop = sheet.subsurface(rect)
+                    mask = pygame.mask.from_threshold(crop, SHEET_BACKGROUND, (1, 1, 1, 255))
+                    self.assertEqual(mask.count(), 0)
+
     def test_character_name_matches_folder_and_sheet(self):
         for name in ROSTER:
             with open(os.path.join(Config.CONFIG_DIR, name, "base.json")) as file:

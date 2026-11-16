@@ -3,6 +3,9 @@ import pygame
 
 class TouchControls:
     DIRECTIONS = ("up", "down", "left", "right")
+    # Buttons that fire once per press
+    ACTIONS = ("attack", "interact", "special", "super")
+    LABELS = {"special": "KI", "super": "SSJ"}
 
     def __init__(self, screen_size):
         self.screen_size = screen_size
@@ -11,6 +14,7 @@ class TouchControls:
         self.pointers = {}
         self.pressed_actions = set()
         self.font = pygame.font.Font(None, max(24, self.button_size // 2))
+        self.small_font = pygame.font.Font(None, max(18, self.button_size // 3))
         self.button_surfaces = {
             control: (
                 self._make_button_surface(control, False),
@@ -31,6 +35,8 @@ class TouchControls:
             "attack": (width - size * 1.35, height - size * 1.65),
             "interact": (width - size * 2.45, height - size * 0.85),
             "run": (width - size * 0.85, height - size * 0.85),
+            "special": (width - size * 2.55, height - size * 2.0),
+            "super": (width - size * 1.35, height - size * 2.95),
         }
 
     @property
@@ -56,7 +62,9 @@ class TouchControls:
         pygame.draw.circle(surface, color, (radius, radius), radius)
         pygame.draw.circle(surface, (245, 245, 245, 200), (radius, radius), radius, 2)
 
-        text = self.font.render(control[0].upper(), True, (255, 255, 255))
+        label = self.LABELS.get(control, control[0].upper())
+        font = self.font if len(label) == 1 else self.small_font
+        text = font.render(label, True, (255, 255, 255))
         surface.blit(text, text.get_rect(center=(radius, radius)))
         return surface
 
@@ -104,7 +112,7 @@ class TouchControls:
                     self.pointers.pop(pointer, None)
                 else:
                     self.pointers[pointer] = control
-                    if control in ("attack", "interact") and control != previous:
+                    if control in self.ACTIONS and control != previous:
                         self.pressed_actions.add(control)
 
     def consume_action(self, action):

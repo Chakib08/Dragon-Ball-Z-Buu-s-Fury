@@ -191,6 +191,8 @@ class Menu:
             "Move: Arrow keys or on-screen D-pad",
             "Run: Hold Space or the R button",
             "Attack: A key or the A button",
+            "Special technique: D key or the KI button",
+            "Super Saiyan: S key or the SSJ button",
             "Talk: T key or the T button",
             "Press Esc or tap to return",
         ]

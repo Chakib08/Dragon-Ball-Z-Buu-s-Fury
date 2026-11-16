@@ -37,6 +37,8 @@ buildozer android debug
 - **Movement**: Use the arrow keys, or the on-screen D-pad on a touch device. Diagonal movement is supported.
 - **Running**: Hold Space while moving, or hold the on-screen **R** button.
 - **Attacking**: Press **A** or the on-screen **A** button.
+- **Special technique**: Press **D** or the on-screen **KI** button to charge and fire an energy beam in the direction you face. It costs 30 KI.
+- **Super Saiyan**: Press **S** or the on-screen **SSJ** button to transform (needs 20 KI), and again to go back. While transformed you deal 50% more damage and take half, but KI drains instead of regenerating; you revert when it runs out.
 - **Talking to NPCs**: Press **T** or the on-screen **T** button while near an NPC.
 - **Menu**: Select Start or Options with the keyboard or tap. Options shows the control guide; press Esc or tap to return.
 - **Combat resources**: The HUD shows HP and KI (mana). Attacks cost KI, which regenerates over time; nearby hostile NPCs pursue and attack back.

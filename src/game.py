@@ -66,8 +66,24 @@ class Game:
             or attack_pressed
         )
 
-        if any(event.type == pygame.KEYDOWN and event.key == pygame.K_t for event in events) or interact_pressed:
+        pressed_keys = {event.key for event in events if event.type == pygame.KEYDOWN}
+        super_pressed = self.touch_controls.consume_action("super") or pygame.K_s in pressed_keys
+        special_pressed = self.touch_controls.consume_action("special") or pygame.K_d in pressed_keys
+
+        if pygame.K_t in pressed_keys or interact_pressed:
             self.map_manager.check_npc_collisions(self.dialogBox)
+
+        # Hurt, transforming or firing a special: the animation plays out first
+        if self.character.update_action():
+            self.attack_held = False
+            return
+        if super_pressed:
+            self.character.transform()
+        elif special_pressed:
+            self.map_manager.combat.start_special()
+        if self.character.action is not None:
+            self.attack_held = False
+            return
 
         if self.attack_held:
             attack_animation = {
@@ -93,16 +109,15 @@ class Game:
             self.character.current_animation_index = 0
             self.character.clock = 0
             self.character.save_location()
-            if not self.character.isTransofrmed:
-                if AnimationDirection.DOWN.value in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name(C_IDLE_DOWN)
-                elif AnimationDirection.RIGHT.value in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name(C_IDLE_RIGHT)
-                elif AnimationDirection.LEFT.value in self.character.animation_name:
-                    self.character.image = self.character.get_image_by_animation_name(C_IDLE_LEFT)
-                    self.character.image = pygame.transform.flip(self.character.image, True, False)
-                else:
-                    self.character.image = self.character.get_image_by_animation_name(C_IDLE_UP)
+            if AnimationDirection.DOWN.value in self.character.animation_name:
+                self.character.image = self.character.get_image_by_animation_name(C_IDLE_DOWN)
+            elif AnimationDirection.RIGHT.value in self.character.animation_name:
+                self.character.image = self.character.get_image_by_animation_name(C_IDLE_RIGHT)
+            elif AnimationDirection.LEFT.value in self.character.animation_name:
+                self.character.image = self.character.get_image_by_animation_name(C_IDLE_LEFT)
+                self.character.image = pygame.transform.flip(self.character.image, True, False)
+            else:
+                self.character.image = self.character.get_image_by_animation_name(C_IDLE_UP)
 
     def update(self):
         self.map_manager.update(self.attack_held)
@@ -132,7 +147,7 @@ class Game:
                 if(onlyOnce):
                     self.play_music(self.map_manager.current_music)
                     onlyOnce = False
-                if self.map_manager.input_enabled:
+                if self.map_manager.input_enabled and self.character.hp > 0:
                     self.keyBoard_input(events)
                 else:
                     self.touch_controls.clear()

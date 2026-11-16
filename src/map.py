@@ -12,6 +12,28 @@ from combat import CombatSystem
 from movement import resolve_movement_collisions
 
 
+class CharacterGroup(pyscroll.PyscrollGroup):
+    """PyscrollGroup that lets a sprite shift its image (see image_offset).
+
+    Animation frames have different sizes; drawing them all from the top-left
+    of the rect would make the character jump around.
+    """
+
+    def draw(self, surface):
+        ox, oy = self._map_layer.get_center_offset()
+        view_rect = self.view
+        new_surfaces = []
+        for sprite in self.sprites():
+            if not sprite.rect.colliderect(view_rect):
+                continue
+            dx, dy = sprite.image_offset() if hasattr(sprite, "image_offset") else (0, 0)
+            new_rect = sprite.rect.move(ox + dx, oy + dy)
+            new_surfaces.append((sprite.image, new_rect, self.get_layer_of_sprite(sprite)))
+            self.spritedict[sprite] = new_rect
+        self.lostsprites = []
+        return self._map_layer.draw(surface, surface.get_rect(), new_surfaces)
+
+
 @dataclass
 class Portal:
     src_map: str        # Map where the character is located
@@ -104,7 +126,7 @@ class MapManager:
         collisions = [pygame.Rect(obj.x, obj.y, obj.width, obj.height) for obj in tmx_data.objects if obj.type == "collision"]
 
         # Draw layers groups
-        group = pyscroll.PyscrollGroup(map_layer=map_layer, default_layer=1)
+        group = CharacterGroup(map_layer=map_layer, default_layer=1)
 
         # Add your layers here (like characters etc.)
         group.add(self.character)
@@ -167,6 +189,10 @@ class MapManager:
 
     def draw(self):
         self.get_group().draw(self.screen)
+        # Drawn before re-centering so the bars match the frame just rendered
+        to_screen_rect = self.get_group()._map_layer.translate_rect
+        self.combat.draw_beams(self.screen, to_screen_rect)
+        self.combat.draw_npc_bars(self.screen, self.get_map().npcs, to_screen_rect)
         self.get_group().center(self.character.rect.center)
         if self.transitioning:
             self.black_screen.set_alpha(self.transition_alpha)

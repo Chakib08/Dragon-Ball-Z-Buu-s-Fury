@@ -65,12 +65,6 @@ class NPC(Character):
         # current_point is the last point reached, the target is the next one
         self.current_point = (nearest - 1) % len(self.points)
 
-    def _face_idle(self, direction):
-        self.facing = direction
-        self.image = self.get_image_by_animation_name(f"IDLE {direction}")
-        if direction == "Left":
-            self.image = pygame.transform.flip(self.image, True, False)
-
     def move_npc(self):
         """Walk the patrol path, independently of what the player is doing."""
         if self.is_defeated or self.combat_engaged or not self.points:

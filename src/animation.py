@@ -18,12 +18,22 @@ class AnimationDirection(Enum):
     RIGHT = "Right"
               
 class Animation(pygame.sprite.Sprite):
+    BASE_FORM = "base"
+    SUPER_FORM = "ssj"
+
     def __init__(self, name):
         super().__init__()
         self.json_file = PathManager.character_json_path(name, "base")
         self.character_name = self.parse_data(self.json_file, "Character")
-        self.sprit_sheet =  pygame.image.load(os.path.join(Config.ROOT_DIR, self.parse_data(self.json_file, "Image path")))
-        self.animations = self.parse_data(self.json_file, "Animations")
+        # A form is a sprite sheet plus its frames; every form uses the same
+        # animation names, so switching form only swaps what gets drawn
+        self.forms = {}
+        for form in (self.BASE_FORM, self.SUPER_FORM):
+            json_file = PathManager.character_json_path(name, form)
+            if os.path.exists(json_file):
+                self.forms[form] = self._load_form(json_file)
+        self.form = self.BASE_FORM
+        self.sprit_sheet, self.animations = self.forms[self.form]
         self.current_animation_index = 0
         self.current_animation_macro = None
         self.animation_name = "IDLE Down"
@@ -32,6 +42,33 @@ class Animation(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.clock = 0
         self.clock_speed = Config.CLOCK_SPEED   
+
+    def _load_form(self, json_file):
+        with open(json_file) as file:
+            data = json.load(file)
+        sheet = pygame.image.load(os.path.join(Config.ROOT_DIR, data["Image path"]))
+        return sheet, data["Animations"]
+
+    def has_form(self, form):
+        return form in self.forms
+
+    def set_form(self, form):
+        if form == self.form or form not in self.forms:
+            return
+        self.form = form
+        self.sprit_sheet, self.animations = self.forms[form]
+        # Cached frames belong to the previous form
+        self.images = []
+        self.current_animation_macro = None
+        self.current_animation_index = 0
+        self.clock = 0
+
+    def frame_count(self, animation_macro):
+        """Number of frames named "<macro> 0", "<macro> 1", ..."""
+        count = 0
+        while self.has_animation(f"{animation_macro} {count}"):
+            count += 1
+        return count
 
     def parse_data(self, json_file, key):
         with open(json_file) as file:

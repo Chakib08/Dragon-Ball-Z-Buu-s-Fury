@@ -19,35 +19,67 @@ class CombatSystem:
     PLAYER_ATTACK_DAMAGE = 20
     PLAYER_ATTACK_COST = 8
     KI_REGEN_PER_SECOND = 12
+    # Super Saiyan: hits harder, but burns ki instead of regenerating it
+    SUPER_DAMAGE_MULTIPLIER = 1.5
+    SUPER_KI_DRAIN_PER_SECOND = 5
+    # Special technique (energy beam)
+    SPECIAL_COST = 30
+    SPECIAL_DAMAGE = 35
+    SPECIAL_COOLDOWN_MS = 1200
+    SPECIAL_RANGE = 220
+    SPECIAL_SPEED = 9
+    SPECIAL_WIDTH = 10
+    SPECIAL_HOLD_TICKS = 30
+    SPECIAL_FADE_TICKS = 12
+    SPECIAL_COLORS = {"vegeta": (255, 225, 90)}
+    SPECIAL_DEFAULT_COLOR = (90, 200, 255)
 
     def __init__(self, player, screen_size):
         self.player = player
         self.screen_size = screen_size
         self.last_update_ms = pygame.time.get_ticks()
         self.last_player_attack_ms = self.last_update_ms - self.PLAYER_ATTACK_COOLDOWN_MS
+        self.last_special_ms = self.last_update_ms - self.SPECIAL_COOLDOWN_MS
+        self.beams = []
         self.font = pygame.font.Font(None, 30)
 
     def update(self, npcs, collisions, player_attacking=False):
         now = pygame.time.get_ticks()
         elapsed_seconds = max(0, now - self.last_update_ms) / 1000
         self.last_update_ms = now
-        self.player.ki = min(
-            self.player.max_ki,
-            self.player.ki + self.KI_REGEN_PER_SECOND * elapsed_seconds,
-        )
+        if self.player.is_super:
+            self.player.ki = max(
+                0, self.player.ki - self.SUPER_KI_DRAIN_PER_SECOND * elapsed_seconds
+            )
+            if self.player.ki <= 0:
+                self.player.revert()
+        else:
+            self.player.ki = min(
+                self.player.max_ki,
+                self.player.ki + self.KI_REGEN_PER_SECOND * elapsed_seconds,
+            )
+        self._update_beams(npcs)
 
-        if player_attacking:
+        player_down = self.player.hp <= 0
+        if player_down:
+            self.player.faint()
+        elif player_attacking:
             self._player_attack(npcs, now)
 
         for npc in tuple(npcs):
             if npc.hp <= 0:
                 npc.is_defeated = True
                 npc.combat_engaged = True
+                npc.faint()
+                continue
+
+            # Flinching after a hit: no chasing or attacking meanwhile
+            if npc.update_action():
                 continue
 
             distance = self._distance(self.player.feet.center, npc.feet.center)
             was_engaged = npc.combat_engaged
-            npc.combat_engaged = distance <= self.AGGRO_RANGE
+            npc.combat_engaged = distance <= self.AGGRO_RANGE and not player_down
             if not npc.combat_engaged:
                 npc.chase_path = []
                 npc.chase_target = None
@@ -86,9 +118,122 @@ class CombatSystem:
             return
 
         target = min(targets, key=lambda npc: self._distance(self.player.rect.center, npc.rect.center))
-        target.take_damage(self.PLAYER_ATTACK_DAMAGE)
+        target.take_damage(self.PLAYER_ATTACK_DAMAGE * self._damage_multiplier())
         self.player.ki -= self.PLAYER_ATTACK_COST
         self.last_player_attack_ms = now
+
+    def _damage_multiplier(self):
+        return self.SUPER_DAMAGE_MULTIPLIER if self.player.is_super else 1
+
+    # ---- Special technique -------------------------------------------------
+    def start_special(self):
+        """Charge, then fire an energy beam in the facing direction.
+
+        Returns True if the technique started (enough ki, not busy, off cooldown).
+        """
+        player = self.player
+        now = pygame.time.get_ticks()
+        if (
+            player.hp <= 0
+            or player.action is not None
+            or player.ki < self.SPECIAL_COST
+            or now - self.last_special_ms < self.SPECIAL_COOLDOWN_MS
+        ):
+            return False
+
+        facing = player.facing
+        started = player.start_action(
+            "special",
+            f"Special {facing}",
+            clock_speed=player.SPECIAL_CLOCK_SPEED,
+            hold_ticks=self.SPECIAL_HOLD_TICKS,
+            on_last_frame=lambda: self._fire_beam(facing),
+        )
+        if not started:
+            return False
+        player.ki -= self.SPECIAL_COST
+        self.last_special_ms = now
+        return True
+
+    def _fire_beam(self, facing):
+        player = self.player
+        direction = {
+            AnimationDirection.UP.value: (0, -1),
+            AnimationDirection.DOWN.value: (0, 1),
+            AnimationDirection.LEFT.value: (-1, 0),
+            AnimationDirection.RIGHT.value: (1, 0),
+        }[facing]
+        # Start at the edge of the body, at chest height for sideways shots
+        origin = (
+            player.rect.centerx + direction[0] * player.rect.width / 2,
+            player.rect.centery + 2 + direction[1] * player.rect.height / 2,
+        )
+        self.beams.append({
+            "origin": origin,
+            "direction": direction,
+            "length": 0,
+            "damage": self.SPECIAL_DAMAGE * self._damage_multiplier(),
+            "color": self.SPECIAL_COLORS.get(player.character_name, self.SPECIAL_DEFAULT_COLOR),
+            "stopped": False,
+            "fade": self.SPECIAL_FADE_TICKS,
+        })
+
+    def _beam_rect(self, beam):
+        (x, y), (dx, dy) = beam["origin"], beam["direction"]
+        half = self.SPECIAL_WIDTH / 2
+        end_x, end_y = x + dx * beam["length"], y + dy * beam["length"]
+        left, top = min(x, end_x) - half * abs(dy), min(y, end_y) - half * abs(dx)
+        return pygame.Rect(
+            round(left),
+            round(top),
+            max(1, round(abs(end_x - x) + self.SPECIAL_WIDTH * abs(dy))),
+            max(1, round(abs(end_y - y) + self.SPECIAL_WIDTH * abs(dx))),
+        )
+
+    def _update_beams(self, npcs):
+        for beam in tuple(self.beams):
+            if beam["stopped"]:
+                beam["fade"] -= 1
+                if beam["fade"] <= 0:
+                    self.beams.remove(beam)
+                continue
+
+            beam["length"] = min(self.SPECIAL_RANGE, beam["length"] + self.SPECIAL_SPEED)
+            rect = self._beam_rect(beam)
+            hit = [npc for npc in npcs if npc.hp > 0 and rect.colliderect(npc.rect)]
+            if hit:
+                target = min(hit, key=lambda npc: self._distance(beam["origin"], npc.rect.center))
+                target.take_damage(beam["damage"])
+                # The beam ends on the enemy it hit
+                beam["length"] = min(
+                    beam["length"], self._distance(beam["origin"], target.rect.center)
+                )
+                beam["stopped"] = True
+            elif beam["length"] >= self.SPECIAL_RANGE:
+                beam["stopped"] = True
+
+    def draw_beams(self, screen, to_screen_rect):
+        for beam in self.beams:
+            rect = pygame.Rect(to_screen_rect(self._beam_rect(beam)))
+            alpha = 255 if not beam["stopped"] else round(255 * beam["fade"] / self.SPECIAL_FADE_TICKS)
+            horizontal = beam["direction"][0] != 0
+            thickness = rect.height if horizontal else rect.width
+            # Glowing head at the tip, a little wider than the beam
+            head_radius = round(thickness * 0.85)
+            pad = head_radius
+            layer = pygame.Surface((rect.width + pad * 2, rect.height + pad * 2), pygame.SRCALPHA)
+            body = pygame.Rect(pad, pad, rect.width, rect.height)
+            core = body.inflate(0, -thickness // 2) if horizontal else body.inflate(-thickness // 2, 0)
+            tip = {
+                (1, 0): body.midright, (-1, 0): body.midleft,
+                (0, 1): body.midbottom, (0, -1): body.midtop,
+            }[beam["direction"]]
+            pygame.draw.rect(layer, (*beam["color"], 235), body, border_radius=thickness // 2)
+            pygame.draw.circle(layer, (*beam["color"], 235), tip, head_radius)
+            pygame.draw.rect(layer, (255, 255, 255, 255), core, border_radius=thickness // 4)
+            pygame.draw.circle(layer, (255, 255, 255, 255), tip, head_radius // 2)
+            layer.set_alpha(alpha)
+            screen.blit(layer, (rect.x - pad, rect.y - pad))
 
     def _player_attack_area(self):
         direction = getattr(self.player, "facing", self._facing(self.player.animation_name))
@@ -299,7 +444,34 @@ class CombatSystem:
 
     def draw(self, screen):
         self._draw_bar(screen, "HP", self.player.hp, self.player.max_hp, (220, 55, 55), 20)
-        self._draw_bar(screen, "KI", self.player.ki, self.player.max_ki, (65, 145, 245), 58)
+        ki_color = (245, 205, 60) if self.player.is_super else (65, 145, 245)
+        self._draw_bar(screen, "KI", self.player.ki, self.player.max_ki, ki_color, 58)
+
+    NPC_BAR_MIN_WIDTH = 48
+    NPC_BAR_HEIGHT = 8
+    NPC_BAR_GAP = 8
+
+    def draw_npc_bars(self, screen, npcs, to_screen_rect):
+        """Draw a health bar above each NPC.
+
+        to_screen_rect converts a rect in map coordinates to screen coordinates.
+        The bar stays (empty) during the knock-out animation, then disappears.
+        """
+        for npc in npcs:
+            if getattr(npc, "faint_finished", False):
+                continue
+            on_screen = pygame.Rect(to_screen_rect(npc.rect))
+            width = max(self.NPC_BAR_MIN_WIDTH, on_screen.width)
+            bar = pygame.Rect(0, 0, width, self.NPC_BAR_HEIGHT)
+            bar.midbottom = (on_screen.centerx, on_screen.top - self.NPC_BAR_GAP)
+            fraction = max(0, min(1, npc.hp / npc.max_hp)) if npc.max_hp else 0
+            pygame.draw.rect(screen, (35, 35, 42), bar)
+            pygame.draw.rect(
+                screen,
+                (220, 55, 55),
+                (bar.x, bar.y, round(bar.width * fraction), bar.height),
+            )
+            pygame.draw.rect(screen, (235, 235, 235), bar, 1)
 
     def _draw_bar(self, screen, label, value, maximum, color, y):
         x = 20

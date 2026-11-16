@@ -173,6 +173,174 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(self.enemy.hp, 0)
         self.assertEqual(self.player.hp, self.player.max_hp)
 
+    def test_defeated_enemy_plays_the_faint_animation_once_and_stays_down(self):
+        self.enemy.hp = 0
+        standing = self.enemy.image
+        with patch("combat.pygame.time.get_ticks", return_value=1000):
+            for _ in range(200):
+                self.combat.update([self.enemy], [])
+
+        self.assertTrue(self.enemy.faint_finished)
+        self.assertEqual(self.enemy.faint_index, len(self.enemy.faint_frames) - 1)
+        self.assertIs(self.enemy.image, self.enemy.faint_frames[-1])
+        self.assertIsNot(self.enemy.image, standing)
+        # Frames are padded so the body lies on the ground, not at head height
+        self.assertEqual(self.enemy.image.get_height(), self.enemy.rect.height)
+
+    def test_player_faints_at_zero_hp_and_the_enemy_stops_fighting(self):
+        for name in ("goku", "gohan", "goten", "vegeta"):
+            with self.subTest(character=name):
+                player = Character(100, 100, name)
+                player.update()
+                enemy = NPC(110, 100, False, "vegeta", 0, [])
+                enemy.update()
+                enemy.facing = "Left"
+                with patch("combat.pygame.time.get_ticks", return_value=0):
+                    combat = CombatSystem(player, (1200, 1000))
+                player.hp = 0
+                with patch("combat.pygame.time.get_ticks", return_value=5000):
+                    for _ in range(200):
+                        combat.update([enemy], [], player_attacking=True)
+
+                self.assertTrue(player.faint_finished)
+                self.assertEqual(len(player.faint_frames), 4)
+                self.assertIs(player.image, player.faint_frames[-1])
+                self.assertFalse(enemy.combat_engaged)
+                self.assertEqual(enemy.hp, enemy.max_hp)
+                self.assertEqual(player.hp, 0)
+
+    def run_action(self, character, limit=400):
+        ticks = 0
+        while character.update_action():
+            ticks += 1
+            self.assertLess(ticks, limit)
+        return ticks
+
+    def test_super_saiyan_transformation_plays_then_switches_form_and_toggles_back(self):
+        for name in ("goku", "gohan", "goten", "vegeta"):
+            with self.subTest(character=name):
+                player = Character(100, 100, name)
+                player.update()
+                self.assertFalse(player.is_super)
+                self.assertTrue(player.transform())
+                self.assertEqual(player.action["name"], "transform")
+                self.assertFalse(player.is_super)
+                self.assertGreater(self.run_action(player), 10)
+                self.assertTrue(player.is_super)
+                # Walking still works with the Super Saiyan sprites
+                player.move("Walk Right", 4)
+                self.assertTrue(player.transform())
+                self.assertFalse(player.is_super)
+
+    def test_transformation_needs_ki(self):
+        self.player.ki = self.player.TRANSFORM_MIN_KI - 1
+        self.assertFalse(self.player.transform())
+        self.assertIsNone(self.player.action)
+
+    def test_super_saiyan_hits_harder_takes_less_and_reverts_when_ki_runs_out(self):
+        self.player.transform()
+        self.run_action(self.player)
+        self.player.facing = "Right"
+        with patch("combat.pygame.time.get_ticks", return_value=1000):
+            self.combat.update([self.enemy], [], player_attacking=True)
+        self.assertEqual(
+            self.enemy.hp,
+            self.enemy.max_hp - self.combat.PLAYER_ATTACK_DAMAGE * self.combat.SUPER_DAMAGE_MULTIPLIER,
+        )
+        ki_after_attack = self.player.ki
+        self.player.take_damage(10)
+        self.assertEqual(self.player.hp, self.player.max_hp - 5)
+
+        with patch("combat.pygame.time.get_ticks", return_value=2000):
+            self.combat.update([], [])
+        self.assertLess(self.player.ki, ki_after_attack)
+        with patch("combat.pygame.time.get_ticks", return_value=60000):
+            self.combat.update([], [])
+        self.assertEqual(self.player.ki, 0)
+        self.assertFalse(self.player.is_super)
+
+    def test_getting_hit_plays_the_hurt_animation_for_player_and_npc(self):
+        for character in (self.player, self.enemy):
+            with self.subTest(character=type(character).__name__):
+                idle = character.image
+                character.take_damage(5)
+                self.assertEqual(character.action["name"], "hurt")
+                self.assertIsNot(character.image, idle)
+                self.run_action(character)
+                self.assertIsNone(character.action)
+
+    def test_hurt_npc_flinches_instead_of_attacking(self):
+        self.enemy.position = [self.player.position[0] + 10, self.player.position[1]]
+        self.enemy.update()
+        self.enemy.facing = "Left"
+        self.enemy.combat_engaged = True
+        self.enemy.take_damage(5)
+        with patch("combat.pygame.time.get_ticks", return_value=5000):
+            self.combat.update([self.enemy], [])
+        self.assertEqual(self.player.hp, self.player.max_hp)
+
+    def test_special_charges_then_fires_a_beam_that_damages_the_enemy_in_front(self):
+        self.enemy.position = [self.player.position[0] + 120, self.player.position[1]]
+        self.enemy.update()
+        with patch("combat.pygame.time.get_ticks", return_value=5000):
+            self.assertTrue(self.combat.start_special())
+            self.assertEqual(self.player.ki, self.player.max_ki - self.combat.SPECIAL_COST)
+            # Busy and on cooldown: a second press does nothing
+            self.assertFalse(self.combat.start_special())
+            self.assertEqual(self.combat.beams, [])
+            for _ in range(200):
+                self.player.update_action()
+                self.combat.update([self.enemy], [])
+
+        self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.combat.SPECIAL_DAMAGE)
+        self.assertEqual(self.combat.beams, [])
+        self.assertIsNone(self.player.action)
+
+    def test_special_misses_enemies_that_are_not_in_the_line_of_fire(self):
+        self.enemy.position = [self.player.position[0], self.player.position[1] + 120]
+        self.enemy.update()
+        with patch("combat.pygame.time.get_ticks", return_value=5000):
+            self.assertTrue(self.combat.start_special())
+            for _ in range(200):
+                self.player.update_action()
+                self.combat.update([], [])
+                self.combat._update_beams([self.enemy])
+        self.assertEqual(self.enemy.hp, self.enemy.max_hp)
+
+    def test_special_needs_ki_and_beams_can_be_drawn(self):
+        self.player.ki = self.combat.SPECIAL_COST - 1
+        with patch("combat.pygame.time.get_ticks", return_value=5000):
+            self.assertFalse(self.combat.start_special())
+        self.combat._fire_beam("Right")
+        self.combat._update_beams([])
+        screen = pygame.Surface((400, 400))
+        self.combat.draw_beams(screen, lambda rect: rect)
+        tip = self.combat._beam_rect(self.combat.beams[0]).midright
+        self.assertNotEqual(screen.get_at(tip)[:3], (0, 0, 0))
+
+    def test_npc_health_bar_follows_hp_and_disappears_after_the_faint(self):
+        screen = pygame.Surface((200, 200))
+        self.enemy.position = [100, 100]
+        self.enemy.update()
+        bar_y = self.enemy.rect.top - self.combat.NPC_BAR_GAP - self.combat.NPC_BAR_HEIGHT // 2
+        left = (self.enemy.rect.centerx - 20, bar_y)
+        right = (self.enemy.rect.centerx + 20, bar_y)
+        red, empty = (220, 55, 55), (35, 35, 42)
+
+        self.combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
+        self.assertEqual(screen.get_at(left)[:3], red)
+        self.assertEqual(screen.get_at(right)[:3], red)
+
+        self.enemy.hp = self.enemy.max_hp / 2
+        self.combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
+        self.assertEqual(screen.get_at(left)[:3], red)
+        self.assertEqual(screen.get_at(right)[:3], empty)
+
+        screen.fill((0, 0, 0))
+        self.enemy.faint_finished = True
+        self.combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
+        self.assertEqual(screen.get_at(left)[:3], (0, 0, 0))
+
     def test_attack_animation_advances_while_attacking_even_without_a_hit(self):
         self.enemy.position = [500, 500]
         self.enemy.update()

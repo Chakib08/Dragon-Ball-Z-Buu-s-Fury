@@ -53,6 +53,17 @@ class TouchControlsTests(unittest.TestCase):
         self.assertFalse(self.controls.attacking)
         self.assertNotIn("attack", self.controls.pointers.values())
 
+    def test_super_and_special_buttons_fire_once_per_press_and_do_not_overlap(self):
+        for control in ("super", "special"):
+            with self.subTest(control=control):
+                self.controls.handle_event(self.finger_event(pygame.FINGERDOWN, 3, control))
+                self.assertTrue(self.controls.consume_action(control))
+                self.assertFalse(self.controls.consume_action(control))
+                self.controls.handle_event(self.finger_event(pygame.FINGERUP, 3, control))
+        # Each button centre resolves to its own button
+        for control, center in self.controls.buttons.items():
+            self.assertEqual(self.controls._control_at(center), control)
+
     def test_controls_render_on_screen(self):
         screen = pygame.Surface((1200, 1000))
         self.controls.draw(screen)
