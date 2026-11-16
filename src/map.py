@@ -1,15 +1,14 @@
-from dataclasses import dataclass
-from typing import List
-import pygame
-import pytmx
-import pyscroll
-import copy
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional
 
-from pathmanager import PathManager
-from npc import NPC
-from pygamehelper import PygameHelper
+import pygame
+import pyscroll
+import pytmx
+
 from combat import CombatSystem
 from movement import resolve_movement_collisions
+from npc import NPC, SaiyanNPC
+from pathmanager import PathManager
 
 
 class CharacterGroup(pyscroll.PyscrollGroup):
@@ -36,210 +35,230 @@ class CharacterGroup(pyscroll.PyscrollGroup):
 
 @dataclass
 class Portal:
-    src_map: str        # Map where the character is located
-    src_point: str      # Point where the character location will be changed when he enter in collision witht this point
-    target_map: str     # Map where the chacter is going to spawn after a collision with the refering point
-    target_point: str   # Point where the charcter is going to spawn after being in the target map
-    
+    src_map: str        # Map the portal is on
+    src_point: str      # Map object the character has to step on
+    target_map: str     # Map the character is sent to
+    target_point: str   # Map object the character appears on
+
+
+@dataclass
+class MapDefinition:
+    """What a map is made of. The map itself is only loaded on first visit."""
+    name: str
+    music: str
+    portals: List[Portal] = field(default_factory=list)
+    # Called on first visit, so NPCs of unvisited maps cost nothing
+    make_npcs: Optional[Callable[[], List[NPC]]] = None
 
 
 @dataclass
 class Map:
-    name: str                       # Name of the map
-    collisions: List[pygame.Rect]   # Lits of collisions
-    group: pyscroll.PyscrollGroup   # The group of objects (ex: character)
-    tmx_data: pytmx.TiledMap        # TMX Map data
-    portals: List[Portal]           # List of portals
-    npcs: List[NPC]                 # List of NPCs
-    music: str                      # Soudtrack specific to a map
+    name: str
+    collisions: List[pygame.Rect]
+    group: pyscroll.PyscrollGroup
+    tmx_data: pytmx.TiledMap
+    portals: List[Portal]
+    npcs: List[NPC]
+    music: str
+    portal_rects: Dict[str, pygame.Rect] = field(default_factory=dict)
+
+    def get_object(self, name):
+        return self.tmx_data.get_object_by_name(name)
+
+    @staticmethod
+    def get_rect(map_object):
+        return pygame.Rect(map_object.x, map_object.y, map_object.width, map_object.height)
+
+
+HOME_MUSIC = "DBZ-Buus-Fury-Soundtrack-Gokus-Home"
+WORLD_MUSIC = "legacy-of-goku-II/The Legacy Of Goku 2 OST - The Imperfect Cell"
+
+
+def _world_npcs():
+    return [SaiyanNPC(99, 345, False, "vegeta", 4, ["KAKAROT !!", "I want my revenge !!"])]
+
+
+def map_definitions():
+    world = PathManager.soundtrack(WORLD_MUSIC)
+    home = PathManager.soundtrack(HOME_MUSIC)
+    return [
+        MapDefinition("map", world, [Portal("map", "enter_house", "house", "spawn_house")], _world_npcs),
+        MapDefinition("house", home, [
+            Portal("house", "exit_house", "map", "spawn_world"),
+            Portal("house", "enter_hall", "hall", "spawn_from_house_to_hall"),
+            Portal("house", "enter_kitchen", "kitchen", "spawn_kitchen"),
+        ]),
+        MapDefinition("hall", home, [
+            Portal("hall", "exit_hall", "house", "spawn_from_hall_to_house"),
+            Portal("hall", "gohan_goten_room_enter", "gohan_goten_room", "spawn_gohan_goten_room"),
+            Portal("hall", "enter_chichi_room", "chichi_room", "spawn_chichi_room"),
+        ]),
+        MapDefinition("gohan_goten_room", home, [
+            Portal("gohan_goten_room", "exit_gohan_goten_room", "hall", "spawn_from_room_to_hall"),
+        ]),
+        MapDefinition("chichi_room", home, [
+            Portal("chichi_room", "exit_chichi_room", "hall", "spawn_from_room_to_hall"),
+        ]),
+        MapDefinition("kitchen", home, [
+            Portal("kitchen", "exit_kitchen", "house", "spawn_from_kitchen_to_house"),
+        ]),
+    ]
 
 
 class MapManager:
+    # Map pixels visible from top to bottom of the screen
+    VISIBLE_MAP_HEIGHT = 250
+    # Alpha added per frame while fading to/from black between maps
+    FADE_SPEED = 10
+
     def __init__(self, screen, character, default_map="map") -> None:
-        self.maps = dict()
-        self.current_map = default_map
         self.screen = screen
         self.character = character
         self.combat = CombatSystem(character, screen.get_size())
-        
-        # Black transition parameters
-        self.input_enabled = True       # Boolean to handle keyboard inputs
-        self.transition_alpha = 0       # Alpha value to manage black fading
-        self.transitioning = False      # Indicate a transition is starting
-        self.transitioning_in = True    # Indicate the beginning of the fade-in phase
-        # Fill the screen with black
+        self.definitions = {definition.name: definition for definition in map_definitions()}
+        self.maps = {}
+
+        # Fade to black between two maps
+        self.input_enabled = True
+        self.transitioning = False
+        self.transitioning_in = True
+        self.transition_alpha = 0
+        self.new_map = None
+        self.new_position = None
         self.black_screen = pygame.Surface(screen.get_size())
         self.black_screen.fill((0, 0, 0))
+
+        self.current_map = default_map
+        self.load_map(default_map)
+        self.current_music = self.get_map().music
         self.isMusicChanged = False
-
-        # Registering the maps
-        self.register_map(default_map, 
-                          portals=[Portal("map", "enter_house", "house", "spawn_house")], 
-                          npcs=[NPC(99, 345, False, "vegeta", 4, ["KAKAROT !!", "I want my revenge !!"])], 
-                          music=PathManager.soundtrack("legacy-of-goku-II/The Legacy Of Goku 2 OST - The Imperfect Cell")
-            )
-        
-        self.register_map("house", 
-                          portals=[Portal("house", "exit_house", "map", "spawn_world"), 
-                                Portal("house", "enter_hall", "hall", "spawn_from_house_to_hall"),
-                                Portal("house", "enter_kitchen", "kitchen", "spawn_kitchen")],
-                          music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
-        
-        self.register_map("hall", portals=
-        [
-            Portal("hall", "exit_hall", "house", "spawn_from_hall_to_house"),
-            Portal("hall", "gohan_goten_room_enter", "gohan_goten_room", "spawn_gohan_goten_room"),
-            Portal("hall", "enter_chichi_room", "chichi_room", "spawn_chichi_room")
-        ],music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
-        
-        self.register_map("gohan_goten_room", portals=[Portal
-            ("gohan_goten_room", "exit_gohan_goten_room", "hall", "spawn_from_room_to_hall")
-        ], music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
-        
-        self.register_map("chichi_room", portals=[Portal(
-            "chichi_room", "exit_chichi_room", "hall", "spawn_from_room_to_hall")], music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
-        
-        self.register_map("kitchen", portals=[Portal(
-            "kitchen", "exit_kitchen", "house", "spawn_from_kitchen_to_house")
-                                              ], music=PathManager.soundtrack("DBZ-Buus-Fury-Soundtrack-Gokus-Home"))
-        
-        self.current_music = self.maps[self.current_map].music
-        self.teleport_npcs()
-        
-
-    # Map pixels visible from top to bottom of the screen
-    VISIBLE_MAP_HEIGHT = 250
 
     @classmethod
     def zoom_for(cls, screen_size):
         # Whole numbers keep the pixel art sharp
         return max(2, round(screen_size[1] / cls.VISIBLE_MAP_HEIGHT))
 
-    def position_character(self, name):
-        pos = self.get_object(name)
-        self.character.position[0] = pos.x - 10
-        self.character.position[1] = pos.y - 20
-        self.character.save_location()
+    # ---- Loading ----------------------------------------------------------------
+    def load_map(self, name):
+        """Load a map the first time it is needed (each one holds a
+        screen-sized render buffer, so unvisited maps stay unloaded)."""
+        if name in self.maps:
+            return self.maps[name]
 
-    def register_map(self, name, portals=[], npcs=[], music=None):
-        # Load tmx utils to handle the game's map
-        tmx_map = PathManager.map_path(name)
-        tmx_data = pytmx.load_pygame(tmx_map)
-        map_data = pyscroll.data.TiledMapData(tmx_data)
+        definition = self.definitions[name]
+        tmx_data = pytmx.load_pygame(PathManager.map_path(name))
         map_layer = pyscroll.orthographic.BufferedRenderer(
-            map_data, self.screen.get_size())
+            pyscroll.data.TiledMapData(tmx_data), self.screen.get_size()
+        )
         map_layer.zoom = self.zoom_for(self.screen.get_size())
 
-        # List of collision in tmx map
-        collisions = [pygame.Rect(obj.x, obj.y, obj.width, obj.height) for obj in tmx_data.objects if obj.type == "collision"]
-
-        # Draw layers groups
+        collisions = [
+            pygame.Rect(obj.x, obj.y, obj.width, obj.height)
+            for obj in tmx_data.objects
+            if obj.type == "collision"
+        ]
+        npcs = definition.make_npcs() if definition.make_npcs else []
         group = CharacterGroup(map_layer=map_layer, default_layer=1)
+        group.add(self.character, *npcs)
 
-        # Add your layers here (like characters etc.)
-        group.add(self.character)
-        
-        # Get NPCs
+        game_map = Map(name, collisions, group, tmx_data, definition.portals, npcs, definition.music)
+        # Looked up once here instead of on every frame
+        game_map.portal_rects = {
+            portal.src_point: game_map.get_rect(game_map.get_object(portal.src_point))
+            for portal in definition.portals
+        }
         for npc in npcs:
-            group.add(npc)
+            npc.load_points(game_map)
+            npc.teleport_spawn()
+        self.maps[name] = game_map
+        return game_map
 
-        self.maps[name] = Map(name, collisions, group, tmx_data, portals, npcs, music)
+    # ---- Accessors --------------------------------------------------------------
+    def get_map(self):
+        return self.maps[self.current_map]
 
+    def get_group(self):
+        return self.get_map().group
+
+    def get_collisions(self):
+        return self.get_map().collisions
+
+    def get_object(self, name):
+        return self.get_map().get_object(name)
+
+    def position_character(self, name):
+        point = self.get_object(name)
+        self.character.position[0] = point.x - 10
+        self.character.position[1] = point.y - 20
+        self.character.save_location()
+
+    # ---- Collisions -------------------------------------------------------------
     def check_collisions(self):
-        if not self.transitioning:
-            # Handle Portals
-            for portal in self.get_map().portals:
-                if portal.src_map == self.current_map:
-                    point = self.get_object(portal.src_point)
-                    rect = self.get_rect(point)
-                    if self.character.feet.colliderect(rect):
-                        self.transitioning = True
-                        self.transitioning_in = True
-                        self.new_map = portal.target_map
-                        self.new_position = portal.target_point
-                        self.transition_alpha = 0
-                        self.input_enabled = False
-                        break  # Exit after first valid portal collision
+        if self.transitioning:
+            return
+        game_map = self.get_map()
+        for portal in game_map.portals:
+            if self.character.feet.colliderect(game_map.portal_rects[portal.src_point]):
+                self.transitioning = True
+                self.transitioning_in = True
+                self.new_map = portal.target_map
+                self.new_position = portal.target_point
+                self.transition_alpha = 0
+                self.input_enabled = False
+                break
 
-            resolve_movement_collisions(self.character, self.get_collisions())
+        resolve_movement_collisions(self.character, game_map.collisions)
 
-            for sprite in self.get_group().sprites():
-                if type(sprite) is NPC:
-                    if sprite.feet.colliderect(self.character.rect):
-                        sprite.speed = 0
-                    else:
-                        sprite.speed = 1
-                    
+        # NPCs stand still while touching the player, so he can talk to them
+        for sprite in game_map.group.sprites():
+            if isinstance(sprite, NPC):
+                sprite.speed = 0 if sprite.feet.colliderect(self.character.rect) else 1
+
     def check_npc_collisions(self, dialogBox):
-        for sprite in self.get_group().sprites():
-            if sprite.feet.colliderect(self.character.rect) and type(sprite) is NPC:
-                dialogBox.open(sprite.dialog_texts)
-        
+        for npc in self.get_map().npcs:
+            if npc.feet.colliderect(self.character.rect):
+                dialogBox.open(npc.dialog_texts)
 
-    def get_map(self): return self.maps[self.current_map]
+    # ---- Frame ------------------------------------------------------------------
+    def update(self, player_attacking=False):
+        previous_music = self.current_music
+        if self.transitioning:
+            self.black_transition()
+        game_map = self.get_map()
+        game_map.group.update()
+        self.check_collisions()
+        self.combat.update(game_map.npcs, game_map.collisions, player_attacking)
 
-    def get_group(self): return self.get_map().group
+        self.current_music = game_map.music
+        self.isMusicChanged = self.current_music != previous_music
 
-    def get_collisions(self): return self.get_map().collisions
-
-    def get_object(self, name): return self.get_map().tmx_data.get_object_by_name(name)
-
-    def get_rect(self, object): return pygame.Rect(
-        object.x, object.y, object.width, object.height)
-    
-    def teleport_npcs(self):
-        for map in self.maps:
-            map_data = self.maps[map]
-            npcs = map_data.npcs
-            for npc in npcs:
-                npc.load_points(self)
-                npc.teleport_spawn()
+        for npc in game_map.npcs:
+            npc.move_npc()
 
     def draw(self):
-        self.get_group().draw(self.screen)
-        # Drawn before re-centering so the bars match the frame just rendered
-        to_screen_rect = self.get_group()._map_layer.translate_rect
+        group = self.get_group()
+        group.draw(self.screen)
+        # Drawn before re-centering so the overlays match the frame just rendered
+        to_screen_rect = group._map_layer.translate_rect
         self.combat.draw_beams(self.screen, to_screen_rect)
         self.combat.draw_npc_bars(self.screen, self.get_map().npcs, to_screen_rect)
-        self.get_group().center(self.character.rect.center)
+        group.center(self.character.rect.center)
         if self.transitioning:
             self.black_screen.set_alpha(self.transition_alpha)
             self.screen.blit(self.black_screen, (0, 0))
 
-    def update(self, player_attacking=False):
-        previous_music = copy.copy(self.current_music)
-        if self.transitioning:
-            self.black_transition()
-        self.get_group().update()
-        self.check_collisions()
-        self.combat.update(
-            self.get_map().npcs,
-            self.get_collisions(),
-            player_attacking,
-        )
-        
-        
-        self.current_music = self.maps[self.current_map].music
-        if(self.current_music == previous_music):
-            self.isMusicChanged = False
-        else:
-            self.isMusicChanged = True
-        
-        # Handle NPC animations      
-        for npc in self.get_map().npcs:
-            npc.move_npc()
-        
     def black_transition(self):
         if self.transitioning_in:
-            self.transition_alpha += 10
+            self.transition_alpha += self.FADE_SPEED
             if self.transition_alpha >= 255:
                 self.transition_alpha = 255
                 self.transitioning_in = False
+                self.load_map(self.new_map)
                 self.current_map = self.new_map
                 self.position_character(self.new_position)
         else:
-            self.transition_alpha -= 10
+            self.transition_alpha -= self.FADE_SPEED
             if self.transition_alpha <= 0:
                 self.transition_alpha = 0
                 self.transitioning = False
-                self.input_enabled = True        
+                self.input_enabled = True

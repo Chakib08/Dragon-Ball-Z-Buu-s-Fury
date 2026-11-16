@@ -9,7 +9,8 @@ import pygame
 
 from combat import CombatSystem
 from character import Character
-from npc import NPC
+from saiyan import Saiyan
+from npc import NPC, SaiyanNPC
 from utils.config import Config
 
 
@@ -24,7 +25,7 @@ class CombatTests(unittest.TestCase):
         pygame.quit()
 
     def setUp(self):
-        self.player = Character(100, 100, "goku")
+        self.player = Saiyan(100, 100, False, "goku")
         self.player.update()
         self.player.facing = "Right"
         self.player.animation_name = "IDLE Right"
@@ -33,19 +34,24 @@ class CombatTests(unittest.TestCase):
         with patch("combat.pygame.time.get_ticks", return_value=0):
             self.combat = CombatSystem(self.player, (1200, 1000))
 
+    def hit(self):
+        """Damage one auto attack really does to the enemy."""
+        return self.combat.PLAYER_ATTACK_DAMAGE * self.enemy.damage_taken
+
     def test_player_attack_damages_nearby_enemy_and_spends_ki_once_per_cooldown(self):
         with patch("combat.pygame.time.get_ticks", return_value=1000):
             self.combat.update([self.enemy], [], player_attacking=True)
-            self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.combat.PLAYER_ATTACK_DAMAGE)
+            self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.hit())
             self.assertEqual(self.player.ki, self.player.max_ki - self.combat.PLAYER_ATTACK_COST)
 
             self.combat.update([self.enemy], [], player_attacking=True)
-            self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.combat.PLAYER_ATTACK_DAMAGE)
+            self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.hit())
 
     def test_attacks_hit_in_each_facing_direction_and_ignore_enemies_behind(self):
         for direction in ("Up", "Down", "Left", "Right"):
             with self.subTest(direction=direction):
                 self.enemy = NPC(0, 0, False, "vegeta", 0, [])
+                self.player.action = None
                 self.player.facing = direction
                 origin_x, origin_y = self.player.feet.center
                 offset = 42
@@ -72,22 +78,29 @@ class CombatTests(unittest.TestCase):
                 self.enemy.update()
                 before = self.enemy.hp
                 now = 1000
-                self.combat.last_player_attack_ms = now - self.combat.PLAYER_ATTACK_COOLDOWN_MS
+                self.combat.last_player_attack_ms = now - self.player.ATTACK_COOLDOWN_MS
 
                 with patch("combat.pygame.time.get_ticks", return_value=now):
                     self.combat.update([self.enemy], [], player_attacking=True)
 
-                self.assertEqual(self.enemy.hp, before - self.combat.PLAYER_ATTACK_DAMAGE)
+                self.assertEqual(self.enemy.hp, before - self.hit())
 
         self.player.facing = "Right"
         self.enemy = NPC(100, 100, False, "vegeta", 0, [])
         self.enemy.position = [70, 100]
         self.enemy.update()
         before = self.enemy.hp
-        self.combat.last_player_attack_ms = 0
+        ki_before = self.player.ki
+        self.player.action = None
+        self.combat.last_player_attack_ms = -self.player.ATTACK_COOLDOWN_MS
         with patch("combat.pygame.time.get_ticks", return_value=1000):
             self.combat.update([self.enemy], [], player_attacking=True)
         self.assertEqual(self.enemy.hp, before)
+        # Swinging at nothing still plays the attack and uses up the cooldown
+        self.assertTrue(self.combat.player_swung)
+        self.assertEqual(self.player.action["name"], "attack")
+        self.assertEqual(self.player.ki, ki_before)
+        self.assertEqual(self.combat.last_player_attack_ms, 1000)
 
     def test_enemy_chases_and_retaliates_after_attack_cooldown(self):
         self.enemy.position = [180, 100]
@@ -102,7 +115,7 @@ class CombatTests(unittest.TestCase):
 
         self.enemy.position = [130, 100]
         self.enemy.update()
-        with patch("combat.pygame.time.get_ticks", return_value=2001):
+        with patch("combat.pygame.time.get_ticks", return_value=1001 + self.enemy.attack_cooldown_ms):
             self.combat.update([self.enemy], [])
         self.assertEqual(self.player.hp, self.player.max_hp - self.enemy.attack_damage)
 
@@ -156,7 +169,7 @@ class CombatTests(unittest.TestCase):
         self.assertAlmostEqual(self.player.ki, 50 + self.combat.KI_REGEN_PER_SECOND * 2)
 
     def test_defeated_enemy_stays_visible_and_stops_fighting(self):
-        self.enemy.hp = self.combat.PLAYER_ATTACK_DAMAGE
+        self.enemy.hp = self.hit()
         group = pygame.sprite.Group(self.enemy)
         enemies = [self.enemy]
 
@@ -190,7 +203,7 @@ class CombatTests(unittest.TestCase):
     def test_player_faints_at_zero_hp_and_the_enemy_stops_fighting(self):
         for name in ("goku", "gohan", "goten", "vegeta"):
             with self.subTest(character=name):
-                player = Character(100, 100, name)
+                player = Saiyan(100, 100, False, name)
                 player.update()
                 enemy = NPC(110, 100, False, "vegeta", 0, [])
                 enemy.update()
@@ -219,7 +232,7 @@ class CombatTests(unittest.TestCase):
     def test_super_saiyan_transformation_plays_then_switches_form_and_toggles_back(self):
         for name in ("goku", "gohan", "goten", "vegeta"):
             with self.subTest(character=name):
-                player = Character(100, 100, name)
+                player = Saiyan(100, 100, False, name)
                 player.update()
                 self.assertFalse(player.is_super)
                 self.assertTrue(player.transform())
@@ -245,7 +258,7 @@ class CombatTests(unittest.TestCase):
             self.combat.update([self.enemy], [], player_attacking=True)
         self.assertEqual(
             self.enemy.hp,
-            self.enemy.max_hp - self.combat.PLAYER_ATTACK_DAMAGE * self.combat.SUPER_DAMAGE_MULTIPLIER,
+            self.enemy.max_hp - self.hit() * self.combat.SUPER_DAMAGE_MULTIPLIER,
         )
         ki_after_attack = self.player.ki
         self.player.take_damage(10)
@@ -292,7 +305,7 @@ class CombatTests(unittest.TestCase):
                 self.player.update_action()
                 self.combat.update([self.enemy], [])
 
-        self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.combat.SPECIAL_DAMAGE)
+        self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.combat.SPECIAL_DAMAGE * self.enemy.damage_taken)
         self.assertEqual(self.combat.beams, [])
         self.assertIsNone(self.player.action)
 
@@ -318,6 +331,100 @@ class CombatTests(unittest.TestCase):
         tip = self.combat._beam_rect(self.combat.beams[0]).midright
         self.assertNotEqual(screen.get_at(tip)[:3], (0, 0, 0))
 
+    def test_player_and_npc_attack_at_the_same_pace(self):
+        self.assertEqual(self.player.ATTACK_COOLDOWN_MS, self.enemy.attack_cooldown_ms)
+        self.assertEqual(self.player.ATTACK_CLOCK_SPEED, self.enemy.ATTACK_CLOCK_SPEED)
+        with patch("combat.pygame.time.get_ticks", return_value=1000):
+            self.combat.update([self.enemy], [], player_attacking=True)
+        self.player.action = None
+        with patch("combat.pygame.time.get_ticks", return_value=999 + self.player.ATTACK_COOLDOWN_MS):
+            self.combat.update([self.enemy], [], player_attacking=True)
+            self.assertFalse(self.combat.player_swung)
+        self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.hit())
+        with patch("combat.pygame.time.get_ticks", return_value=1000 + self.player.ATTACK_COOLDOWN_MS):
+            self.combat.update([self.enemy], [], player_attacking=True)
+            self.assertTrue(self.combat.player_swung)
+        self.assertEqual(self.enemy.hp, self.enemy.max_hp - 2 * self.hit())
+
+    def test_no_attack_while_busy_with_another_action(self):
+        self.player.take_damage(1)
+        self.assertEqual(self.player.action["name"], "hurt")
+        with patch("combat.pygame.time.get_ticks", return_value=5000):
+            self.combat.update([self.enemy], [], player_attacking=True)
+        self.assertFalse(self.combat.player_swung)
+        self.assertEqual(self.enemy.hp, self.enemy.max_hp)
+
+    def test_npc_is_tough_enough_for_a_long_fight(self):
+        hits_to_win = self.enemy.max_hp / self.hit()
+        self.assertGreaterEqual(hits_to_win, 15)
+        self.assertLess(self.enemy.damage_taken, 1)
+
+    def test_fast_attacks_cannot_keep_the_npc_stunned(self):
+        with patch("combat.pygame.time.get_ticks", return_value=1000):
+            self.enemy.take_damage(5)
+            self.assertEqual(self.enemy.action["name"], "hurt")
+            self.run_action(self.enemy)
+        with patch("combat.pygame.time.get_ticks", return_value=1000 + self.player.ATTACK_COOLDOWN_MS):
+            self.enemy.take_damage(5)
+            self.assertIsNone(self.enemy.action)
+        with patch("combat.pygame.time.get_ticks", return_value=1001 + self.enemy.FLINCH_COOLDOWN_MS):
+            self.enemy.take_damage(5)
+            self.assertEqual(self.enemy.action["name"], "hurt")
+
+    def saiyan_enemy_next_to_player(self):
+        enemy = SaiyanNPC(self.player.position[0] + 10, self.player.position[1], False, "vegeta", 0, [])
+        enemy.update()
+        enemy.facing = "Left"
+        return enemy
+
+    def test_saiyan_npc_goes_super_saiyan_at_half_health_and_hits_harder(self):
+        enemy = self.saiyan_enemy_next_to_player()
+        with patch("combat.pygame.time.get_ticks", return_value=1000):
+            self.combat.update([enemy], [])
+            self.assertFalse(enemy.is_super)
+            self.assertIsNone(enemy.action)
+
+            enemy.hp = enemy.max_hp * enemy.TRANSFORM_AT_HP
+            enemy.last_flinch_ms = 1000
+            self.combat.update([enemy], [])
+            self.assertEqual(enemy.action["name"], "transform")
+            # Hits do not interrupt the transformation
+            enemy.take_damage(5)
+            self.assertEqual(enemy.action["name"], "transform")
+            for _ in range(300):
+                self.combat.update([enemy], [])
+                if enemy.is_super:
+                    break
+        self.assertTrue(enemy.is_super)
+
+        hp = self.player.hp
+        with patch("combat.pygame.time.get_ticks", return_value=5000):
+            self.combat.update([enemy], [])
+            self.combat.update([enemy], [])
+        self.assertEqual(hp - self.player.hp, enemy.attack_damage * self.combat.SUPER_DAMAGE_MULTIPLIER)
+
+        # A Super Saiyan NPC is also harder to hurt, and faints in base form
+        before = enemy.hp
+        enemy.take_damage(10)
+        self.assertEqual(before - enemy.hp, 10 * enemy.damage_taken * enemy.SUPER_DAMAGE_TAKEN)
+        enemy.hp = 0
+        with patch("combat.pygame.time.get_ticks", return_value=6000):
+            for _ in range(100):
+                self.combat.update([enemy], [])
+        self.assertTrue(enemy.faint_finished)
+        self.assertFalse(enemy.is_super)
+
+    def test_non_saiyan_npc_never_transforms(self):
+        self.enemy.position = [self.player.position[0] + 10, self.player.position[1]]
+        self.enemy.update()
+        self.enemy.hp = 1
+        with patch("combat.pygame.time.get_ticks", return_value=1000):
+            for _ in range(50):
+                self.combat.update([self.enemy], [])
+        self.assertFalse(self.enemy.can_transform)
+        self.assertFalse(self.enemy.is_super)
+        self.assertFalse(Character(0, 0, "goku").transform())
+
     def test_npc_health_bar_follows_hp_and_disappears_after_the_faint(self):
         screen = pygame.Surface((200, 200))
         self.enemy.position = [100, 100]
@@ -341,25 +448,33 @@ class CombatTests(unittest.TestCase):
         self.combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
         self.assertEqual(screen.get_at(left)[:3], (0, 0, 0))
 
-    def test_attack_animation_advances_while_attacking_even_without_a_hit(self):
-        self.enemy.position = [500, 500]
-        self.enemy.update()
-        for _ in range(12):
-            self.player.attack("Attack Right", 12)
+    def test_each_strike_is_one_move_of_the_combo_and_they_cycle(self):
+        for name, expected_moves in (("goku", 3), ("gohan", 4), ("goten", 4), ("vegeta", 4)):
+            with self.subTest(character=name):
+                fighter = Saiyan(100, 100, False, name)
+                fighter.facing = "Right"
+                moves = fighter.get_attack_moves("Right")
+                self.assertEqual(len(moves), expected_moves)
+                self.assertEqual(sum(len(move) for move in moves), 12)
 
-        self.assertEqual(self.player.animation_name, "Attack Right")
-        self.assertGreater(self.player.current_animation_index, 0)
+                played = []
+                for _ in range(expected_moves + 1):
+                    self.assertTrue(fighter.strike())
+                    self.assertEqual(fighter.action["name"], "attack")
+                    played.append(fighter.action["frames"])
+                    # A single punch or kick is short: well under the cooldown
+                    ticks = self.run_action(fighter)
+                    self.assertLess(ticks * 1000 / 60, fighter.ATTACK_COOLDOWN_MS)
+                self.assertEqual(played[:expected_moves], moves)
+                # After the last move the combo starts over
+                self.assertEqual(played[expected_moves], moves[0])
+                self.assertIsNone(fighter.action)
 
-        self.player.images = []
-        self.player.current_animation_macro = None
-        self.player.current_animation_index = 0
-        self.player.clock = 0
-        self.player.attack("Attack Right", 12)
-        self.assertEqual(self.player.current_animation_index, 0)
-
-        self.player.move("Walk Up", 4)
-        self.assertEqual(self.player.animation_name, "Walk Up")
-        self.assertLess(self.player.current_animation_index, 4)
+    def test_left_strikes_are_mirrored(self):
+        right = self.player.get_attack_moves("Right")[0][0]
+        left = self.player.get_attack_moves("Left")[0][0]
+        self.assertIsNot(left, right)
+        self.assertEqual(left.get_size(), right.get_size())
 
 
 if __name__ == "__main__":

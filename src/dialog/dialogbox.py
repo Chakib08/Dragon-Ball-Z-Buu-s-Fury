@@ -34,9 +34,8 @@ class DialogBox:
         
     def render(self, screen):
         if self.isBoxOpened:
-            self.letter_idx += 1
-            if self.letter_idx >= len(self.texts[self.text_idx]):
-                self.letter_idx = self.letter_idx
+            # Typewriter effect: one more letter per frame
+            self.letter_idx = min(self.letter_idx + 1, len(self.texts[self.text_idx]))
             screen.blit(self.box, (self.x, self.y))
             text = self.font.render(self.texts[self.text_idx][0:self.letter_idx], False, WHITE)
             screen.blit(text, (self.x + round(30 * self.scale), self.y + round(20 * self.scale)))
@@ -56,7 +55,7 @@ class DialogBox:
         if(self.text_idx >= len(self.texts)):
             self.isBoxOpened = False
     
-    def open(self, dialog_texts=[]):
+    def open(self, dialog_texts=()):
         if self.isBoxOpened:
             self.next_text()
         else:

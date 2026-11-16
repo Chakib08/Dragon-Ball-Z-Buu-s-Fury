@@ -101,6 +101,16 @@ class CharacterConfigTests(unittest.TestCase):
                     mask = pygame.mask.from_threshold(crop, SHEET_BACKGROUND, (1, 1, 1, 255))
                     self.assertEqual(mask.count(), 0)
 
+    def test_frames_are_cut_once_and_shared_between_sprites(self):
+        first, second = Animation("vegeta"), Animation("vegeta")
+        self.assertIs(first.forms["base"], second.forms["base"])
+        image = first.get_image_by_animation_name("IDLE Right")
+        self.assertIs(image, second.get_image_by_animation_name("IDLE Right"))
+        mirrored = first.get_image_by_animation_name("IDLE Right", flipped=True)
+        self.assertIsNot(mirrored, image)
+        self.assertIs(mirrored, first.get_image_by_animation_name("IDLE Right", flipped=True))
+        self.assertEqual(first.get_frames("Walk Left", 4), second.get_frames("Walk Left", 4))
+
     def test_character_name_matches_folder_and_sheet(self):
         for name in ROSTER:
             with open(os.path.join(Config.CONFIG_DIR, name, "base.json")) as file:

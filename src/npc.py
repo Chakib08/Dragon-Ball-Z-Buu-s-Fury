@@ -1,47 +1,57 @@
 import math
 
-import pygame
-
 from character import Character
-from constants import *
+from constants import C_WALK_ANIMATION_COUNT
+from saiyan import SuperSaiyanMixin
+
 
 class NPC(Character):
-    def __init__(self, pos_x, pos_y, isTransformed, name, nb_points, dialog_texts):
+    """A character that patrols a path and fights back when the player is near."""
+
+    MAX_HP = 400
+    # NPCs are tough: only this share of a hit gets through
+    DAMAGE_TAKEN = 0.6
+    ATTACK_DAMAGE = 2
+    # Longer than the player's attack rhythm, so the NPC keeps fighting back
+    FLINCH_COOLDOWN_MS = 1800
+    # Distance (in pixels) under which the NPC considers a patrol point reached
+    PATROL_ARRIVAL_DISTANCE = 2
+
+    def __init__(self, pos_x, pos_y, is_transformed, name, nb_points, dialog_texts):
         super().__init__(pos_x, pos_y, name)
-        self.isTransofrmed = isTransformed
-        self.rect = self.image.get_rect()
         self.name = name
         self.nb_points = nb_points
         self.points = []
         self.current_point = 0
         self.speed = 1
         self.dialog_texts = dialog_texts
-        self.max_hp = 60
-        self.hp = self.max_hp
         self.combat_engaged = False
         self.is_defeated = False
         self.chase_stuck_frames = 0
         self.chase_path = []
         self.chase_target = None
-        self.attack_damage = 8
-        self.attack_cooldown_ms = 1000
+        self.attack_damage = self.ATTACK_DAMAGE
+        self.attack_cooldown_ms = self.ATTACK_COOLDOWN_MS
         self.last_attack_ms = 0
+        if is_transformed and self.can_transform:
+            self._become_super()
+            self.face_idle()
+
+    def update_ai(self):
+        """Decisions the NPC takes on its own during a fight."""
 
     def teleport_spawn(self):
         location = self.points[self.current_point]
         self.position[0] = location.x
         self.position[1] = location.y
 
-    def load_points(self, map):
-        for i in range(self.nb_points):
-            point = map.get_object(f"{self.name}_path_{i}")
-            rect = map.get_rect(point)
-            self.points.append(rect)
-            self.save_location()
-
-
-    # Distance (in pixels) under which the NPC considers a patrol point reached
-    PATROL_ARRIVAL_DISTANCE = 2
+    def load_points(self, game_map):
+        """Read the patrol path ("<name>_path_<i>" objects) from the map."""
+        self.points = [
+            game_map.get_rect(game_map.get_object(f"{self.name}_path_{index}"))
+            for index in range(self.nb_points)
+        ]
+        self.save_location()
 
     def _target_index(self):
         return (self.current_point + 1) % len(self.points)
@@ -72,7 +82,7 @@ class NPC(Character):
 
         # Stand still while touching the player (so he can be talked to)
         if self.speed == 0:
-            self._face_idle(self.facing)
+            self.face_idle()
             return
 
         target_rect = self.points[self._target_index()]
@@ -90,3 +100,17 @@ class NPC(Character):
         else:
             direction = "Down" if dy > 0 else "Up"
         self.move(f"Walk {direction}", C_WALK_ANIMATION_COUNT, (dx, dy))
+
+
+class SaiyanNPC(SuperSaiyanMixin, NPC):
+    """A Saiyan NPC: goes Super Saiyan once the fight turns against him."""
+
+    # Transforms when HP drops to this share of the maximum
+    TRANSFORM_AT_HP = 0.5
+
+    def update_ai(self):
+        if (
+            not self.is_super
+            and 0 < self.hp <= self.max_hp * self.TRANSFORM_AT_HP
+        ):
+            self.transform()

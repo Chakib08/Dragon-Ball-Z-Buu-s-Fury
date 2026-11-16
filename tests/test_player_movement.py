@@ -49,7 +49,9 @@ class PlayerMovementTests(unittest.TestCase):
                 character.move("Walk Down", 4)
                 character.move("Run Right", 4)
                 for direction in ("Up", "Down", "Left", "Right"):
-                    character.attack(f"Attack {direction}", 12)
+                    character.facing = direction
+                    self.assertTrue(character.strike())
+                    self.assertEqual(character.action["name"], "attack")
 
     def test_collision_resolution_keeps_unblocked_axis_movement(self):
         class FakeCharacter:

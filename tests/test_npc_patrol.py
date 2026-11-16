@@ -100,14 +100,30 @@ class NpcPatrolTests(unittest.TestCase):
         self.npc.resume_patrol()
         self.assertEqual(self.npc._target_index(), 2)
 
-    def test_npc_keeps_fighting_with_an_attack_animation_when_player_is_idle(self):
+    def test_npc_keeps_striking_one_move_at_a_time_when_player_is_idle(self):
         self.step(300)
         self.assertTrue(self.npc.combat_engaged)
-        self.assertTrue(self.npc.animation_name.startswith("Attack"))
-        index_before = self.npc.current_animation_index
-        self.step(10)
-        self.assertNotEqual(self.npc.current_animation_index, index_before)
-        self.assertLess(self.player.hp, self.player.max_hp)
+        moves_before = self.npc.attack_move_index
+        hp_before = self.player.hp
+        striking = False
+        for _ in range(120):
+            self.step(1)
+            striking = striking or (self.npc.action is not None and self.npc.action["name"] == "attack")
+        self.assertTrue(striking)
+        # About two seconds: several separate punches and kicks, each a hit
+        self.assertGreaterEqual(self.npc.attack_move_index - moves_before, 3)
+        self.assertLess(self.player.hp, hp_before)
+
+    def test_maps_are_loaded_on_first_visit_only(self):
+        self.assertEqual(list(self.maps.maps), ["map"])
+        house = self.maps.load_map("house")
+        self.assertIs(self.maps.load_map("house"), house)
+        self.assertEqual(set(house.portal_rects), {"exit_house", "enter_hall", "enter_kitchen"})
+        self.assertIn(self.player, house.group.sprites())
+
+    def test_world_npc_is_a_saiyan_who_can_transform(self):
+        self.assertTrue(self.npc.can_transform)
+        self.assertTrue(self.npc.has_form("ssj"))
 
 
 if __name__ == "__main__":

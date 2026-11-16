@@ -4,7 +4,7 @@ import heapq
 import pygame
 
 from animation import AnimationDirection
-from constants import C_ATTACK_ANIMATION_COUNT
+from character import DIRECTION_VECTORS
 from movement import resolve_movement_collisions
 
 
@@ -15,16 +15,17 @@ class CombatSystem:
     NPC_ATTACK_RANGE = 32
     NPC_ATTACK_LATERAL_TOLERANCE = 20
     PATH_GRID_SIZE = 8
-    PLAYER_ATTACK_COOLDOWN_MS = 450
-    PLAYER_ATTACK_DAMAGE = 20
-    PLAYER_ATTACK_COST = 8
+    # One punch or kick per button press, at most one every
+    # Character.ATTACK_COOLDOWN_MS (the pace NPCs strike at too)
+    PLAYER_ATTACK_DAMAGE = 15
+    PLAYER_ATTACK_COST = 3
     KI_REGEN_PER_SECOND = 12
     # Super Saiyan: hits harder, but burns ki instead of regenerating it
     SUPER_DAMAGE_MULTIPLIER = 1.5
     SUPER_KI_DRAIN_PER_SECOND = 5
     # Special technique (energy beam)
     SPECIAL_COST = 30
-    SPECIAL_DAMAGE = 35
+    SPECIAL_DAMAGE = 70
     SPECIAL_COOLDOWN_MS = 1200
     SPECIAL_RANGE = 220
     SPECIAL_SPEED = 9
@@ -38,10 +39,15 @@ class CombatSystem:
         self.player = player
         self.screen_size = screen_size
         self.last_update_ms = pygame.time.get_ticks()
-        self.last_player_attack_ms = self.last_update_ms - self.PLAYER_ATTACK_COOLDOWN_MS
+        self.last_player_attack_ms = self.last_update_ms - player.ATTACK_COOLDOWN_MS
+        # True when the last update() started a player attack
+        self.player_swung = False
         self.last_special_ms = self.last_update_ms - self.SPECIAL_COOLDOWN_MS
         self.beams = []
         self.font = pygame.font.Font(None, 30)
+        self.name_font = pygame.font.Font(None, 22)
+        # Text is rendered once and reused every frame
+        self._labels = {}
 
     def update(self, npcs, collisions, player_attacking=False):
         now = pygame.time.get_ticks()
@@ -60,6 +66,7 @@ class CombatSystem:
             )
         self._update_beams(npcs)
 
+        self.player_swung = False
         player_down = self.player.hp <= 0
         if player_down:
             self.player.faint()
@@ -73,7 +80,7 @@ class CombatSystem:
                 npc.faint()
                 continue
 
-            # Flinching after a hit: no chasing or attacking meanwhile
+            # Flinching or transforming: no chasing or attacking meanwhile
             if npc.update_action():
                 continue
 
@@ -89,6 +96,10 @@ class CombatSystem:
                     npc.resume_patrol()
                 continue
 
+            npc.update_ai()
+            if npc.action is not None:
+                continue
+
             if not was_engaged:
                 npc.last_attack_ms = now
                 npc.chase_stuck_frames = 0
@@ -98,32 +109,40 @@ class CombatSystem:
             if self._npc_in_attack_range(npc):
                 npc.chase_stuck_frames = 0
                 npc.chase_path = []
-                # Keep fighting (animated) even when the player stands still
-                npc.attack(f"Attack {npc.facing}", C_ATTACK_ANIMATION_COUNT)
+                # One punch or kick at a time, at the same pace as the player
                 if now - npc.last_attack_ms >= npc.attack_cooldown_ms:
                     npc.last_attack_ms = now
-                    self.player.take_damage(npc.attack_damage)
+                    npc.strike()
+                    self.player.take_damage(npc.attack_damage * self._damage_multiplier(npc))
+                else:
+                    npc.face_idle()
             else:
                 self._move_toward(npc, self.player.feet.center, collisions)
 
     def _player_attack(self, npcs, now):
+        """Strike once, if the player is free to: plays one punch or kick
+        and hits the closest enemy in front, if there is one."""
+        player = self.player
         if (
-            now - self.last_player_attack_ms < self.PLAYER_ATTACK_COOLDOWN_MS
-            or self.player.ki < self.PLAYER_ATTACK_COST
+            now - self.last_player_attack_ms < player.ATTACK_COOLDOWN_MS
+            or player.action is not None
+            or player.ki < self.PLAYER_ATTACK_COST
         ):
             return
+
+        self.last_player_attack_ms = now
+        self.player_swung = True
+        player.strike()
 
         targets = [npc for npc in npcs if npc.hp > 0 and self._is_in_attack_range(npc)]
         if not targets:
             return
+        target = min(targets, key=lambda npc: self._distance(player.rect.center, npc.rect.center))
+        target.take_damage(self.PLAYER_ATTACK_DAMAGE * self._damage_multiplier(player))
+        player.ki -= self.PLAYER_ATTACK_COST
 
-        target = min(targets, key=lambda npc: self._distance(self.player.rect.center, npc.rect.center))
-        target.take_damage(self.PLAYER_ATTACK_DAMAGE * self._damage_multiplier())
-        self.player.ki -= self.PLAYER_ATTACK_COST
-        self.last_player_attack_ms = now
-
-    def _damage_multiplier(self):
-        return self.SUPER_DAMAGE_MULTIPLIER if self.player.is_super else 1
+    def _damage_multiplier(self, attacker):
+        return self.SUPER_DAMAGE_MULTIPLIER if attacker.is_super else 1
 
     # ---- Special technique -------------------------------------------------
     def start_special(self):
@@ -157,12 +176,7 @@ class CombatSystem:
 
     def _fire_beam(self, facing):
         player = self.player
-        direction = {
-            AnimationDirection.UP.value: (0, -1),
-            AnimationDirection.DOWN.value: (0, 1),
-            AnimationDirection.LEFT.value: (-1, 0),
-            AnimationDirection.RIGHT.value: (1, 0),
-        }[facing]
+        direction = DIRECTION_VECTORS[facing]
         # Start at the edge of the body, at chest height for sideways shots
         origin = (
             player.rect.centerx + direction[0] * player.rect.width / 2,
@@ -172,7 +186,7 @@ class CombatSystem:
             "origin": origin,
             "direction": direction,
             "length": 0,
-            "damage": self.SPECIAL_DAMAGE * self._damage_multiplier(),
+            "damage": self.SPECIAL_DAMAGE * self._damage_multiplier(player),
             "color": self.SPECIAL_COLORS.get(player.character_name, self.SPECIAL_DEFAULT_COLOR),
             "stopped": False,
             "fade": self.SPECIAL_FADE_TICKS,
@@ -236,23 +250,12 @@ class CombatSystem:
             screen.blit(layer, (rect.x - pad, rect.y - pad))
 
     def _player_attack_area(self):
-        direction = getattr(self.player, "facing", self._facing(self.player.animation_name))
-        origin = self.player.feet.center
-        return origin, direction
+        return self.player.feet.center, self.player.facing
 
     def _is_in_attack_range(self, npc):
         origin, direction = self._player_attack_area()
         target = npc.feet.center
-        dx = target[0] - origin[0]
-        dy = target[1] - origin[1]
-        if direction == AnimationDirection.UP.value:
-            forward, lateral = -dy, dx
-        elif direction == AnimationDirection.DOWN.value:
-            forward, lateral = dy, dx
-        elif direction == AnimationDirection.LEFT.value:
-            forward, lateral = -dx, dy
-        else:
-            forward, lateral = dx, dy
+        forward, lateral = self._forward_lateral(direction, origin, target)
         lateral_tolerance = (
             self.player.feet.width + npc.feet.width
         ) / 2 + self.ATTACK_LATERAL_TOLERANCE
@@ -309,21 +312,24 @@ class CombatSystem:
     def _npc_in_attack_range(self, npc):
         origin = npc.feet.center
         target = self.player.feet.center
-        dx = target[0] - origin[0]
-        dy = target[1] - origin[1]
-        direction = getattr(npc, "facing", AnimationDirection.DOWN.value)
-        if direction == AnimationDirection.UP.value:
-            forward, lateral = -dy, dx
-        elif direction == AnimationDirection.DOWN.value:
-            forward, lateral = dy, dx
-        elif direction == AnimationDirection.LEFT.value:
-            forward, lateral = -dx, dy
-        else:
-            forward, lateral = dx, dy
+        forward, lateral = self._forward_lateral(npc.facing, origin, target)
         tolerance = (
             self.player.feet.width + npc.feet.width
         ) / 2 + self.NPC_ATTACK_LATERAL_TOLERANCE
         return 0 <= forward <= self.NPC_ATTACK_RANGE and abs(lateral) <= tolerance
+
+    @staticmethod
+    def _forward_lateral(direction, origin, target):
+        """Offset of target from origin, split along and across the facing direction."""
+        dx = target[0] - origin[0]
+        dy = target[1] - origin[1]
+        if direction == AnimationDirection.UP.value:
+            return -dy, dx
+        if direction == AnimationDirection.DOWN.value:
+            return dy, dx
+        if direction == AnimationDirection.LEFT.value:
+            return -dx, dy
+        return dx, dy
 
     def _find_path(self, npc, target, collisions):
         start = self._grid_cell(npc.feet.center)
@@ -427,29 +433,26 @@ class CombatSystem:
         return min_x <= cell[0] <= max_x and min_y <= cell[1] <= max_y
 
     @staticmethod
-    def _facing(animation_name):
-        for direction in (
-            AnimationDirection.UP.value,
-            AnimationDirection.DOWN.value,
-            AnimationDirection.LEFT.value,
-            AnimationDirection.RIGHT.value,
-        ):
-            if direction in animation_name:
-                return direction
-        return AnimationDirection.DOWN.value
-
-    @staticmethod
     def _distance(first, second):
         return math.hypot(first[0] - second[0], first[1] - second[1])
 
     def draw(self, screen):
         self._draw_bar(screen, "HP", self.player.hp, self.player.max_hp, (220, 55, 55), 20)
-        ki_color = (245, 205, 60) if self.player.is_super else (65, 145, 245)
+        ki_color = self.SUPER_COLOR if self.player.is_super else (65, 145, 245)
         self._draw_bar(screen, "KI", self.player.ki, self.player.max_ki, ki_color, 58)
 
-    NPC_BAR_MIN_WIDTH = 48
-    NPC_BAR_HEIGHT = 8
+    NPC_BAR_MIN_WIDTH = 120
+    NPC_BAR_HEIGHT = 14
     NPC_BAR_GAP = 8
+    SUPER_COLOR = (245, 205, 60)
+    FRAME_COLOR = (235, 235, 235)
+
+    def _label(self, text, font):
+        key = (text, font)
+        label = self._labels.get(key)
+        if label is None:
+            label = self._labels[key] = font.render(text, True, (255, 255, 255))
+        return label
 
     def draw_npc_bars(self, screen, npcs, to_screen_rect):
         """Draw a health bar above each NPC.
@@ -458,7 +461,7 @@ class CombatSystem:
         The bar stays (empty) during the knock-out animation, then disappears.
         """
         for npc in npcs:
-            if getattr(npc, "faint_finished", False):
+            if npc.faint_finished:
                 continue
             on_screen = pygame.Rect(to_screen_rect(npc.rect))
             width = max(self.NPC_BAR_MIN_WIDTH, on_screen.width)
@@ -471,14 +474,17 @@ class CombatSystem:
                 (220, 55, 55),
                 (bar.x, bar.y, round(bar.width * fraction), bar.height),
             )
-            pygame.draw.rect(screen, (235, 235, 235), bar, 1)
+            # Gold frame while the NPC is a Super Saiyan
+            frame_color = self.SUPER_COLOR if npc.is_super else self.FRAME_COLOR
+            pygame.draw.rect(screen, frame_color, bar, 2)
+            name = self._label(npc.character_name.capitalize(), self.name_font)
+            screen.blit(name, name.get_rect(midbottom=(bar.centerx, bar.top - 2)))
 
     def _draw_bar(self, screen, label, value, maximum, color, y):
         x = 20
         bar_width = min(260, self.screen_size[0] // 3)
         bar_height = 22
-        label_surface = self.font.render(label, True, (255, 255, 255))
-        screen.blit(label_surface, (x, y))
+        screen.blit(self._label(label, self.font), (x, y))
         bar_x = x + 42
         bar_y = y + 3
         pygame.draw.rect(screen, (35, 35, 42), (bar_x, bar_y, bar_width, bar_height))
@@ -488,4 +494,4 @@ class CombatSystem:
             color,
             (bar_x, bar_y, round(bar_width * fraction), bar_height),
         )
-        pygame.draw.rect(screen, (235, 235, 235), (bar_x, bar_y, bar_width, bar_height), 2)
+        pygame.draw.rect(screen, self.FRAME_COLOR, (bar_x, bar_y, bar_width, bar_height), 2)
