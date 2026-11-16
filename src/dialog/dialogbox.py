@@ -2,8 +2,10 @@ import pygame
 
 from pathmanager import PathManager
 
-X_POS = 50
-Y_POS = 650
+# Layout designed for a 1200x1000 screen
+BOX_SIZE = (700, 300)
+PORTRAIT_SIZE = (300, 300)
+BOTTOM_MARGIN = 50
 
 WHITE = (255, 255, 255)
 FONT_SIZE = 40
@@ -11,15 +13,23 @@ FONT_SIZE = 40
 # TODO: Remove magic numbers and retreive the from a YAML or JSON config file
 
 class DialogBox:
-    def __init__(self) -> None:
+    def __init__(self, screen_size=(1200, 1000)) -> None:
+        total_width = BOX_SIZE[0] + PORTRAIT_SIZE[0]
+        scale = min(1, screen_size[0] / (total_width + 100), screen_size[1] / 1000)
+        box_size = (round(BOX_SIZE[0] * scale), round(BOX_SIZE[1] * scale))
+        portrait_size = (round(PORTRAIT_SIZE[0] * scale), round(PORTRAIT_SIZE[1] * scale))
+        self.scale = scale
+        self.box_width = box_size[0]
+        self.x = (screen_size[0] - box_size[0] - portrait_size[0]) // 2
+        self.y = screen_size[1] - box_size[1] - round(BOTTOM_MARGIN * scale)
         self.box = self.get_image(PathManager.dialog_file("dialogbox.png"), (68, 140, 203), (6, 16, 160, 64), (160,64))
-        self.box = pygame.transform.scale(self.box, (700, 300))
+        self.box = pygame.transform.scale(self.box, box_size)
         self.portrait = self.get_image(PathManager.dialog_file("portraits.png"), (255, 174, 201), (171, 607, 64, 64), (64, 64))
-        self.portrait = pygame.transform.scale(self.portrait, (300, 300))
+        self.portrait = pygame.transform.scale(self.portrait, portrait_size)
         self.texts = ["KAKAROT !!!", "I want my revenge !!"]
         self.text_idx = 0
         self.letter_idx = 0
-        self.font = pygame.font.Font(PathManager.dialog_file("dialog_font.ttf"), FONT_SIZE)
+        self.font = pygame.font.Font(PathManager.dialog_file("dialog_font.ttf"), max(12, round(FONT_SIZE * scale)))
         self.isBoxOpened = False
         
     def render(self, screen):
@@ -27,10 +37,10 @@ class DialogBox:
             self.letter_idx += 1
             if self.letter_idx >= len(self.texts[self.text_idx]):
                 self.letter_idx = self.letter_idx
-            screen.blit(self.box, (X_POS, Y_POS))
+            screen.blit(self.box, (self.x, self.y))
             text = self.font.render(self.texts[self.text_idx][0:self.letter_idx], False, WHITE)
-            screen.blit(text, (X_POS + 30, Y_POS + 20))
-            screen.blit(self.portrait, (X_POS + 700, Y_POS))
+            screen.blit(text, (self.x + round(30 * self.scale), self.y + round(20 * self.scale)))
+            screen.blit(self.portrait, (self.x + self.box_width, self.y))
     
     def get_image(self, img_path: str, bg: tuple, pos: tuple, size: tuple) -> pygame.Surface:
         full_img = pygame.image.load(img_path)

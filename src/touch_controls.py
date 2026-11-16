@@ -9,7 +9,8 @@ class TouchControls:
 
     def __init__(self, screen_size):
         self.screen_size = screen_size
-        self.button_size = max(44, min(82, int(min(screen_size) * 0.11)))
+        shortest = min(screen_size)
+        self.button_size = max(44, min(int(max(1000, shortest) * 0.082), int(shortest * 0.11)))
         self.buttons = self._make_buttons()
         self.pointers = {}
         self.pressed_actions = set()

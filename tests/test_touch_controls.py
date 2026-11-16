@@ -64,6 +64,17 @@ class TouchControlsTests(unittest.TestCase):
         for control, center in self.controls.buttons.items():
             self.assertEqual(self.controls._control_at(center), control)
 
+    def test_buttons_stay_on_screen_and_apart_on_phone_and_desktop_sizes(self):
+        for size in ((1200, 1000), (2400, 1080), (1280, 720), (1920, 1080), (3200, 1440)):
+            with self.subTest(size=size):
+                controls = TouchControls(size)
+                radius = controls.button_size * 0.63
+                for control, (x, y) in controls.buttons.items():
+                    self.assertTrue(radius <= x <= size[0] - radius * 0.9, control)
+                    self.assertTrue(radius <= y <= size[1] - radius * 0.5, control)
+                    self.assertEqual(controls._control_at((x, y)), control)
+        self.assertGreater(TouchControls((3200, 1440)).button_size, TouchControls((1200, 1000)).button_size)
+
     def test_controls_render_on_screen(self):
         screen = pygame.Surface((1200, 1000))
         self.controls.draw(screen)

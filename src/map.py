@@ -107,6 +107,14 @@ class MapManager:
         self.teleport_npcs()
         
 
+    # Map pixels visible from top to bottom of the screen
+    VISIBLE_MAP_HEIGHT = 250
+
+    @classmethod
+    def zoom_for(cls, screen_size):
+        # Whole numbers keep the pixel art sharp
+        return max(2, round(screen_size[1] / cls.VISIBLE_MAP_HEIGHT))
+
     def position_character(self, name):
         pos = self.get_object(name)
         self.character.position[0] = pos.x - 10
@@ -120,7 +128,7 @@ class MapManager:
         map_data = pyscroll.data.TiledMapData(tmx_data)
         map_layer = pyscroll.orthographic.BufferedRenderer(
             map_data, self.screen.get_size())
-        map_layer.zoom = 4
+        map_layer.zoom = self.zoom_for(self.screen.get_size())
 
         # List of collision in tmx map
         collisions = [pygame.Rect(obj.x, obj.y, obj.width, obj.height) for obj in tmx_data.objects if obj.type == "collision"]

@@ -15,6 +15,11 @@ class State(Enum):
 
 # TODO: Remove magic numbers, retreive the latters from the app config
 class Menu:
+    # Start/Options sit at this fraction of the screen width (the background
+    # image is stretched to the screen), with the arrow just left of them
+    BUTTONS_X = 680 / 1200
+    ARROW_GAP = 25
+
     def __init__(self, resolution) -> None:
         # Main menu image
         self.menu_image = pygame.image.load(PathManager.menu_image_path("menu_image_box.png"))
@@ -64,10 +69,10 @@ class Menu:
     def launch_menu(self, screen: pygame.Surface, resolution: tuple, events: List[pygame.event.Event]) -> None:
         # Set up the start image rect
         image_start_rect = self.start_image.get_rect()
-        image_start_rect.center = (resolution[0] - 520, resolution[1] / 1.5)
+        image_start_rect.center = (resolution[0] * self.BUTTONS_X, resolution[1] / 1.5)
         # Set up the options image rect
         image_options_rect = self.options_image.get_rect()
-        image_options_rect.center = (resolution[0] - 520, resolution[1] / 1.35)
+        image_options_rect.center = (resolution[0] * self.BUTTONS_X, resolution[1] / 1.35)
         # Set up the arrow image rect
         image_arrow_rect = self.arrow_image.get_rect()
         if self.state == State.OPTIONS:
@@ -116,9 +121,9 @@ class Menu:
         # Blit the arrow image according to the selected state
         if self.arrow_visible:
             if self.state == State.START:
-                image_arrow_rect.center = (590, resolution[1] / 1.5)
+                image_arrow_rect.center = (image_start_rect.left - self.ARROW_GAP, resolution[1] / 1.5)
             elif self.state == State.OPTIONS:
-                image_arrow_rect.center = (565, resolution[1] / 1.35)
+                image_arrow_rect.center = (image_options_rect.left - self.ARROW_GAP, resolution[1] / 1.35)
             screen.blit(self.arrow_image, image_arrow_rect.topleft)
         # Handle keyboard and touch selection.
         for event in events:
@@ -194,6 +199,7 @@ class Menu:
             "Special technique: D key or the KI button",
             "Super Saiyan: S key or the SSJ button",
             "Talk: T key or the T button",
+            "Quit: Esc key or the X button (top right)",
             "Press Esc or tap to return",
         ]
         y = resolution[1] * 0.30

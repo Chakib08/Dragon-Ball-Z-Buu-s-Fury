@@ -5,7 +5,7 @@ def main():
     Config.init()
     resolution = (Config.WIDTH, Config.HEIGHT)
     caption = Config.CAPTION
-    app = Game(resolution, caption)
+    app = Game(resolution, caption, fullscreen=Config.FULLSCREEN)
     app.run()
 
 if __name__ == '__main__':

@@ -1,3 +1,5 @@
+import os
+
 import pygame
 import pytmx
 import pyscroll
@@ -12,16 +14,40 @@ from utils.config import Config
 from constants import *
 from animation import AnimationType, AnimationDirection
 from touch_controls import TouchControls
+from quit_prompt import QuitPrompt
+from menu import State
+
+def is_android():
+    return "ANDROID_ARGUMENT" in os.environ
+
+
+def create_display(window_size, fullscreen):
+    """Open the game display.
+
+    Fullscreen takes the whole screen at its native size (no borders, and on
+    Android no system bars); the game lays itself out from the size it gets.
+    Android is always fullscreen.
+    """
+    if fullscreen or is_android():
+        try:
+            screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+            if screen.get_width() > 0 and screen.get_height() > 0:
+                return screen
+        except pygame.error:
+            pass
+    return pygame.display.set_mode(window_size)
+
 
 class Game:
-    def __init__(self, resolution, caption):
+    def __init__(self, resolution, caption, fullscreen=False):
         # Initialize game
         pygame.init() 
-        self.resolution = resolution
         self.caption = caption
         self.isRunning = True
         pygame.display.set_caption(self.caption)
-        self.screen = pygame.display.set_mode(self.resolution)
+        self.screen = create_display(resolution, fullscreen)
+        # Everything is laid out from the size the display really has
+        self.resolution = self.screen.get_size()
         
         # Intanciate Goku character
         self.character = Saiyan(159, 289, False, "goku")
@@ -30,8 +56,9 @@ class Game:
         self.map_manager = MapManager(self.screen, self.character)
         
         # Create dialog box
-        self.dialogBox = DialogBox()        
+        self.dialogBox = DialogBox(self.resolution)
         self.touch_controls = TouchControls(self.resolution)
+        self.quit_prompt = QuitPrompt(self.resolution)
         self.attack_held = False
 
     def play_music(self, music):
@@ -136,6 +163,16 @@ class Game:
         while self.isRunning:
             # Get all the pygame events
             events = pygame.event.get()
+            # Quit button / Escape. Inside the menu's sub-screens Escape means
+            # "back", so it only asks to quit from the main menu or the game
+            was_asking = self.quit_prompt.is_open
+            events = self.quit_prompt.process(
+                events,
+                escape_opens=mainMenu.isPlaying or mainMenu.state == State.START,
+            )
+            if self.quit_prompt.confirmed:
+                self.isRunning = False
+            paused = was_asking or self.quit_prompt.is_open
             # Launch main menu
             if not mainMenu.isPlaying:
                 mainMenu.launch_menu(self.screen, self.resolution, events)
@@ -147,13 +184,18 @@ class Game:
                 if(onlyOnce):
                     self.play_music(self.map_manager.current_music)
                     onlyOnce = False
-                if self.map_manager.input_enabled and self.character.hp > 0:
+                if paused:
+                    # The game stands still behind the "Quit game?" question
+                    self.touch_controls.clear()
+                    self.attack_held = False
+                elif self.map_manager.input_enabled and self.character.hp > 0:
                     self.keyBoard_input(events)
                 else:
                     self.touch_controls.clear()
                     self.attack_held = False
                 # Update game state and draw map groups
-                self.update()
+                if not paused:
+                    self.update()
                 self.map_manager.draw()
                 self.dialogBox.render(self.screen)
                 self.map_manager.combat.draw(self.screen)
@@ -161,10 +203,14 @@ class Game:
                 if self.map_manager.isMusicChanged:
                     self.play_music(self.map_manager.current_music)
 
+            self.quit_prompt.draw(self.screen)
+
             # Common events
             for event in events:
                 if event.type == pygame.QUIT:
                     self.isRunning = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11 and not is_android():
+                    pygame.display.toggle_fullscreen()
             # Update the display
             pygame.display.flip()
             # Cap the frame rate

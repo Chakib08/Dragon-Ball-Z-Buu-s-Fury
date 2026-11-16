@@ -1,0 +1,127 @@
+import pygame
+
+
+class QuitPrompt:
+    """Quit button (top-right corner) and its "Quit game?" confirmation.
+
+    Escape, the Android back button or a tap on the corner button opens the
+    confirmation; nothing closes the game without a second, explicit answer.
+    """
+
+    OPEN_KEYS = (pygame.K_ESCAPE, pygame.K_AC_BACK)
+    YES_KEYS = (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_y)
+    NO_KEYS = (pygame.K_ESCAPE, pygame.K_AC_BACK, pygame.K_n)
+
+    def __init__(self, screen_size):
+        self.screen_size = screen_size
+        self.is_open = False
+        self.confirmed = False
+
+        shortest = min(screen_size)
+        # Top-right: clear of the HP/KI bars (top-left) and the touch controls
+        # (bottom corners), and where a close button is expected
+        self.radius = max(22, int(shortest * 0.034))
+        margin = self.radius // 2
+        self.button_center = (screen_size[0] - margin - self.radius, margin + self.radius)
+
+        panel_width = min(screen_size[0] - 40, max(360, int(shortest * 0.6)))
+        panel_height = max(190, int(shortest * 0.26))
+        self.panel = pygame.Rect(0, 0, panel_width, panel_height)
+        self.panel.center = (screen_size[0] // 2, screen_size[1] // 2)
+        button_width = int(panel_width * 0.36)
+        button_height = max(52, int(panel_height * 0.3))
+        button_y = self.panel.bottom - button_height - int(panel_height * 0.12)
+        self.yes_rect = pygame.Rect(0, button_y, button_width, button_height)
+        self.no_rect = pygame.Rect(0, button_y, button_width, button_height)
+        self.yes_rect.centerx = self.panel.left + panel_width * 0.27
+        self.no_rect.centerx = self.panel.left + panel_width * 0.73
+
+        self.title_font = pygame.font.Font(None, max(36, int(panel_height * 0.24)))
+        self.button_font = pygame.font.Font(None, max(30, int(button_height * 0.55)))
+        self.shade = pygame.Surface(screen_size, pygame.SRCALPHA)
+        self.shade.fill((0, 0, 0, 150))
+        self.button_surface = self._make_button_surface()
+
+    def _make_button_surface(self):
+        radius = self.radius
+        surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(surface, (25, 30, 45, 145), (radius, radius), radius)
+        pygame.draw.circle(surface, (245, 245, 245, 200), (radius, radius), radius, 2)
+        arm = int(radius * 0.38)
+        width = max(3, radius // 7)
+        for dx in (-1, 1):
+            pygame.draw.line(
+                surface,
+                (255, 255, 255),
+                (radius - arm * dx, radius - arm),
+                (radius + arm * dx, radius + arm),
+                width,
+            )
+        return surface
+
+    def _tap_position(self, event):
+        if event.type == pygame.FINGERDOWN:
+            return event.x * self.screen_size[0], event.y * self.screen_size[1]
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            return event.pos
+        return None
+
+    def _on_button(self, position):
+        dx = position[0] - self.button_center[0]
+        dy = position[1] - self.button_center[1]
+        # A little larger than drawn: easier to hit with a thumb
+        return dx * dx + dy * dy <= (self.radius * 1.3) ** 2
+
+    def process(self, events, escape_opens=True):
+        """Handle the quit keys/taps and return the events the game may use.
+
+        While the confirmation is open the game gets no input at all (only
+        window events such as QUIT pass through).
+        """
+        remaining = []
+        for event in events:
+            position = self._tap_position(event)
+            if self.is_open:
+                if event.type == pygame.KEYDOWN:
+                    if event.key in self.YES_KEYS:
+                        self.confirmed = True
+                    elif event.key in self.NO_KEYS:
+                        self.is_open = False
+                elif position is not None:
+                    if self.yes_rect.collidepoint(position):
+                        self.confirmed = True
+                    elif self.no_rect.collidepoint(position):
+                        self.is_open = False
+                elif event.type == pygame.QUIT:
+                    remaining.append(event)
+                continue
+
+            if position is not None and self._on_button(position):
+                self.is_open = True
+            elif escape_opens and event.type == pygame.KEYDOWN and event.key in self.OPEN_KEYS:
+                self.is_open = True
+            else:
+                remaining.append(event)
+        return remaining
+
+    def draw(self, screen):
+        screen.blit(
+            self.button_surface,
+            (self.button_center[0] - self.radius, self.button_center[1] - self.radius),
+        )
+        if not self.is_open:
+            return
+
+        screen.blit(self.shade, (0, 0))
+        pygame.draw.rect(screen, (25, 30, 45), self.panel, border_radius=14)
+        pygame.draw.rect(screen, (245, 245, 245), self.panel, 3, border_radius=14)
+        title = self.title_font.render("Quit game?", True, (255, 230, 120))
+        screen.blit(title, title.get_rect(center=(self.panel.centerx, self.panel.top + self.panel.height * 0.27)))
+        for rect, label, color in (
+            (self.yes_rect, "Yes", (200, 60, 60)),
+            (self.no_rect, "No", (60, 110, 190)),
+        ):
+            pygame.draw.rect(screen, color, rect, border_radius=10)
+            pygame.draw.rect(screen, (245, 245, 245), rect, 2, border_radius=10)
+            text = self.button_font.render(label, True, (255, 255, 255))
+            screen.blit(text, text.get_rect(center=rect.center))

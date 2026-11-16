@@ -40,5 +40,7 @@ buildozer android debug
 - **Special technique**: Press **D** or the on-screen **KI** button to charge and fire an energy beam in the direction you face. It costs 30 KI.
 - **Super Saiyan**: Press **S** or the on-screen **SSJ** button to transform (needs 20 KI), and again to go back. While transformed you deal 50% more damage and take half, but KI drains instead of regenerating; you revert when it runs out.
 - **Talking to NPCs**: Press **T** or the on-screen **T** button while near an NPC.
+- **Full screen**: The game opens full screen at the display's own resolution (always on Android). On desktop, press **F11** to switch between full screen and a window, or set `"fullscreen": false` in `Config/config.json` to start in a window.
+- **Quit**: Press **Esc** (or the Android back button), or tap the **X** button in the top-right corner, then confirm with **Yes** / Enter. While the question is open the game is paused.
 - **Menu**: Select Start or Options with the keyboard or tap. Options shows the control guide; press Esc or tap to return.
 - **Combat resources**: The HUD shows HP and KI (mana). Attacks cost KI, which regenerates over time; nearby hostile NPCs pursue and attack back.

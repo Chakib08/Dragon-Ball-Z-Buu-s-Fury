@@ -39,6 +39,9 @@ class Config:
         cls.CAPTION = cls.get_config_value("caption")
         cls.WIDTH = cls.get_config_value("resolution.width")
         cls.HEIGHT = cls.get_config_value("resolution.heigth")
+        # Fullscreen uses the display's own size; "resolution" is the window
+        # size when fullscreen is off (or unavailable)
+        cls.FULLSCREEN = bool(cls.get_config_value("fullscreen", default_value=True))
         
         # Media paths
         cls.ROOT_DIR = cls.root_dir()        
