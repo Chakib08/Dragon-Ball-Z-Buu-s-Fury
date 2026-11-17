@@ -11,11 +11,16 @@ def _feet_at(character, position):
 
 
 def _overlap_area(rect, obstacles):
-    return sum(
-        max(0, min(rect.right, obstacle.right) - max(rect.left, obstacle.left))
-        * max(0, min(rect.bottom, obstacle.bottom) - max(rect.top, obstacle.top))
-        for obstacle in obstacles
-    )
+    """Total area of rect covered by the obstacles.
+
+    collidelistall finds the few touching obstacles in C, instead of
+    measuring every wall of the map in Python.
+    """
+    total = 0
+    for index in rect.collidelistall(obstacles):
+        overlap = rect.clip(obstacles[index])
+        total += overlap.width * overlap.height
+    return total
 
 
 def resolve_movement_collisions(character, obstacles):

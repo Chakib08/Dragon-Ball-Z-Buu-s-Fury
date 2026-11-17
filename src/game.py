@@ -29,13 +29,35 @@ def is_android():
     return "ANDROID_ARGUMENT" in os.environ
 
 
+# On Android the game draws at this height (and the screen's shape), and the
+# GPU scales the picture up to the whole screen: drawing every pixel of a
+# phone screen in Python is far too slow
+ANDROID_RENDER_HEIGHT = 540
+
+
+def android_render_size(screen_size):
+    """Drawing size for a phone screen: landscape, ANDROID_RENDER_HEIGHT tall
+    (or the screen's own size if that is smaller)."""
+    width, height = max(screen_size), min(screen_size)
+    if height <= ANDROID_RENDER_HEIGHT:
+        return width, height
+    return round(width * ANDROID_RENDER_HEIGHT / height), ANDROID_RENDER_HEIGHT
+
+
 def create_display(window_size, fullscreen):
     """Open the game display.
 
     Fullscreen takes the whole screen at its native size (no borders, and on
     Android no system bars); the game lays itself out from the size it gets.
-    Android is always fullscreen.
+    Android is always fullscreen, drawn smaller and scaled up by the GPU.
     """
+    if is_android():
+        try:
+            info = pygame.display.Info()
+            size = android_render_size((info.current_w, info.current_h))
+            return pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.SCALED)
+        except pygame.error:
+            pass  # fall back to the native size below
     if fullscreen or is_android():
         try:
             screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)

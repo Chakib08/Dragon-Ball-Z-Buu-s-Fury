@@ -158,7 +158,8 @@ class Menu:
         screen.blit(title, title.get_rect(center=(resolution[0] / 2, resolution[1] * 0.22)))
 
         card_width = min(220, resolution[0] // (len(self.character_names) + 1))
-        card_height = min(300, resolution[1] // 2)
+        # Cards fill 30-76% of the height, the hint sits below them
+        card_height = min(300, int(resolution[1] * 0.40))
         spacing = (resolution[0] - card_width * len(self.character_names)) / (len(self.character_names) + 1)
         top = resolution[1] * 0.36
         self.character_rects.clear()
@@ -189,7 +190,7 @@ class Menu:
         instructions = self.character_font.render(
             "Tap a character, or use Left/Right and Enter", True, (255, 255, 255)
         )
-        screen.blit(instructions, instructions.get_rect(center=(resolution[0] / 2, resolution[1] * 0.83)))
+        screen.blit(instructions, instructions.get_rect(center=(resolution[0] / 2, resolution[1] * 0.85)))
 
     def _draw_options(self, screen, resolution):
         screen.blit(self.menu_image, (0, 0))

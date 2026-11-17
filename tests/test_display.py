@@ -37,11 +37,14 @@ class DisplayTests(unittest.TestCase):
                 game.create_display((1200, 1000), fullscreen=False)
         set_mode.assert_called_once_with((1200, 1000))
 
-    def test_android_is_always_fullscreen(self):
-        with patch("game.pygame.display.set_mode", return_value=pygame.Surface((2400, 1080))) as set_mode:
-            with patch("game.is_android", return_value=True):
-                game.create_display((1200, 1000), fullscreen=False)
-        set_mode.assert_called_once_with((0, 0), pygame.FULLSCREEN)
+    def test_android_falls_back_to_native_full_screen_without_scaling(self):
+        native = pygame.Surface((2400, 1080))
+        with patch("game.is_android", return_value=True), \
+                patch("game.pygame.display.set_mode",
+                      side_effect=[pygame.error("no SCALED"), native]) as set_mode:
+            screen = game.create_display((1200, 1000), fullscreen=False)
+        self.assertIs(screen, native)
+        self.assertEqual(set_mode.call_args_list[-1].args, ((0, 0), pygame.FULLSCREEN))
 
     def test_falls_back_to_a_window_when_fullscreen_is_unavailable(self):
         window = pygame.Surface((1200, 1000))
@@ -105,6 +108,24 @@ class DisplayTests(unittest.TestCase):
                 game_.toggle_fullscreen()
         create.assert_called_once_with((1200, 1000), True)
         self.assertEqual(game_.resolution, (1280, 720))
+
+
+    def test_android_draws_small_and_lets_the_gpu_scale_it(self):
+        info = type("Info", (), {"current_w": 2400, "current_h": 1080})()
+        with patch("game.is_android", return_value=True), \
+                patch("game.pygame.display.Info", return_value=info), \
+                patch("game.pygame.display.set_mode", return_value=pygame.Surface((1200, 540))) as set_mode:
+            screen = game.create_display((1200, 1000), fullscreen=False)
+        set_mode.assert_called_once_with((1200, 540), pygame.FULLSCREEN | pygame.SCALED)
+        self.assertEqual(screen.get_size(), (1200, 540))
+
+    def test_android_render_size_keeps_the_screen_shape_in_landscape(self):
+        self.assertEqual(game.android_render_size((2400, 1080)), (1200, 540))
+        self.assertEqual(game.android_render_size((1080, 2400)), (1200, 540))  # reported in portrait
+        self.assertEqual(game.android_render_size((1920, 1080)), (960, 540))
+        self.assertEqual(game.android_render_size((800, 480)), (800, 480))  # already small
+        # The map is then zoomed 2x instead of 4x
+        self.assertEqual(game.MapManager.zoom_for((1200, 540)), 2)
 
 
 if __name__ == "__main__":
