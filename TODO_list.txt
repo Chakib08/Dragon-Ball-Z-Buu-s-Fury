@@ -12,4 +12,4 @@
 * OSTs handeling
 * Standing character and sides [DONE]
 * Add start menu that shows item and character power
-* Add playable Goten, Vegeta, and Gohan [DONE]
+* Add playable Vegeta and Gohan [DONE]

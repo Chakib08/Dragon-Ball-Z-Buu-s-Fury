@@ -54,6 +54,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install buildozer Cython==0.29.36
 
+      - name: Download sprite sheets
+        run: ./setup.sh
+
       - name: Build debug APK
         run: buildozer android debug
         env:

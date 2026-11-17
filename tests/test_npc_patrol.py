@@ -82,9 +82,16 @@ class NpcPatrolTests(unittest.TestCase):
         self.step(200)
         self.assertTrue(self.npc.combat_engaged)
 
-        # The player flees. The NPC used to run away forever and vanish
+        # The player flees. The NPC used to run away forever and vanish; it
+        # may be off its route (knockback makes chases longer) but walks back
         self.move_player_far_away()
-        for _ in range(2000):
+        min_x, max_x, min_y, max_y = self.path_bounds()
+        for _ in range(600):
+            self.step()
+            x, y = self.npc.position
+            if min_x <= x <= max_x and min_y <= y <= max_y:
+                break
+        for _ in range(1400):
             self.step()
             self.assert_on_patrol_path()
 
@@ -121,9 +128,11 @@ class NpcPatrolTests(unittest.TestCase):
         self.assertEqual(set(house.portal_rects), {"exit_house", "enter_hall", "enter_kitchen"})
         self.assertIn(self.player, house.group.sprites())
 
-    def test_world_npc_is_a_saiyan_who_can_transform(self):
+    def test_world_npc_is_gohan_on_the_map_patrol_route(self):
+        self.assertEqual(self.npc.character_name, "gohan")
+        self.assertEqual(self.npc.path_name, "vegeta")
+        self.assertEqual(len(self.npc.points), 4)
         self.assertTrue(self.npc.can_transform)
-        self.assertTrue(self.npc.has_form("ssj"))
 
 
 if __name__ == "__main__":

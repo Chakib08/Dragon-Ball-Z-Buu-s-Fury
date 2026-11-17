@@ -47,6 +47,14 @@ class SpriteForm:
         self._images = {}
         self._frame_counts = {}
 
+    @staticmethod
+    def sheet_exists(json_file):
+        """Whether the image this form is cut from is present (sheets are
+        downloaded by setup.sh, so one may be missing)."""
+        with open(json_file) as file:
+            image_path = json.load(file)["Image path"]
+        return os.path.exists(os.path.join(Config.ROOT_DIR, image_path))
+
     @classmethod
     def load(cls, json_file):
         form = cls._cache.get(json_file)
@@ -88,6 +96,9 @@ class SpriteForm:
             (frame["x"], frame["y"], frame["Area Width"], frame["Area Height"]),
         )
         image.set_colorkey((background["R"], background["G"], background["B"]))
+        # Some sheets draw a pose facing the other way than the game needs
+        if frame.get("Flip"):
+            image = pygame.transform.flip(image, True, False)
         return image
 
 
@@ -102,9 +113,14 @@ class Animation(pygame.sprite.Sprite):
         self.forms = {}
         for form in (self.BASE_FORM, self.SUPER_FORM):
             json_file = PathManager.character_json_path(name, form)
-            if os.path.exists(json_file):
+            if os.path.exists(json_file) and SpriteForm.sheet_exists(json_file):
                 self.forms[form] = SpriteForm.load(json_file)
-        self.form = self.BASE_FORM
+        if not self.forms:
+            raise FileNotFoundError(
+                f"No sprite sheet for {name}: run ./setup.sh to download them"
+            )
+        # A character with only a Super Saiyan sheet is always a Super Saiyan
+        self.form = self.BASE_FORM if self.BASE_FORM in self.forms else self.SUPER_FORM
         self._sprites = self.forms[self.form]
         self.character_name = self._sprites.character_name
 

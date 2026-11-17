@@ -38,8 +38,10 @@ class Menu:
         }
         self.start_image = self.menu_images[State.START][False]
         self.options_image = self.menu_images[State.OPTIONS][False]
-        self.options_font = pygame.font.Font(None, 42)
-        self.options_title_font = pygame.font.Font(None, 58)
+        # The control guide must fit on any screen height
+        self.options_font_size = max(20, min(42, int(resolution[1] / 25)))
+        self.options_font = pygame.font.Font(None, self.options_font_size)
+        self.options_title_font = pygame.font.Font(None, int(self.options_font_size * 1.4))
 
         # Arrow selector image
         self.arrow_image = pygame.image.load(PathManager.menu_image_path("arrow.png"))
@@ -47,7 +49,7 @@ class Menu:
         
         self.isPlaying = False
         self.state = State.START
-        self.character_names = ("goku", "goten", "vegeta", "gohan")
+        self.character_names = ("goku", "vegeta", "gohan")
         self.selected_character = "goku"
         self.character_font = pygame.font.Font(None, 42)
         self.character_title_font = pygame.font.Font(None, 58)
@@ -193,22 +195,33 @@ class Menu:
         screen.blit(self.menu_image, (0, 0))
         lines = [
             "Controls",
-            "Move: Arrow keys or on-screen D-pad",
-            "Run: Hold Space or the R button",
-            "Attack: press the A key or the A button (one punch or kick per press)",
-            "Special technique: D key or the KI button",
-            "Super Saiyan: S key or the SSJ button",
-            "Talk: T key or the T button",
+            "Move: Arrow keys or the on-screen stick",
+            "Run: Hold Space or push the stick to the edge",
+            "Attack: A key or the AUTO button (one punch or kick per press)",
+            "Guard: hold F or the DEFENSE button",
+            "Special technique: D key or the blast button",
+            "Super Saiyan: S key or the transform button",
+            "Talk: T key",
             "Quit: Esc key or the X button (top right)",
             "Press Esc or tap to return",
         ]
-        y = resolution[1] * 0.30
+        line_height = int(self.options_font_size * 1.25)
+        title_height = int(line_height * 1.3)
+        block_height = title_height + line_height * (len(lines) - 1)
+        y = (resolution[1] - block_height) / 2 + line_height / 2
+        # Dark panel behind the text so it reads over the artwork
+        widest = max(self.options_font.size(line)[0] for line in lines)
+        panel = pygame.Rect(0, 0, widest + line_height * 2, block_height + line_height)
+        panel.center = (resolution[0] / 2, resolution[1] / 2)
+        shade = pygame.Surface(panel.size, pygame.SRCALPHA)
+        shade.fill((10, 12, 20, 190))
+        screen.blit(shade, panel.topleft)
         for index, line in enumerate(lines):
             font = self.options_title_font if index == 0 else self.options_font
             color = (255, 230, 120) if index == 0 else (255, 255, 255)
             text = font.render(line, True, color)
             screen.blit(text, text.get_rect(center=(resolution[0] / 2, y)))
-            y += 68 if index == 0 else 52
+            y += title_height if index == 0 else line_height
 
     @staticmethod
     def _is_tap(event, resolution):

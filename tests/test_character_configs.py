@@ -1,6 +1,7 @@
 import json
 import os
 import unittest
+from unittest.mock import patch
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
@@ -10,7 +11,7 @@ import pygame
 from animation import Animation
 from utils.config import Config
 
-ROSTER = ("goku", "goten", "vegeta", "gohan")
+ROSTER = ("goku", "vegeta", "gohan")
 # Sprite sheets ripped with a teal background; frames sit in (0, 64, 64) cells
 SHEET_BACKGROUND = (0, 128, 128)
 DIRECTIONS = ("Up", "Down", "Left", "Right")
@@ -27,83 +28,80 @@ class CharacterConfigTests(unittest.TestCase):
     def tearDownClass(cls):
         pygame.quit()
 
-    def test_every_roster_character_has_all_required_animations(self):
+    def required_animations(self):
+        required = [f"IDLE {d}" for d in DIRECTIONS]
+        for direction in DIRECTIONS:
+            required += [f"Walk {direction} {i}" for i in range(4)]
+            required += [f"Run {direction} {i}" for i in range(4)]
+            required += [f"Attack {direction} {i}" for i in range(12)]
+            required += [f"Hurt {direction} {i}" for i in range(2)]
+            required += [f"Special {direction} {i}" for i in range(2)]
+        return required
+
+    def test_every_downloaded_form_has_all_required_animations(self):
         for name in ROSTER:
             animation = Animation(name)
-            required = [f"IDLE {d}" for d in DIRECTIONS]
-            for direction in DIRECTIONS:
-                required += [f"Walk {direction} {i}" for i in range(4)]
-                required += [f"Run {direction} {i}" for i in range(4)]
-                required += [f"Attack {direction} {i}" for i in range(12)]
-            for animation_name in required:
-                with self.subTest(character=name, animation=animation_name):
-                    self.assertTrue(animation.has_animation(animation_name))
-                    image = animation.get_image_by_animation_name(animation_name)
-                    self.assertGreater(image.get_width(), 0)
+            self.assertTrue(animation.forms, name)
+            for form_name, form in animation.forms.items():
+                for animation_name in self.required_animations():
+                    with self.subTest(character=name, form=form_name, animation=animation_name):
+                        self.assertTrue(form.has(animation_name))
+                        self.assertGreater(form.image(animation_name).get_width(), 0)
 
-    def test_frames_stay_inside_their_sprite_cell(self):
-        """A frame that crosses the cell border shows the teal sheet background
-        or a piece of the neighbour frame (garbled sprite)."""
-        for name in ("goten", "vegeta", "gohan"):
-            animation = Animation(name)
-            sheet = animation.sprit_sheet
-            for frame in animation.animations:
-                with self.subTest(character=name, animation=frame["AnimationName"]):
-                    size = frame["Size"]
-                    rect = pygame.Rect(frame["x"], frame["y"], size["Width"], size["Height"])
-                    self.assertTrue(sheet.get_rect().contains(rect))
-                    crop = sheet.subsurface(rect)
-                    mask = pygame.mask.from_threshold(crop, SHEET_BACKGROUND, (1, 1, 1, 255))
-                    self.assertEqual(mask.count(), 0)
+    def test_frames_stay_inside_their_sheet(self):
+        for name in ROSTER:
+            for form_name, form in Animation(name).forms.items():
+                for frame in form.animations:
+                    with self.subTest(character=name, form=form_name, animation=frame["AnimationName"]):
+                        size = frame["Size"]
+                        rect = pygame.Rect(frame["x"], frame["y"], size["Width"], size["Height"])
+                        self.assertTrue(form.sheet.get_rect().contains(rect))
 
-    def test_frame_background_matches_the_sheet_cell_color(self):
-        for name in ("goten", "vegeta", "gohan"):
-            animation = Animation(name)
-            for frame in animation.animations:
-                with self.subTest(character=name, animation=frame["AnimationName"]):
-                    self.assertEqual(
-                        (frame["Background"]["R"], frame["Background"]["G"], frame["Background"]["B"]),
-                        (0, 64, 64),
-                    )
-
-    def test_every_character_has_hurt_special_and_transform_frames(self):
+    def test_characters_with_both_forms_can_play_the_transformation(self):
         for name in ROSTER:
             animation = Animation(name)
-            self.assertTrue(animation.has_form("ssj"), name)
-            for form in ("base", "ssj"):
-                animation.set_form(form)
-                for direction in DIRECTIONS:
-                    for macro in (f"Hurt {direction}", f"Special {direction}"):
-                        with self.subTest(character=name, form=form, animation=macro):
-                            self.assertGreaterEqual(animation.frame_count(macro), 2)
-            animation.set_form("base")
-            self.assertGreaterEqual(animation.frame_count("Transform"), 4)
+            if animation.has_form("base") and animation.has_form("ssj"):
+                with self.subTest(character=name):
+                    self.assertGreaterEqual(animation.frame_count("Transform"), 4)
 
-    def test_super_saiyan_form_has_every_movement_and_attack_frame(self):
+    def test_vegeta_only_exists_as_a_super_saiyan(self):
+        vegeta = Animation("vegeta")
+        self.assertEqual(list(vegeta.forms), ["ssj"])
+        self.assertEqual(vegeta.form, "ssj")
+
+    def test_a_form_whose_sheet_was_not_downloaded_is_skipped(self):
+        with patch("animation.SpriteForm.sheet_exists", side_effect=lambda path: "base" in path):
+            goku = Animation("goku")
+        self.assertEqual(list(goku.forms), ["base"])
+        with patch("animation.SpriteForm.sheet_exists", return_value=False):
+            with self.assertRaises(FileNotFoundError):
+                Animation("goku")
+
+    def test_frame_background_is_the_colour_around_the_sprite(self):
+        """The colour made transparent must be the one framing the sprite,
+        whatever background the downloaded sheet uses."""
         for name in ROSTER:
             animation = Animation(name)
-            animation.set_form("ssj")
-            sheet = animation.sprit_sheet
-            required = [f"IDLE {d}" for d in DIRECTIONS]
-            for direction in DIRECTIONS:
-                required += [f"Walk {direction} {i}" for i in range(4)]
-                required += [f"Run {direction} {i}" for i in range(4)]
-                required += [f"Attack {direction} {i}" for i in range(12)]
-            for animation_name in required:
-                with self.subTest(character=name, animation=animation_name):
-                    self.assertTrue(animation.has_animation(animation_name))
-            for frame in animation.animations:
-                with self.subTest(character=name, animation=frame["AnimationName"]):
-                    size = frame["Size"]
-                    rect = pygame.Rect(frame["x"], frame["y"], size["Width"], size["Height"])
-                    self.assertTrue(sheet.get_rect().contains(rect))
-                    crop = sheet.subsurface(rect)
-                    mask = pygame.mask.from_threshold(crop, SHEET_BACKGROUND, (1, 1, 1, 255))
-                    self.assertEqual(mask.count(), 0)
+            for form in animation.forms.values():
+                sheet = form.sheet
+                for frame in form.animations:
+                    with self.subTest(character=name, animation=frame["AnimationName"]):
+                        size = frame["Size"]
+                        crop = sheet.subsurface(
+                            pygame.Rect(frame["x"], frame["y"], size["Width"], size["Height"])
+                        )
+                        width, height = crop.get_size()
+                        border = [crop.get_at((x, y))[:3] for x in range(width) for y in (0, height - 1)]
+                        border += [crop.get_at((x, y))[:3] for y in range(height) for x in (0, width - 1)]
+                        background = frame["Background"]
+                        self.assertEqual(
+                            max(set(border), key=border.count),
+                            (background["R"], background["G"], background["B"]),
+                        )
 
     def test_frames_are_cut_once_and_shared_between_sprites(self):
         first, second = Animation("vegeta"), Animation("vegeta")
-        self.assertIs(first.forms["base"], second.forms["base"])
+        self.assertIs(first.forms["ssj"], second.forms["ssj"])
         image = first.get_image_by_animation_name("IDLE Right")
         self.assertIs(image, second.get_image_by_animation_name("IDLE Right"))
         mirrored = first.get_image_by_animation_name("IDLE Right", flipped=True)
@@ -113,10 +111,16 @@ class CharacterConfigTests(unittest.TestCase):
 
     def test_character_name_matches_folder_and_sheet(self):
         for name in ROSTER:
-            with open(os.path.join(Config.CONFIG_DIR, name, "base.json")) as file:
-                data = json.load(file)
-            self.assertEqual(data["Character"], name)
-            self.assertTrue(os.path.exists(os.path.join(Config.ROOT_DIR, data["Image path"])))
+            for form in ("base", "ssj"):
+                path = os.path.join(Config.CONFIG_DIR, name, f"{form}.json")
+                if not os.path.exists(path):
+                    continue
+                with open(path) as file:
+                    data = json.load(file)
+                with self.subTest(character=name, form=form):
+                    self.assertEqual(data["Character"], name)
+                    # Sheets live next to each other in the character's folder
+                    self.assertTrue(data["Image path"].startswith(f"Graphics/assets/{name}/"))
 
     def test_left_animations_mirror_the_right_ones(self):
         for name in ROSTER:

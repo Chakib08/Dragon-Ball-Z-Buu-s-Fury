@@ -75,7 +75,14 @@ WORLD_MUSIC = "legacy-of-goku-II/The Legacy Of Goku 2 OST - The Imperfect Cell"
 
 
 def _world_npcs():
-    return [SaiyanNPC(99, 345, False, "vegeta", 4, ["KAKAROT !!", "I want my revenge !!"])]
+    # Gohan walks the route the map calls "vegeta_path"
+    return [
+        SaiyanNPC(
+            99, 345, False, "gohan", 4,
+            ["Hey! Let's see how strong you've become!", "I won't hold back this time!"],
+            path_name="vegeta",
+        )
+    ]
 
 
 def map_definitions():
@@ -132,6 +139,18 @@ class MapManager:
         self.load_map(default_map)
         self.current_music = self.get_map().music
         self.isMusicChanged = False
+
+    def set_screen(self, screen):
+        """Draw to a new display surface (after switching full screen)."""
+        self.screen = screen
+        size = screen.get_size()
+        for game_map in self.maps.values():
+            layer = game_map.group._map_layer
+            layer.zoom = self.zoom_for(size)
+            layer.set_size(size)
+        self.combat.screen_size = size
+        self.black_screen = pygame.Surface(size)
+        self.black_screen.fill((0, 0, 0))
 
     @classmethod
     def zoom_for(cls, screen_size):

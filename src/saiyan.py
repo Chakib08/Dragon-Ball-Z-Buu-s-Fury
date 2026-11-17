@@ -19,6 +19,8 @@ class SuperSaiyanMixin:
         if self.action is not None or self.hp <= 0:
             return False
         if self.is_super:
+            if not self.can_revert:
+                return False
             self.revert()
             return True
         if not self.has_form(self.SUPER_FORM) or self.ki < self.TRANSFORM_MIN_KI:

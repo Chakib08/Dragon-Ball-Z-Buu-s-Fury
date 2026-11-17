@@ -94,6 +94,8 @@ class AttackInputTests(unittest.TestCase):
         self.assertFalse(self.game.attack_requested)
 
     def test_each_press_plays_a_different_move(self):
+        # A hit from the enemy would make the player flinch and drop a press
+        self.enemy.attack_damage = 0
         seen = []
         for _ in range(4):
             self.frame([key_down(pygame.K_a)])
@@ -102,6 +104,69 @@ class AttackInputTests(unittest.TestCase):
             self.frames(40)
         self.assertEqual(self.player.attack_move_index, 4)
         self.assertIsNot(seen[0], seen[1])
+
+
+    def test_stick_moves_the_player_and_runs_when_pushed_far(self):
+        controls = self.game.touch_controls
+        cx, cy = controls.stick_center
+        r = controls.stick_radius
+        down = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(round(cx), round(cy)))
+        self.frame([down])
+        start = list(self.player.position)
+        # Half way down-left: walk diagonally
+        drag = pygame.event.Event(pygame.MOUSEMOTION, pos=(round(cx - r * 0.4), round(cy + r * 0.4)), buttons=(1, 0, 0))
+        self.player.position = [60, 300]
+        self.player.save_location()
+        self.frame([drag])
+        self.frames(10)
+        self.assertTrue(self.player.animation_name.startswith("Walk"))
+        # Pushed to the edge: run
+        push = pygame.event.Event(pygame.MOUSEMOTION, pos=(round(cx + r), round(cy)), buttons=(1, 0, 0))
+        self.frame([push])
+        self.assertEqual(self.player.animation_name, "Run Right")
+        self.assertEqual(self.player.facing, "Right")
+
+
+    def test_holding_block_guards_and_stops_moving_and_attacking(self):
+        x, y = self.game.touch_controls.buttons["block"]
+        self.frame([pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(round(x), round(y)))])
+        self.assertTrue(self.player.blocking)
+        start = list(self.player.position)
+        with patch("pygame.key.get_pressed", return_value=_Keys({pygame.K_RIGHT: True})):
+            self.frame([key_down(pygame.K_a)])
+            self.frames(5)
+        self.assertEqual(self.player.position, start)
+        self.assertFalse(self.combat.player_swung)
+        self.frame([pygame.event.Event(pygame.MOUSEBUTTONUP, button=1, pos=(round(x), round(y)))])
+        self.assertFalse(self.player.blocking)
+
+    def test_f_key_blocks(self):
+        with patch("pygame.key.get_pressed", return_value=_Keys({pygame.K_f: True})):
+            self.frame()
+        self.assertTrue(self.player.blocking)
+        self.frame()
+        self.assertFalse(self.player.blocking)
+
+
+    def test_every_hit_shows_the_hurt_animation(self):
+        for _ in range(4):
+            self.player.take_damage(1, self.enemy.feet.center)
+            self.assertEqual(self.player.action["name"], "hurt")
+            self.frames(30)
+
+    def test_attacking_or_guarding_cancels_the_hurt_animation(self):
+        self.enemy.attack_damage = 0
+        self.player.take_damage(1)
+        self.frame([key_down(pygame.K_a)])
+        self.assertTrue(self.combat.player_swung)
+        self.assertEqual(self.player.action["name"], "attack")
+
+        self.frames(40)
+        self.player.take_damage(1)
+        with patch("pygame.key.get_pressed", return_value=_Keys({pygame.K_f: True})):
+            self.frame()
+        self.assertTrue(self.player.blocking)
+        self.assertIsNone(self.player.action)
 
 
 class _Keys:

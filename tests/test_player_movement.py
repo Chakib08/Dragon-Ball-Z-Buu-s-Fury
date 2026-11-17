@@ -42,7 +42,7 @@ class PlayerMovementTests(unittest.TestCase):
         self.assertEqual(character.facing, "Up")
 
     def test_all_roster_characters_support_movement_and_safe_attacks(self):
-        for name in ("goku", "goten", "vegeta", "gohan"):
+        for name in ("goku", "vegeta", "gohan"):
             with self.subTest(character=name):
                 character = Character(10, 20, name)
                 self.assertEqual(character.character_name, name)

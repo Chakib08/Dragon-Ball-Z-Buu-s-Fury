@@ -10,10 +10,12 @@ from movement import resolve_movement_collisions
 
 class CombatSystem:
     AGGRO_RANGE = 180
-    ATTACK_RANGE = 64
-    ATTACK_LATERAL_TOLERANCE = 24
-    NPC_ATTACK_RANGE = 32
-    NPC_ATTACK_LATERAL_TOLERANCE = 20
+    # Melee reach in map pixels between the two characters' feet, the same
+    # for the player and the NPCs: bodies (15-25 px wide) nearly touch
+    ATTACK_RANGE = 22
+    ATTACK_LATERAL_TOLERANCE = 8
+    NPC_ATTACK_RANGE = ATTACK_RANGE
+    NPC_ATTACK_LATERAL_TOLERANCE = ATTACK_LATERAL_TOLERANCE
     PATH_GRID_SIZE = 8
     # One punch or kick per button press, at most one every
     # Character.ATTACK_COOLDOWN_MS (the pace NPCs strike at too)
@@ -53,7 +55,7 @@ class CombatSystem:
         now = pygame.time.get_ticks()
         elapsed_seconds = max(0, now - self.last_update_ms) / 1000
         self.last_update_ms = now
-        if self.player.is_super:
+        if self.player.can_revert:
             self.player.ki = max(
                 0, self.player.ki - self.SUPER_KI_DRAIN_PER_SECOND * elapsed_seconds
             )
@@ -67,6 +69,7 @@ class CombatSystem:
         self._update_beams(npcs)
 
         self.player_swung = False
+        self.player.update_knockback(collisions)
         player_down = self.player.hp <= 0
         if player_down:
             self.player.faint()
@@ -80,8 +83,15 @@ class CombatSystem:
                 npc.faint()
                 continue
 
-            # Flinching or transforming: no chasing or attacking meanwhile
-            if npc.update_action():
+            # Pushed back, flinching or transforming: no chasing or attacking.
+            # An NPC flinches on every hit, but strikes back out of the flinch
+            # as soon as its next strike is due (it cannot be stun-locked)
+            pushed = npc.update_knockback(collisions)
+            busy = npc.update_action()
+            if busy and npc.action["name"] == "hurt" and self._npc_strike_due(npc, now):
+                npc.cancel_hurt()
+                busy = False
+            if pushed or busy:
                 continue
 
             distance = self._distance(self.player.feet.center, npc.feet.center)
@@ -100,6 +110,15 @@ class CombatSystem:
             if npc.action is not None:
                 continue
 
+            # Up close, the NPC always turns to face the player
+            if distance <= self.ATTACK_RANGE + self.ATTACK_LATERAL_TOLERANCE:
+                npc.face_toward(self.player.feet.center)
+            # Guard after a flurry of hits, then riposte
+            if npc.wants_guard:
+                npc.start_guard(now)
+            if npc.update_guard(now):
+                continue
+
             if not was_engaged:
                 npc.last_attack_ms = now
                 npc.chase_stuck_frames = 0
@@ -109,15 +128,39 @@ class CombatSystem:
             if self._npc_in_attack_range(npc):
                 npc.chase_stuck_frames = 0
                 npc.chase_path = []
-                # One punch or kick at a time, at the same pace as the player
-                if now - npc.last_attack_ms >= npc.attack_cooldown_ms:
+                # One punch or kick at a time, at the same pace as the player,
+                # after a short reaction time
+                if self._npc_strike_due(npc, now):
                     npc.last_attack_ms = now
                     npc.strike()
-                    self.player.take_damage(npc.attack_damage * self._damage_multiplier(npc))
+                    self.player.take_damage(
+                        npc.attack_damage * self._damage_multiplier(npc), npc.feet.center
+                    )
                 else:
                     npc.face_idle()
             else:
+                if npc.out_of_reach_since is None:
+                    npc.out_of_reach_since = now
+                # A short trip out of reach (a hit's push) keeps the reaction
+                if now - npc.out_of_reach_since > npc.REACH_GRACE_MS:
+                    npc.in_reach_since = None
                 self._move_toward(npc, self.player.feet.center, collisions)
+
+    def _npc_strike_due(self, npc, now):
+        """In reach of the player and either riposting after a guard, or past
+        its reaction time and its cooldown."""
+        if not self._npc_in_attack_range(npc):
+            return False
+        npc.out_of_reach_since = None
+        if npc.in_reach_since is None:
+            npc.in_reach_since = now
+        if npc.riposte_ready:
+            npc.riposte_ready = False
+            return True
+        return (
+            now - npc.in_reach_since >= npc.REACTION_MS
+            and now - npc.last_attack_ms >= npc.attack_cooldown_ms
+        )
 
     def _player_attack(self, npcs, now):
         """Strike once, if the player is free to: plays one punch or kick
@@ -138,11 +181,13 @@ class CombatSystem:
         if not targets:
             return
         target = min(targets, key=lambda npc: self._distance(player.rect.center, npc.rect.center))
-        target.take_damage(self.PLAYER_ATTACK_DAMAGE * self._damage_multiplier(player))
+        target.take_damage(
+            self.PLAYER_ATTACK_DAMAGE * self._damage_multiplier(player), player.feet.center
+        )
         player.ki -= self.PLAYER_ATTACK_COST
 
     def _damage_multiplier(self, attacker):
-        return self.SUPER_DAMAGE_MULTIPLIER if attacker.is_super else 1
+        return self.SUPER_DAMAGE_MULTIPLIER if attacker.powered_up else 1
 
     # ---- Special technique -------------------------------------------------
     def start_special(self):
@@ -217,7 +262,7 @@ class CombatSystem:
             hit = [npc for npc in npcs if npc.hp > 0 and rect.colliderect(npc.rect)]
             if hit:
                 target = min(hit, key=lambda npc: self._distance(beam["origin"], npc.rect.center))
-                target.take_damage(beam["damage"])
+                target.take_damage(beam["damage"], beam["origin"])
                 # The beam ends on the enemy it hit
                 beam["length"] = min(
                     beam["length"], self._distance(beam["origin"], target.rect.center)
@@ -438,7 +483,7 @@ class CombatSystem:
 
     def draw(self, screen):
         self._draw_bar(screen, "HP", self.player.hp, self.player.max_hp, (220, 55, 55), 20)
-        ki_color = self.SUPER_COLOR if self.player.is_super else (65, 145, 245)
+        ki_color = self.SUPER_COLOR if self.player.powered_up else (65, 145, 245)
         self._draw_bar(screen, "KI", self.player.ki, self.player.max_ki, ki_color, 58)
 
     NPC_BAR_MIN_WIDTH = 120
@@ -475,7 +520,7 @@ class CombatSystem:
                 (bar.x, bar.y, round(bar.width * fraction), bar.height),
             )
             # Gold frame while the NPC is a Super Saiyan
-            frame_color = self.SUPER_COLOR if npc.is_super else self.FRAME_COLOR
+            frame_color = self.SUPER_COLOR if npc.powered_up else self.FRAME_COLOR
             pygame.draw.rect(screen, frame_color, bar, 2)
             name = self._label(npc.character_name.capitalize(), self.name_font)
             screen.blit(name, name.get_rect(midbottom=(bar.centerx, bar.top - 2)))

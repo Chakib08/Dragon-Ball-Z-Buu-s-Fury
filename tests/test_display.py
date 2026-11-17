@@ -77,5 +77,35 @@ class DisplayTests(unittest.TestCase):
         self.assertEqual(menu.state, State.CHARACTER_SELECT)
 
 
+    def test_switching_screen_mid_game_redraws_on_the_new_surface(self):
+        game_ = game.Game((1200, 1000), "test")
+        game_.menu = game.Menu(game_.resolution)
+        game_.dialogBox.open(["Hello"])
+        for size in ((1280, 720), (2400, 1080), (1200, 1000)):
+            with self.subTest(size=size):
+                game_.set_screen(pygame.display.set_mode(size))
+                self.assertEqual(game_.resolution, size)
+                self.assertEqual(game_.map_manager.screen, game_.screen)
+                self.assertEqual(game_.map_manager.combat.screen_size, size)
+                self.assertEqual(game_.touch_controls.screen_size, size)
+                self.assertEqual(game_.quit_prompt.screen_size, size)
+                self.assertTrue(game_.dialogBox.isBoxOpened)
+                layer = game_.map_manager.get_group()._map_layer
+                self.assertEqual(layer.zoom, game.MapManager.zoom_for(size))
+                # A whole frame and the menu draw without touching a stale surface
+                for _ in range(3):
+                    game_.play_frame([], False)
+                game_.menu.launch_menu(game_.screen, game_.resolution, [])
+                game_.quit_prompt.draw(game_.screen)
+
+    def test_toggling_full_screen_asks_for_the_other_mode(self):
+        game_ = game.Game((1200, 1000), "test")
+        with patch("game.create_display", return_value=pygame.display.set_mode((1280, 720))) as create:
+            with patch.object(game.Game, "is_fullscreen", new_callable=lambda: property(lambda self: False)):
+                game_.toggle_fullscreen()
+        create.assert_called_once_with((1200, 1000), True)
+        self.assertEqual(game_.resolution, (1280, 720))
+
+
 if __name__ == "__main__":
     unittest.main()
