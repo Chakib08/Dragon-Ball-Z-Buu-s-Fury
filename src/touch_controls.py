@@ -11,7 +11,12 @@ class TouchControls:
     buttons arranged around the bottom-right corner."""
 
     # Buttons that fire once per press (block is held instead)
-    ACTIONS = ("attack", "special", "super")
+    ACTIONS = ("attack", "special", "super", "tech_prev", "tech_next", "form_prev", "form_next")
+    # Small arrows on top of the ki button: choose the technique it uses
+    ARROWS = ("tech_prev", "tech_next", "form_prev", "form_next")
+    # Which button each pair of arrows sits on
+    ARROW_BUTTONS = {"tech": "special", "form": "super"}
+    ARROW_RADIUS = 0.27
     # Text labels; attack and block show a sword and a shield instead
     LABELS = {"special": "KI", "super": "SSJ"}
     ICONS = ("attack", "block")
@@ -35,6 +40,7 @@ class TouchControls:
         shortest = min(screen_size)
         self.button_size = max(60, min(150, int(shortest * 0.14)))
         self.buttons = self._make_buttons()
+        self.arrows = self._make_arrows()
 
         size = self.button_size
         self.stick_radius = size * 1.25
@@ -56,6 +62,12 @@ class TouchControls:
             )
             for control in self.buttons
         }
+        self.arrow_surfaces = {
+            name: (self._make_arrow_surface(name, False), self._make_arrow_surface(name, True))
+            for name in self.ARROWS
+        }
+        self.label_font = pygame.font.Font(None, max(18, int(size * 0.3)))
+        self._label_cache = {}
         self.stick_base = self._make_stick_base()
         self.stick_knob = self._make_stick_knob()
 
@@ -76,7 +88,22 @@ class TouchControls:
             "attack": (right, bottom),
         }
 
+    def _make_arrows(self):
+        """Left / right of the top of the ki button (techniques) and of the
+        transform button (Super Saiyan level)."""
+        radius = self.button_size * self.BUTTON_RADIUS
+        arrow = self.button_size * self.ARROW_RADIUS
+        arrows = {}
+        for prefix, button in self.ARROW_BUTTONS.items():
+            x, y = self.buttons[button]
+            top = y - radius - arrow * 0.9
+            arrows[f"{prefix}_prev"] = (x - radius * 0.6, top)
+            arrows[f"{prefix}_next"] = (x + radius * 0.6, top)
+        return arrows
+
     def radius(self, control):
+        if control in self.ARROWS:
+            return self.button_size * self.ARROW_RADIUS
         return self.button_size * self.BUTTON_RADIUS
 
     # ---- State ------------------------------------------------------------------
@@ -102,6 +129,10 @@ class TouchControls:
     @property
     def attacking(self):
         return "attack" in self.pointers.values()
+
+    @property
+    def special_held(self):
+        return "special" in self.pointers.values()
 
     @property
     def blocking(self):
@@ -161,6 +192,29 @@ class TouchControls:
             # Darker while held, so the press is visible
             surface.fill((170, 170, 170, 255), special_flags=pygame.BLEND_RGBA_MULT)
         return surface
+
+    def _make_arrow_surface(self, name, pressed):
+        radius = int(self.radius(name))
+        surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        color = (245, 180, 55, 220) if pressed else (25, 30, 45, 190)
+        pygame.draw.circle(surface, color, (radius, radius), radius)
+        pygame.draw.circle(surface, (245, 245, 245, 220), (radius, radius), radius, 2)
+        point = radius * 0.45
+        side = -1 if name.endswith("_prev") else 1
+        triangle = [(radius + side * point, radius), (radius - side * point * 0.7, radius - point),
+                    (radius - side * point * 0.7, radius + point)]
+        pygame.draw.polygon(surface, (255, 255, 255), triangle)
+        return surface
+
+    def _technique_label(self, text):
+        label = self._label_cache.get(text)
+        if label is None:
+            rendered = self.label_font.render(text, True, (255, 230, 120))
+            label = pygame.Surface((rendered.get_width() + 10, rendered.get_height() + 4), pygame.SRCALPHA)
+            label.fill((15, 18, 30, 190))
+            label.blit(rendered, (5, 2))
+            self._label_cache[text] = label
+        return label
 
     @staticmethod
     def _draw_sword(surface, radius):
@@ -222,7 +276,9 @@ class TouchControls:
 
     # ---- Input ------------------------------------------------------------------
     def _control_at(self, position):
-        for control, center in self.buttons.items():
+        hidden = getattr(self, "_hidden_arrows", ())
+        arrows = [(name, center) for name, center in self.arrows.items() if name not in hidden]
+        for control, center in (*self.buttons.items(), *arrows):
             # Slightly larger than drawn: easier to hit with a thumb
             reach = self.radius(control) * 1.1
             if (position[0] - center[0]) ** 2 + (position[1] - center[1]) ** 2 <= reach ** 2:
@@ -296,7 +352,10 @@ class TouchControls:
             return True
         return False
 
-    def draw(self, screen):
+    def draw(self, screen, technique_name=None, level_name=None):
+        """technique_name: shown between the arrows on top of the ki button;
+        level_name: between those on the transform button (None: no arrows,
+        e.g. a character with a single Super Saiyan level)."""
         base = self.stick_base
         screen.blit(base, (self.stick_center[0] - base.get_width() / 2,
                            self.stick_center[1] - base.get_height() / 2))
@@ -307,3 +366,26 @@ class TouchControls:
             is_pressed = control in self.pointers.values()
             surface = self.button_surfaces[control][int(is_pressed)]
             screen.blit(surface, (center[0] - surface.get_width() / 2, center[1] - surface.get_height() / 2))
+        hidden = []
+        placed = []  # label rectangles already drawn
+        for prefix, name in (("form", level_name), ("tech", technique_name)):
+            if name is None:
+                hidden += [f"{prefix}_prev", f"{prefix}_next"]
+                continue
+            for arrow in (f"{prefix}_prev", f"{prefix}_next"):
+                center = self.arrows[arrow]
+                surface = self.arrow_surfaces[arrow][int(arrow in self.pointers.values())]
+                screen.blit(surface, (center[0] - surface.get_width() / 2, center[1] - surface.get_height() / 2))
+            label = self._technique_label(name)
+            x, _ = self.buttons[self.ARROW_BUTTONS[prefix]]
+            top = self.arrows[f"{prefix}_prev"][1] - self.radius(arrow) - label.get_height() - 2
+            # Centred on the button, but never past the screen's edge, and
+            # one row higher if it would cover the other label
+            left = min(max(4, x - label.get_width() / 2), self.screen_size[0] - label.get_width() - 4)
+            rect = pygame.Rect(left, top, label.get_width(), label.get_height())
+            while any(rect.colliderect(other) for other in placed):
+                rect.y -= label.get_height() + 2
+            placed.append(rect)
+            screen.blit(label, rect.topleft)
+        # Hidden arrows cannot be pressed
+        self._hidden_arrows = tuple(hidden)

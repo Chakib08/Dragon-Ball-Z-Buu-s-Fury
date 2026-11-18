@@ -56,6 +56,10 @@ jobs:
 
       - name: Download sprite sheets
         run: ./setup.sh
+        env:
+          # A token that can read the private dbz-assets repository (the
+          # workflow's own GITHUB_TOKEN only reaches this repository)
+          GH_TOKEN: ${{ secrets.DBZ_ASSETS_TOKEN }}
 
       - name: Build debug APK
         run: buildozer android debug

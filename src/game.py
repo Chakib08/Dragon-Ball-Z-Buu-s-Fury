@@ -9,7 +9,7 @@ from constants import (
     C_WALK_ANIMATION_COUNT,
 )
 from dialog.dialogbox import DialogBox
-from map import MapManager
+from map import DEFAULT_ENEMY, MapManager
 from menu import Menu, State
 from net import NetClient
 from online import LobbyScreen, OnlineMatch
@@ -135,6 +135,7 @@ class Game:
             menu.isPlaying = self.menu.isPlaying
             menu.online = self.menu.online
             menu.selected_character = self.menu.selected_character
+            menu.selected_enemy = self.menu.selected_enemy
             self.menu = menu
         if self.lobby is not None:
             lobby = self.lobby
@@ -144,10 +145,10 @@ class Game:
             self.match._fonts(self.resolution)
         self.release_input()
 
-    def select_character(self, name):
-        """Start the world over with the given playable character."""
+    def select_character(self, name, enemy=DEFAULT_ENEMY):
+        """Start the world over with the given playable character and enemy."""
         self.character = Saiyan(*PLAYER_SPAWN, False, name)
-        self.map_manager = MapManager(self.screen, self.character)
+        self.map_manager = MapManager(self.screen, self.character, enemy=enemy)
 
     def play_music(self, music):
         pygame.mixer.music.stop()
@@ -176,6 +177,18 @@ class Game:
         attack_pressed = touch.consume_action("attack") or pygame.K_a in pressed_keys
         super_pressed = touch.consume_action("super") or pygame.K_s in pressed_keys
         special_pressed = touch.consume_action("special") or pygame.K_d in pressed_keys
+        # Choose the technique: arrows on top of the ki button, or Q / E
+        combat = self.map_manager.combat
+        if touch.consume_action("tech_prev") or pygame.K_q in pressed_keys:
+            combat.cycle_technique(-1)
+        if touch.consume_action("tech_next") or pygame.K_e in pressed_keys:
+            combat.cycle_technique(1)
+        # Choose the Super Saiyan level: arrows on top of the transform
+        # button, or Z / X
+        if touch.consume_action("form_prev") or pygame.K_z in pressed_keys:
+            self.character.cycle_level(-1)
+        if touch.consume_action("form_next") or pygame.K_x in pressed_keys:
+            self.character.cycle_level(1)
         # One attack per press: holding the button does not repeat
         if attack_pressed:
             self.attack_pressed_ms = pygame.time.get_ticks()
@@ -185,6 +198,9 @@ class Game:
 
         character = self.character
         guard_held = keys[pygame.K_f] or touch.blocking
+        # A charging technique goes off when its button is released
+        if combat.charging and not (keys[pygame.K_d] or touch.special_held):
+            combat.release_charge()
         # Every hit plays the hurt animation, but acting cancels it: the
         # player is never stuck in a flinch
         if self.attack_requested or guard_held or super_pressed or special_pressed:
@@ -246,7 +262,11 @@ class Game:
         self.map_manager.draw()
         self.dialogBox.render(self.screen)
         self.map_manager.combat.draw(self.screen)
-        self.touch_controls.draw(self.screen)
+        technique = self.map_manager.combat.technique
+        character = self.character
+        levels = character.super_levels if hasattr(character, "super_levels") else []
+        level = character.LEVEL_NAMES.get(character.target_level) if len(levels) > 1 else None
+        self.touch_controls.draw(self.screen, technique.name if technique else None, level)
 
     def play_frame(self, events, paused):
         """One frame of gameplay. While paused the world is drawn but frozen."""
@@ -263,7 +283,7 @@ class Game:
 
     # ---- Scenes -------------------------------------------------------------------
     def start_story(self):
-        self.select_character(self.menu.selected_character)
+        self.select_character(self.menu.selected_character, self.menu.selected_enemy)
         self.play_music(self.map_manager.current_music)
         self.scene = "story"
 

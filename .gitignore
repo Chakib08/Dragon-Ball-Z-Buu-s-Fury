@@ -5,9 +5,6 @@
 __pycache__/
 .venv/
 # Sprite sheets downloaded by setup.sh
-Graphics/assets/goku/*.png
-Graphics/assets/gohan/base.png
-Graphics/assets/vegeta/ssj.png
 *.part
 
 # Never commit a ROM or what is extracted from it
@@ -16,3 +13,9 @@ rips/
 
 # Settings changed in the game (server address)
 user_settings.json
+# Sprite sheets downloaded by setup.sh
+Graphics/assets/*/*.png
+Graphics/assets/.dbz-assets
+
+# Local secrets (GH_TOKEN for setup.sh)
+.env

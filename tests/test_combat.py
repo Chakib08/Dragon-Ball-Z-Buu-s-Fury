@@ -11,6 +11,7 @@ from combat import CombatSystem
 from character import Character
 from saiyan import Saiyan
 from npc import NPC, SaiyanNPC
+from movement import resolve_movement_collisions, solid_bodies
 from utils.config import Config
 
 
@@ -33,7 +34,13 @@ class CombatTests(unittest.TestCase):
         self.player.animation_name = "IDLE Right"
         # Feet 15 map pixels apart: within melee reach
         self.enemy = NPC(120, 100, False, "gohan", 0, [])
-        self.enemy.update()
+        self.place(self.enemy, 15)
+
+    def place(self, fighter, gap):
+        """Put fighter gap map pixels right of the player (feet to feet)."""
+        fighter.position = [self.player.feet.centerx + gap - fighter.rect.width / 2,
+                            self.player.position[1] + self.player.rect.height - fighter.rect.height]
+        fighter.update()
         with patch("combat.pygame.time.get_ticks", return_value=0):
             self.combat = CombatSystem(self.player, (1200, 1000))
 
@@ -41,11 +48,11 @@ class CombatTests(unittest.TestCase):
         """Damage one auto attack really does to the enemy."""
         return self.combat.PLAYER_ATTACK_DAMAGE * self.enemy.damage_taken
 
-    def test_player_attack_damages_nearby_enemy_and_spends_ki_once_per_cooldown(self):
+    def test_player_attack_damages_nearby_enemy_once_per_cooldown_and_costs_no_ki(self):
         with patch("combat.pygame.time.get_ticks", return_value=1000):
             self.combat.update([self.enemy], [], player_attacking=True)
             self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.hit())
-            self.assertEqual(self.player.ki, self.player.max_ki - self.combat.PLAYER_ATTACK_COST)
+            self.assertEqual(self.player.ki, self.player.max_ki)
 
             self.combat.update([self.enemy], [], player_attacking=True)
             self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.hit())
@@ -116,8 +123,7 @@ class CombatTests(unittest.TestCase):
         self.assertLess(self.enemy.position[0], initial_x)
         self.assertEqual(self.player.hp, self.player.max_hp)
 
-        self.enemy.position = [120, 100]
-        self.enemy.update()
+        self.place(self.enemy, 15)
         reached = 1001 + self.enemy.attack_cooldown_ms
         with patch("combat.pygame.time.get_ticks", return_value=reached):
             self.combat.update([self.enemy], [])
@@ -158,14 +164,14 @@ class CombatTests(unittest.TestCase):
         self.assertFalse(self.enemy.feet.colliderect(wall))
         self.assertTrue(self.combat._npc_in_attack_range(self.enemy))
 
-    def test_empty_ki_blocks_attacks_and_hud_draws(self):
+    def test_attacking_works_with_empty_ki_and_hud_draws(self):
         self.player.ki = 0
         screen = pygame.Surface((1200, 1000))
         with patch("combat.pygame.time.get_ticks", return_value=0):
             self.combat.update([self.enemy], [], player_attacking=True)
         self.combat.draw(screen)
 
-        self.assertEqual(self.enemy.hp, self.enemy.max_hp)
+        self.assertLess(self.enemy.hp, self.enemy.max_hp)
         self.assertEqual(self.player.ki, 0)
         self.assertNotEqual(screen.get_at((62, 30))[:3], (0, 0, 0))
 
@@ -209,7 +215,7 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(self.enemy.image.get_height(), self.enemy.rect.height)
 
     def test_player_faints_at_zero_hp_and_the_enemy_stops_fighting(self):
-        for name in ("goku", "gohan", "vegeta"):
+        for name in ("goku", "gohan", "vegeta", "trunks", "broly"):
             with self.subTest(character=name):
                 player = Saiyan(100, 100, False, name)
                 player.update()
@@ -224,8 +230,7 @@ class CombatTests(unittest.TestCase):
                         combat.update([enemy], [], player_attacking=True)
 
                 self.assertTrue(player.faint_finished)
-                # Vegeta has no knock-out sprites and lies in his hurt pose
-                self.assertEqual(len(player.faint_frames), 1 if name == "vegeta" else 4)
+                self.assertEqual(len(player.faint_frames), 4)
                 self.assertIs(player.image, player.faint_frames[-1])
                 self.assertFalse(enemy.combat_engaged)
                 self.assertEqual(enemy.hp, enemy.max_hp)
@@ -254,10 +259,84 @@ class CombatTests(unittest.TestCase):
                 self.assertTrue(player.transform())
                 self.assertFalse(player.is_super)
 
+    def test_super_saiyan_walks_and_runs_faster(self):
+        for macro, base in (("Walk Right", self.player.WALK_SPEED), ("Run Right", self.player.RUN_SPEED)):
+            with self.subTest(move=macro):
+                fighter = Saiyan(100, 100, False, "goku")
+                start = fighter.position[0]
+                fighter.move(macro, 4)
+                normal = fighter.position[0] - start
+                fighter.transform()
+                while fighter.update_action():
+                    pass
+                start = fighter.position[0]
+                fighter.move(macro, 4)
+                self.assertEqual(normal, base)
+                self.assertAlmostEqual(fighter.position[0] - start, base * fighter.SUPER_SPEED_MULTIPLIER)
+
     def test_transformation_needs_ki(self):
-        self.player.ki = self.player.TRANSFORM_MIN_KI - 1
+        self.player.ki = self.player.TRANSFORM_MIN_KI["ssj"] - 1
         self.assertFalse(self.player.transform())
         self.assertIsNone(self.player.action)
+
+    def test_goku_chooses_between_ssj_and_ssj3_and_gohan_has_no_choice(self):
+        self.assertEqual(self.player.super_levels, ["ssj", "ssj3"])
+        self.assertEqual(self.player.target_level, "ssj")
+        self.player.cycle_level(1)
+        self.assertEqual(self.player.target_level, "ssj3")
+        self.player.cycle_level(1)
+        self.assertEqual(self.player.target_level, "ssj")
+        self.player.cycle_level(-1)
+        self.assertEqual(self.player.target_level, "ssj3")
+        gohan = Saiyan(100, 100, False, "gohan")
+        self.assertLessEqual(len(gohan.super_levels), 1)
+
+    def test_ssj3_transformation_plays_its_own_aura_then_reverts(self):
+        self.player.cycle_level(1)
+        self.assertTrue(self.player.transform())
+        self.assertEqual(self.player.action["name"], "transform")
+        self.assertGreater(self.run_action(self.player), 10)
+        self.assertEqual(self.player.form, "ssj3")
+        self.assertTrue(self.player.is_super)
+        # Pressing transform again at the chosen level goes back to base
+        self.assertTrue(self.player.transform())
+        self.assertFalse(self.player.is_super)
+
+    def test_switching_from_ssj_to_ssj3_while_transformed(self):
+        self.player.transform()
+        self.run_action(self.player)
+        self.assertEqual(self.player.form, "ssj")
+        self.player.cycle_level(1)
+        self.assertTrue(self.player.transform())
+        self.run_action(self.player)
+        self.assertEqual(self.player.form, "ssj3")
+
+    def test_ssj3_needs_more_ki(self):
+        self.player.cycle_level(1)
+        self.player.ki = self.player.TRANSFORM_MIN_KI["ssj3"] - 1
+        self.assertGreater(self.player.ki, self.player.TRANSFORM_MIN_KI["ssj"])
+        self.assertFalse(self.player.transform())
+        self.assertIsNone(self.player.action)
+
+    def test_ssj3_hits_harder_than_ssj_and_drains_ki_faster(self):
+        drained = {}
+        for level, multiplier in ((0, self.combat.SUPER_DAMAGE_MULTIPLIER),
+                                  (1, self.combat.SUPER_3_DAMAGE_MULTIPLIER)):
+            with self.subTest(level=level):
+                self.setUp()
+                self.player.selected_level = level
+                self.player.transform()
+                self.run_action(self.player)
+                self.player.facing = "Right"
+                with patch("combat.pygame.time.get_ticks", return_value=1000):
+                    self.combat.update([self.enemy], [], player_attacking=True)
+                self.assertAlmostEqual(self.enemy.hp, self.enemy.max_hp - self.hit() * multiplier)
+                ki = self.player.ki
+                with patch("combat.pygame.time.get_ticks", return_value=11_000):
+                    self.combat.update([], [])
+                drained[self.player.form] = ki - self.player.ki
+        self.assertGreater(self.combat.SUPER_3_DAMAGE_MULTIPLIER, self.combat.SUPER_DAMAGE_MULTIPLIER)
+        self.assertGreater(drained["ssj3"], drained["ssj"])
 
     def test_super_saiyan_hits_harder_takes_less_and_reverts_when_ki_runs_out(self):
         self.player.transform()
@@ -276,7 +355,8 @@ class CombatTests(unittest.TestCase):
         with patch("combat.pygame.time.get_ticks", return_value=2000):
             self.combat.update([], [])
         self.assertLess(self.player.ki, ki_after_attack)
-        with patch("combat.pygame.time.get_ticks", return_value=60000):
+        # The drain is slow: about 100 s for a full bar
+        with patch("combat.pygame.time.get_ticks", return_value=200_000):
             self.combat.update([], [])
         self.assertEqual(self.player.ki, 0)
         self.assertFalse(self.player.is_super)
@@ -308,45 +388,6 @@ class CombatTests(unittest.TestCase):
         with patch("combat.pygame.time.get_ticks", return_value=5000):
             self.combat.update([self.enemy], [])
         self.assertEqual(self.player.hp, self.player.max_hp)
-
-    def test_special_charges_then_fires_a_beam_that_damages_the_enemy_in_front(self):
-        self.enemy.position = [self.player.position[0] + 120, self.player.position[1]]
-        self.enemy.update()
-        with patch("combat.pygame.time.get_ticks", return_value=5000):
-            self.assertTrue(self.combat.start_special())
-            self.assertEqual(self.player.ki, self.player.max_ki - self.combat.SPECIAL_COST)
-            # Busy and on cooldown: a second press does nothing
-            self.assertFalse(self.combat.start_special())
-            self.assertEqual(self.combat.beams, [])
-            for _ in range(200):
-                self.player.update_action()
-                self.combat.update([self.enemy], [])
-
-        self.assertEqual(self.enemy.hp, self.enemy.max_hp - self.combat.SPECIAL_DAMAGE * self.enemy.damage_taken)
-        self.assertEqual(self.combat.beams, [])
-        self.assertIsNone(self.player.action)
-
-    def test_special_misses_enemies_that_are_not_in_the_line_of_fire(self):
-        self.enemy.position = [self.player.position[0], self.player.position[1] + 120]
-        self.enemy.update()
-        with patch("combat.pygame.time.get_ticks", return_value=5000):
-            self.assertTrue(self.combat.start_special())
-            for _ in range(200):
-                self.player.update_action()
-                self.combat.update([], [])
-                self.combat._update_beams([self.enemy])
-        self.assertEqual(self.enemy.hp, self.enemy.max_hp)
-
-    def test_special_needs_ki_and_beams_can_be_drawn(self):
-        self.player.ki = self.combat.SPECIAL_COST - 1
-        with patch("combat.pygame.time.get_ticks", return_value=5000):
-            self.assertFalse(self.combat.start_special())
-        self.combat._fire_beam("Right")
-        self.combat._update_beams([])
-        screen = pygame.Surface((400, 400))
-        self.combat.draw_beams(screen, lambda rect: rect)
-        tip = self.combat._beam_rect(self.combat.beams[0]).midright
-        self.assertNotEqual(screen.get_at(tip)[:3], (0, 0, 0))
 
     def test_attacks_only_land_when_the_bodies_nearly_touch(self):
         for gap, lands in ((15, True), (22, True), (30, False)):
@@ -429,7 +470,7 @@ class CombatTests(unittest.TestCase):
         with patch("npc.pygame.time.get_ticks", return_value=now), \
                 patch("character.pygame.time.get_ticks", return_value=now):
             self.enemy.take_damage(10)
-        self.assertAlmostEqual(before - self.enemy.hp, 10 * self.enemy.damage_taken * 0.5)
+        self.assertAlmostEqual(before - self.enemy.hp, 10 * self.enemy.damage_taken * self.enemy.BLOCK_DAMAGE_TAKEN)
         self.assertIsNone(self.enemy.action)
         # Guard drops after GUARD_MS and the riposte lands at once
         hp = self.player.hp
@@ -518,7 +559,7 @@ class CombatTests(unittest.TestCase):
         with patch("combat.pygame.time.get_ticks", return_value=5000):
             self.combat.update([enemy], [])
             self.combat.update([enemy], [])
-        self.assertEqual(hp - self.player.hp, enemy.attack_damage * self.combat.SUPER_DAMAGE_MULTIPLIER)
+        self.assertEqual(hp - self.player.hp, enemy.attack_damage * self.combat.NPC_SUPER_DAMAGE_MULTIPLIER)
 
         # A Super Saiyan NPC is also harder to hurt, and faints in base form
         before = enemy.hp
@@ -532,8 +573,9 @@ class CombatTests(unittest.TestCase):
         self.assertFalse(enemy.is_super)
 
     def test_super_saiyan_only_npc_starts_transformed_and_stays_that_way(self):
-        enemy = SaiyanNPC(self.player.position[0] + 10, self.player.position[1], False, "vegeta", 0, [])
-        enemy.update()
+        with self.super_saiyan_only():
+            enemy = SaiyanNPC(self.player.position[0] + 10, self.player.position[1], False, "vegeta", 0, [])
+        self.place(enemy, 12)
         self.assertTrue(enemy.is_super)
         self.assertFalse(enemy.can_revert)
         self.assertFalse(enemy.transform())
@@ -560,8 +602,14 @@ class CombatTests(unittest.TestCase):
         self.assertTrue(enemy.faint_finished)
         self.assertEqual(len(enemy.faint_frames), 1)
 
+    @staticmethod
+    def super_saiyan_only():
+        """As if only the Super Saiyan sheets had been downloaded."""
+        return patch("animation.SpriteForm.sheet_exists", side_effect=lambda path: not path.endswith("base.json"))
+
     def test_super_saiyan_only_player_keeps_ki(self):
-        player = Saiyan(100, 100, False, "vegeta")
+        with self.super_saiyan_only():
+            player = Saiyan(100, 100, False, "vegeta")
         with patch("combat.pygame.time.get_ticks", return_value=0):
             combat = CombatSystem(player, (1200, 1000))
         player.ki = 50
@@ -569,6 +617,123 @@ class CombatTests(unittest.TestCase):
             combat.update([], [])
         self.assertGreater(player.ki, 50)
         self.assertTrue(player.is_super)
+
+    def test_difficulty_makes_an_enemy_stronger_or_weaker(self):
+        normal = NPC(0, 0, False, "gohan", 0, [], difficulty="normal")
+        hard = NPC(0, 0, False, "gohan", 0, [], difficulty="hard")
+        easy = NPC(0, 0, False, "gohan", 0, [], difficulty="easy")
+        # Normal is the enemy as it always was
+        self.assertEqual(normal.max_hp, NPC.MAX_HP)
+        self.assertEqual(normal.attack_damage, NPC.ATTACK_DAMAGE)
+        self.assertEqual(normal.damage_taken, NPC.DAMAGE_TAKEN)
+        self.assertEqual(normal.REACTION_MS, NPC.REACTION_MS)
+        for weaker, stronger in ((easy, normal), (normal, hard)):
+            self.assertLess(weaker.max_hp, stronger.max_hp)
+            self.assertLess(weaker.attack_damage, stronger.attack_damage)
+            self.assertGreater(weaker.damage_taken, stronger.damage_taken)
+            self.assertGreater(weaker.REACTION_MS, stronger.REACTION_MS)
+            self.assertGreater(weaker.attack_cooldown_ms, stronger.attack_cooldown_ms)
+            self.assertLess(weaker.WALK_SPEED, stronger.WALK_SPEED)
+        # The class keeps its own numbers
+        self.assertEqual(NPC.WALK_SPEED, normal.WALK_SPEED)
+
+    def test_broly_is_a_hard_enemy_by_default(self):
+        broly = SaiyanNPC(0, 0, False, "broly", 0, [])
+        gohan = SaiyanNPC(0, 0, False, "gohan", 0, [])
+        self.assertEqual(broly.difficulty.name, "hard")
+        self.assertEqual(gohan.difficulty.name, "normal")
+        self.assertGreater(broly.max_hp, gohan.max_hp)
+        self.assertGreater(broly.attack_damage, gohan.attack_damage)
+        # Gets angry sooner: powers up with more HP left
+        self.assertGreater(broly.TRANSFORM_AT_HP, gohan.TRANSFORM_AT_HP)
+
+    def test_a_big_body_is_reached_where_it_is_touched(self):
+        """Broly is twice as wide: fighters touching his body can hit him,
+        and he hits them from there too."""
+        broly = SaiyanNPC(0, 0, False, "broly", 0, [])
+        self.assertEqual(self.combat.body_reach(self.player), 0)
+        self.assertGreater(self.combat.body_reach(broly), 0)
+        gap = self.combat.ATTACK_RANGE + self.combat.body_reach(broly) - 1
+        self.place(broly, gap)
+        broly.facing = "Left"
+        self.player.facing = "Right"
+        self.assertTrue(self.combat._is_in_attack_range(broly))
+        self.assertTrue(self.combat._npc_in_attack_range(broly))
+        # The same gap is out of reach between two ordinary fighters
+        self.place(self.enemy, gap)
+        self.assertFalse(self.combat._is_in_attack_range(self.enemy))
+
+    def step(self, fighter, dx, dy=0, others=()):
+        """Move fighter by (dx, dy) and resolve the move like the game does."""
+        fighter.save_location()
+        fighter.position[0] += dx
+        fighter.position[1] += dy
+        fighter.update()
+        resolve_movement_collisions(fighter, [], solid_bodies(others, fighter))
+
+    def test_bodies_are_as_wide_as_the_characters(self):
+        widths = {name: Saiyan(0, 0, False, name).body_width for name in ("goku", "gohan", "vegeta", "trunks")}
+        self.assertTrue(all(10 <= width <= 20 for width in widths.values()), widths)
+        self.assertGreater(Saiyan(0, 0, False, "broly").body_width, 2 * max(widths.values()) - 10)
+        body = self.player.body
+        self.assertEqual(body.midbottom, self.player.rect.midbottom)
+
+    def test_the_player_cannot_walk_through_an_enemy(self):
+        contact = (self.player.body_width + self.enemy.body_width) / 2
+        self.place(self.enemy, contact)
+        start = list(self.player.position)
+        for _ in range(10):
+            self.step(self.player, 1, others=[self.enemy])
+        self.assertEqual(self.player.position, start)
+        # Sideways along the enemy, and away from it, are still free
+        self.step(self.player, 0, 5, others=[self.enemy])
+        self.step(self.player, -3, others=[self.enemy])
+        self.assertEqual(self.player.position, [start[0] - 3, start[1] + 5])
+
+    def test_overlapping_characters_can_move_apart_but_not_closer(self):
+        # Gohan's narrow body all inside Goku's wider one: still no way through
+        self.place(self.enemy, 4)
+        self.assertTrue(self.player.body.colliderect(self.enemy.body))
+        start = list(self.player.position)
+        self.step(self.player, 2, others=[self.enemy])
+        self.assertEqual(self.player.position, start)
+        self.step(self.player, -2, others=[self.enemy])
+        self.assertEqual(self.player.position[0], start[0] - 2)
+
+    def test_a_knocked_out_enemy_can_be_walked_over(self):
+        self.place(self.enemy, 12)
+        self.enemy.hp = 0
+        self.assertEqual(solid_bodies([self.enemy], self.player), [])
+
+    def test_knockback_stops_at_another_body(self):
+        # Pushed left, into a second enemy standing right behind
+        behind = NPC(0, 0, False, "vegeta", 0, [])
+        self.place(behind, -(self.player.body_width + behind.body_width) / 2 - 1)
+        start = list(self.player.position)
+        self.player.take_damage(5, (self.player.feet.centerx + 10, self.player.feet.centery))
+        with patch("combat.pygame.time.get_ticks", return_value=1000):
+            for _ in range(10):
+                self.combat.update([behind], [])
+        self.assertFalse(self.player.body.colliderect(behind.body))
+        # Room for one pixel of the push, no more
+        self.assertGreaterEqual(self.player.position[0], start[0] - 1)
+
+    def test_a_chasing_enemy_stops_at_the_players_body(self):
+        self.place(self.enemy, 40)
+        self.enemy.attack_damage = 0
+        self.enemy.REACTION_MS = 10 ** 9
+        with patch("combat.pygame.time.get_ticks", return_value=1000):
+            for _ in range(80):
+                self.combat.update([self.enemy], [])
+        self.assertFalse(self.player.body.colliderect(self.enemy.body))
+        self.assertLessEqual(self.enemy.feet.centerx - self.player.feet.centerx, self.combat.ATTACK_RANGE)
+
+    def test_broly_cannot_transform(self):
+        broly = Saiyan(100, 100, False, "broly")
+        broly.ki = broly.max_ki
+        self.assertEqual(broly.super_levels, [])
+        self.assertFalse(broly.transform())
+        self.assertFalse(broly.is_super)
 
     def test_non_saiyan_npc_never_transforms(self):
         self.enemy.position = [self.player.position[0] + 10, self.player.position[1]]
@@ -607,8 +772,7 @@ class CombatTests(unittest.TestCase):
         self.assertLessEqual(self.enemy.feet.right, wall.left + 1)
 
     def test_combat_moves_pushed_npcs_and_player(self):
-        self.enemy.position = [self.player.position[0] + 20, self.player.position[1]]
-        self.enemy.update()
+        self.place(self.enemy, 15)
         self.enemy.facing = "Left"
         with patch("combat.pygame.time.get_ticks", return_value=1000):
             self.combat.update([self.enemy], [], player_attacking=True)
@@ -617,13 +781,14 @@ class CombatTests(unittest.TestCase):
             self.combat.update([self.enemy], [])
         self.assertGreater(self.enemy.position[0], start)
 
-    def test_guard_halves_damage_and_still_pushes_back_without_flinch(self):
+    def test_guard_takes_70_percent_less_damage_and_still_pushes_back_without_flinch(self):
         self.assertTrue(self.player.start_block())
         self.assertTrue(self.player.blocking)
         before = self.player.hp
         start = self.player.feet.centerx
         self.player.take_damage(10, (self.player.feet.centerx + 10, self.player.feet.centery))
-        self.assertAlmostEqual(before - self.player.hp, 5)
+        # 70% less than without guard
+        self.assertAlmostEqual(before - self.player.hp, 10 * 0.3)
         self.assertIsNone(self.player.action)
         self.push_until_still(self.player)
         self.assertAlmostEqual(start - self.player.feet.centerx, self.player.KNOCKBACK_DISTANCE, delta=1.5)
@@ -663,15 +828,15 @@ class CombatTests(unittest.TestCase):
         bar_y = self.enemy.rect.top - self.combat.NPC_BAR_GAP - self.combat.NPC_BAR_HEIGHT // 2
         left = (self.enemy.rect.centerx - 20, bar_y)
         right = (self.enemy.rect.centerx + 20, bar_y)
-        red, empty = (220, 55, 55), (35, 35, 42)
+        green, empty = self.combat.HP_COLOR, (35, 35, 42)
 
         self.combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
-        self.assertEqual(screen.get_at(left)[:3], red)
-        self.assertEqual(screen.get_at(right)[:3], red)
+        self.assertEqual(screen.get_at(left)[:3], green)
+        self.assertEqual(screen.get_at(right)[:3], green)
 
         self.enemy.hp = self.enemy.max_hp / 2
         self.combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
-        self.assertEqual(screen.get_at(left)[:3], red)
+        self.assertEqual(screen.get_at(left)[:3], green)
         self.assertEqual(screen.get_at(right)[:3], empty)
 
         screen.fill((0, 0, 0))

@@ -6,7 +6,9 @@ import pyscroll
 import pytmx
 
 from combat import CombatSystem
-from movement import resolve_movement_collisions
+from effects import EFFECT_LAYER
+from movement import resolve_movement_collisions, solid_bodies
+from difficulty import enemy_profile
 from npc import NPC, SaiyanNPC
 from pathmanager import PathManager
 
@@ -74,22 +76,23 @@ HOME_MUSIC = "DBZ-Buus-Fury-Soundtrack-Gokus-Home"
 WORLD_MUSIC = "legacy-of-goku-II/The Legacy Of Goku 2 OST - The Imperfect Cell"
 
 
-def _world_npcs():
-    # Gohan walks the route the map calls "vegeta_path"
-    return [
-        SaiyanNPC(
-            99, 345, False, "gohan", 4,
-            ["Hey! Let's see how strong you've become!", "I won't hold back this time!"],
-            path_name="vegeta",
-        )
-    ]
+DEFAULT_ENEMY = "gohan"
 
 
-def map_definitions():
+def _world_npcs(enemy=DEFAULT_ENEMY):
+    """The enemy of the world map, with the strength and lines Config/enemies.json
+    gives it. It walks the route the map calls "vegeta_path"."""
+    profile = enemy_profile(enemy)
+    dialog = profile.dialog or ["Let's fight!"]
+    return [SaiyanNPC(99, 345, False, enemy, 4, dialog, path_name="vegeta", difficulty=profile.difficulty)]
+
+
+def map_definitions(enemy=DEFAULT_ENEMY):
     world = PathManager.soundtrack(WORLD_MUSIC)
     home = PathManager.soundtrack(HOME_MUSIC)
     return [
-        MapDefinition("map", world, [Portal("map", "enter_house", "house", "spawn_house")], _world_npcs),
+        MapDefinition("map", world, [Portal("map", "enter_house", "house", "spawn_house")],
+                      lambda: _world_npcs(enemy)),
         MapDefinition("house", home, [
             Portal("house", "exit_house", "map", "spawn_world"),
             Portal("house", "enter_hall", "hall", "spawn_from_house_to_hall"),
@@ -118,15 +121,18 @@ class MapManager:
     # Alpha added per frame while fading to/from black between maps
     FADE_SPEED = 10
 
-    def __init__(self, screen, character, default_map="map", versus=False, opponents=()) -> None:
+    def __init__(self, screen, character, default_map="map", versus=False, opponents=(),
+                 enemy=DEFAULT_ENEMY) -> None:
         """versus: an online match on this map, without NPCs or doors, the
-        opponents (remote players) drawn alongside the player."""
+        opponents (remote players) drawn alongside the player. enemy: the
+        character the player fights on the world map."""
         self.screen = screen
         self.character = character
         self.versus = versus
         self.opponents = list(opponents)
         self.combat = CombatSystem(character, screen.get_size())
-        self.definitions = {definition.name: definition for definition in map_definitions()}
+        self.enemy = enemy
+        self.definitions = {definition.name: definition for definition in map_definitions(enemy)}
         self.maps = {}
 
         # Fade to black between two maps
@@ -231,7 +237,10 @@ class MapManager:
                 self.input_enabled = False
                 break
 
-        resolve_movement_collisions(self.character, game_map.collisions)
+        # Walls stop the feet; the enemies' and online opponents' bodies
+        # stop the player's body
+        others = solid_bodies([*game_map.npcs, *self.opponents], self.character)
+        resolve_movement_collisions(self.character, game_map.collisions, others)
 
         # NPCs stand still while touching the player, so he can talk to them
         for sprite in game_map.group.sprites():
@@ -254,20 +263,31 @@ class MapManager:
         for opponent in self.opponents:
             opponent.follow_snapshot()
         self.combat.update(game_map.npcs, game_map.collisions, player_attacking, self.opponents)
+        # Technique effects are sprites: zoomed and drawn with the characters
+        for effect in self.combat.new_effects:
+            game_map.group.add(effect, layer=EFFECT_LAYER)
+        self.combat.new_effects.clear()
+        for effect in game_map.group.sprites():
+            if getattr(effect, "done", False):
+                game_map.group.remove(effect)
 
         self.current_music = game_map.music
         self.isMusicChanged = self.current_music != previous_music
 
         for npc in game_map.npcs:
+            npc.save_location()
             npc.move_npc()
+            # Patrolling does not walk into the player (or another NPC); the
+            # route itself keeps clear of the walls
+            resolve_movement_collisions(npc, [], solid_bodies([self.character, *game_map.npcs], npc))
 
     def draw(self):
         group = self.get_group()
         group.draw(self.screen)
         # Drawn before re-centering so the overlays match the frame just rendered
         to_screen_rect = group._map_layer.translate_rect
-        self.combat.draw_beams(self.screen, to_screen_rect)
         self.combat.draw_npc_bars(self.screen, [*self.get_map().npcs, *self.opponents], to_screen_rect)
+        self.combat.draw_charge(self.screen, to_screen_rect)
         group.center(self.character.rect.center)
         if self.transitioning:
             self.black_screen.set_alpha(self.transition_alpha)

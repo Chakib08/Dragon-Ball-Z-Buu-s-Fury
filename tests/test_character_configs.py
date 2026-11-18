@@ -8,10 +8,10 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 import pygame
 
-from animation import Animation
+from animation import Animation, load_sheet
 from utils.config import Config
 
-ROSTER = ("goku", "vegeta", "gohan")
+ROSTER = ("goku", "vegeta", "gohan", "trunks", "broly")
 # Sprite sheets ripped with a teal background; frames sit in (0, 64, 64) cells
 SHEET_BACKGROUND = (0, 128, 128)
 DIRECTIONS = ("Up", "Down", "Left", "Right")
@@ -55,7 +55,8 @@ class CharacterConfigTests(unittest.TestCase):
                     with self.subTest(character=name, form=form_name, animation=frame["AnimationName"]):
                         size = frame["Size"]
                         rect = pygame.Rect(frame["x"], frame["y"], size["Width"], size["Height"])
-                        self.assertTrue(form.sheet.get_rect().contains(rect))
+                        sheet = load_sheet(frame["Sheet"]) if "Sheet" in frame else form.sheet
+                        self.assertTrue(sheet.get_rect().contains(rect))
 
     def test_characters_with_both_forms_can_play_the_transformation(self):
         for name in ROSTER:
@@ -64,8 +65,22 @@ class CharacterConfigTests(unittest.TestCase):
                 with self.subTest(character=name):
                     self.assertGreaterEqual(animation.frame_count("Transform"), 4)
 
-    def test_vegeta_only_exists_as_a_super_saiyan(self):
-        vegeta = Animation("vegeta")
+    def test_every_character_has_a_base_and_a_super_saiyan_form(self):
+        for name in ROSTER:
+            if name == "broly":
+                continue
+            with self.subTest(character=name):
+                animation = Animation(name)
+                self.assertIn("base", animation.forms)
+                self.assertIn("ssj", animation.forms)
+                self.assertEqual(animation.form, "base")
+        self.assertIn("ssj3", Animation("goku").forms)
+        # Broly is already the Legendary Super Saiyan
+        self.assertEqual(list(Animation("broly").forms), ["base"])
+
+    def test_a_character_with_only_a_super_saiyan_sheet_is_always_one(self):
+        with patch("animation.SpriteForm.sheet_exists", side_effect=lambda path: path.endswith("ssj.json")):
+            vegeta = Animation("vegeta")
         self.assertEqual(list(vegeta.forms), ["ssj"])
         self.assertEqual(vegeta.form, "ssj")
 
@@ -83,8 +98,8 @@ class CharacterConfigTests(unittest.TestCase):
         for name in ROSTER:
             animation = Animation(name)
             for form in animation.forms.values():
-                sheet = form.sheet
                 for frame in form.animations:
+                    sheet = load_sheet(frame["Sheet"]) if "Sheet" in frame else form.sheet
                     with self.subTest(character=name, animation=frame["AnimationName"]):
                         size = frame["Size"]
                         crop = sheet.subsurface(
@@ -111,7 +126,7 @@ class CharacterConfigTests(unittest.TestCase):
 
     def test_character_name_matches_folder_and_sheet(self):
         for name in ROSTER:
-            for form in ("base", "ssj"):
+            for form in ("base", "ssj", "ssj3"):
                 path = os.path.join(Config.CONFIG_DIR, name, f"{form}.json")
                 if not os.path.exists(path):
                     continue
@@ -121,6 +136,33 @@ class CharacterConfigTests(unittest.TestCase):
                     self.assertEqual(data["Character"], name)
                     # Sheets live next to each other in the character's folder
                     self.assertTrue(data["Image path"].startswith(f"Graphics/assets/{name}/"))
+
+    def test_ssj3_faces_the_same_way_as_ssj(self):
+        """The SSJ3 and SSJ sheets come from different sites, which do not
+        draw the side poses facing the same way: compare the bodies (below
+        the hair) of the frames both have."""
+        animation = Animation("goku")
+        if "ssj3" not in animation.forms:
+            self.skipTest("SSJ3 sheet not downloaded")
+
+        def body(form, name):
+            animation.set_form(form)
+            image = animation.forms[form].image(name, False)
+            mask = pygame.mask.from_surface(image)
+            width, height = image.get_size()
+            return {(x - width // 2, y - height) for x in range(width)
+                    for y in range(height // 2, height) if mask.get_at((x, y))}
+
+        ssj_names = animation.forms["ssj"].frames_by_name
+        for name in animation.forms["ssj3"].frames_by_name:
+            if not name.startswith(("IDLE Right", "Walk Right", "Run Right")) or name not in ssj_names:
+                continue
+            with self.subTest(frame=name):
+                reference, frame = body("ssj", name), body("ssj3", name)
+                mirrored = {(-x, y) for x, y in frame}
+                overlap = lambda points: max(len(reference & {(x + dx, y) for x, y in points})
+                                             for dx in range(-3, 4))
+                self.assertGreaterEqual(overlap(frame), overlap(mirrored))
 
     def test_left_animations_mirror_the_right_ones(self):
         for name in ROSTER:

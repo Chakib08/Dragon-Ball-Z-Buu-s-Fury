@@ -5,6 +5,7 @@ import pygame
 from animation import AnimationDirection
 from character import Character
 from constants import C_WALK_ANIMATION_COUNT
+from difficulty import Difficulty, difficulty as find_difficulty, enemy_profile
 from saiyan import SuperSaiyanMixin
 
 
@@ -30,7 +31,10 @@ class NPC(Character):
     # Distance (in pixels) under which the NPC considers a patrol point reached
     PATROL_ARRIVAL_DISTANCE = 2
 
-    def __init__(self, pos_x, pos_y, is_transformed, name, nb_points, dialog_texts, path_name=None):
+    def __init__(self, pos_x, pos_y, is_transformed, name, nb_points, dialog_texts, path_name=None,
+                 difficulty=None):
+        """difficulty: a Difficulty or its name; by default the one
+        Config/enemies.json gives this character."""
         super().__init__(pos_x, pos_y, name)
         self.name = name
         # Map objects "<path_name>_path_<i>" mark the patrol route
@@ -58,14 +62,35 @@ class NPC(Character):
         self.wants_guard = False
         self.guard_until_ms = None
         self.riposte_ready = False
+        if difficulty is None:
+            difficulty = enemy_profile(name).difficulty
+        elif not isinstance(difficulty, Difficulty):
+            difficulty = find_difficulty(difficulty)
+        self.apply_difficulty(difficulty)
         if is_transformed and self.can_transform:
             self._become_super()
             self.face_idle()
 
+    def apply_difficulty(self, difficulty):
+        """Scale this enemy's strength (see difficulty.py)."""
+        self.difficulty = difficulty
+        self.max_hp = round(self.MAX_HP * difficulty.hp)
+        self.hp = self.max_hp
+        self.attack_damage = self.ATTACK_DAMAGE * difficulty.damage
+        self.damage_taken = self.DAMAGE_TAKEN * difficulty.damage_taken
+        self.REACTION_MS = difficulty.reaction_ms
+        self.attack_cooldown_ms = self.ATTACK_COOLDOWN_MS * difficulty.attack_cooldown
+        self.GUARD_AFTER_HITS = difficulty.guard_after_hits
+        if difficulty.guard_ms is not None:
+            self.GUARD_MS = difficulty.guard_ms
+        self.WALK_SPEED = self.WALK_SPEED * difficulty.speed
+        self.RUN_SPEED = self.RUN_SPEED * difficulty.speed
+        self.TRANSFORM_AT_HP = difficulty.power_up_at
+
     def update_ai(self):
         """Decisions the NPC takes on its own during a fight."""
 
-    def take_damage(self, amount, source=None):
+    def take_damage(self, amount, source=None, push=1.0):
         if not self.blocking:
             now = pygame.time.get_ticks()
             in_a_row = self.last_hit_ms is not None and now - self.last_hit_ms <= self.COMBO_WINDOW_MS
@@ -75,7 +100,7 @@ class NPC(Character):
                 # Guards once this hit's hurt animation is over
                 self.wants_guard = True
                 self.hits_in_a_row = 0
-        return super().take_damage(amount, source)
+        return super().take_damage(amount, source, push)
 
     def start_guard(self, now):
         if self.start_block():

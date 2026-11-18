@@ -37,7 +37,10 @@ class AttackInputTests(unittest.TestCase):
         self.player = self.game.character
         self.combat = self.game.map_manager.combat
         self.enemy = self.game.map_manager.get_map().npcs[0]
-        self.player.position = [self.enemy.position[0] - 22, self.enemy.position[1]]
+        self.enemy.update()
+        # Feet 15 map pixels left of the enemy's: within reach
+        self.player.position = [self.enemy.feet.centerx - 15 - self.player.rect.width / 2,
+                                self.enemy.position[1] + self.enemy.rect.height - self.player.rect.height]
         self.player.save_location()
         self.player.update()
         self.player.facing = "Right"
@@ -167,6 +170,20 @@ class AttackInputTests(unittest.TestCase):
             self.frame()
         self.assertTrue(self.player.blocking)
         self.assertIsNone(self.player.action)
+
+
+    def test_holding_d_charges_and_letting_go_fires(self):
+        combat = self.combat
+        combat.selected_technique = 1  # Kamehameha
+        self.enemy.attack_damage = 0
+        with patch("pygame.key.get_pressed", return_value=_Keys({pygame.K_d: True})):
+            self.frame([key_down(pygame.K_d)])
+            self.frames(30)
+        self.assertTrue(combat.charging)
+        self.assertGreater(combat.charge_level, 0.2)
+        self.frame()  # key released
+        self.assertFalse(combat.charging)
+        self.assertEqual(self.player.action["name"], "special")
 
 
 class _Keys:

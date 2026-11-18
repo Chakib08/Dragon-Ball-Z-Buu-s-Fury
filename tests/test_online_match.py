@@ -123,22 +123,38 @@ class OnlineMatchTests(unittest.TestCase):
         self.b.handle_messages(self.net_b.poll())
         self.assertLess(self.b.player.hp, hp)
 
-    def test_beams_are_shown_to_the_opponent_and_stop_on_them(self):
+    def test_techniques_are_shown_to_the_opponent_with_its_sprites_and_stop_on_them(self):
         combat_a = self.game_a.map_manager.combat
+        combat_a.selected_technique = 1  # Kamehameha
         self.a.player.facing = "Right"
-        combat_a._fire_beam("Right")
+        combat_a._release(combat_a.technique, "Right")
+        message = self.net_a.sent[-1]
+        self.assertEqual((message["t"], message["id"], message["dir"]), ("tech", "kamehameha", "Right"))
         self.b.handle_messages(self.net_b.poll())
         combat_b = self.game_b.map_manager.combat
-        self.assertEqual(len(combat_b.beams), 1)
-        beam = combat_b.beams[0]
-        self.assertTrue(beam["from_opponent"])
+        self.assertEqual(len(combat_b.effects), 1)
+        beam = combat_b.effects[0]
+        self.assertTrue(beam.hits_player)
         hp = self.b.player.hp
         for _ in range(40):
-            combat_b._update_beams([])
-        self.assertTrue(beam["stopped"])
-        self.assertLess(beam["length"], combat_b.SPECIAL_RANGE)
-        # The visual beam does no damage: only A's "hit" message does
+            combat_b._update_effects([])
+        self.assertTrue(beam.hit)  # stopped on B's fighter
+        # Only A's "hit" message does damage
         self.assertEqual(self.b.player.hp, hp)
+
+    def test_the_opponent_sees_a_charged_technique_at_the_same_size(self):
+        heights = []
+        for power in (0.0, 1.0):
+            combat_a = self.game_a.map_manager.combat
+            combat_a.selected_technique = 1
+            combat_a._release(combat_a.technique, "Right", power)
+            message = self.net_a.sent[-1]
+            self.assertEqual(message["power"], power)
+            combat_b = self.game_b.map_manager.combat
+            combat_b.effects.clear()
+            self.b.handle_messages(self.net_b.poll())
+            heights.append(combat_b.effects[-1].pieces["heads"][0].get_height())
+        self.assertLess(heights[0], heights[1])
 
     def test_knock_out_ends_the_match_on_both_sides(self):
         self.b.player.hp = 0

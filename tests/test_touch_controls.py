@@ -227,6 +227,25 @@ class TouchControlsTests(unittest.TestCase):
             ],
         )
         self.assertEqual(menu.selected_character, "vegeta")
+        # Then the opponent
+        self.assertEqual(menu.state, State.ENEMY_SELECT)
+        self.assertFalse(menu.isPlaying)
+        menu.launch_menu(screen, resolution, [])
+        broly_rect = menu.character_rects["broly"]
+        menu.launch_menu(
+            screen,
+            resolution,
+            [
+                pygame.event.Event(
+                    pygame.FINGERDOWN,
+                    finger_id=6,
+                    x=broly_rect.centerx / resolution[0],
+                    y=broly_rect.centery / resolution[1],
+                )
+            ],
+        )
+        self.assertEqual(menu.selected_enemy, "broly")
+        self.assertEqual(menu.selected_character, "vegeta")
         self.assertTrue(menu.isPlaying)
 
         menu = Menu(resolution)
@@ -268,7 +287,39 @@ class TouchControlsTests(unittest.TestCase):
             resolution,
             [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)],
         )
+        self.assertEqual(menu.state, State.ENEMY_SELECT)
+        self.assertFalse(menu.isPlaying)
+
+        # Esc goes back to the character, Enter there comes back here
+        key = lambda k: [pygame.event.Event(pygame.KEYDOWN, key=k)]
+        menu.launch_menu(screen, resolution, key(pygame.K_ESCAPE))
+        self.assertEqual(menu.state, State.CHARACTER_SELECT)
+        menu.launch_menu(screen, resolution, key(pygame.K_RETURN))
+        self.assertEqual(menu.state, State.ENEMY_SELECT)
+
+        menu.launch_menu(screen, resolution, key(pygame.K_LEFT))
+        self.assertEqual(menu.selected_enemy, "vegeta")  # left of Gohan
+        menu.launch_menu(screen, resolution, key(pygame.K_RETURN))
         self.assertTrue(menu.isPlaying)
+        self.assertEqual(menu.selected_character, "vegeta")
+
+    def test_online_skips_the_opponent_choice(self):
+        resolution = (1200, 1000)
+        screen = pygame.Surface(resolution)
+        menu = Menu(resolution)
+        menu.open_online()
+        menu.launch_menu(screen, resolution, [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)])
+        self.assertTrue(menu.isPlaying)
+        self.assertTrue(menu.online)
+
+    def test_opponent_screen_shows_each_enemys_difficulty(self):
+        resolution = (1200, 1000)
+        menu = Menu(resolution)
+        self.assertEqual(menu.enemy_difficulties["broly"].name, "hard")
+        self.assertEqual(menu.enemy_difficulties["gohan"].name, "normal")
+        menu.state = State.ENEMY_SELECT
+        menu.launch_menu(pygame.Surface(resolution), resolution, [])
+        self.assertEqual(set(menu.character_rects), set(menu.character_names))
 
 
 if __name__ == "__main__":

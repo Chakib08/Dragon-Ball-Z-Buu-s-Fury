@@ -1,0 +1,48 @@
+{
+  "difficulties": {
+    "easy": {
+      "label": "Easy",
+      "color": [110, 210, 110],
+      "hp": 0.7,
+      "damage": 0.6,
+      "damage_taken": 1.25,
+      "reaction_ms": 350,
+      "attack_cooldown": 1.3,
+      "guard_after_hits": 4,
+      "speed": 0.9,
+      "power_up_at": 0.35
+    },
+    "normal": {
+      "label": "Normal",
+      "color": [240, 210, 90],
+      "hp": 1.0,
+      "damage": 1.0,
+      "damage_taken": 1.0,
+      "reaction_ms": 200,
+      "attack_cooldown": 1.0,
+      "guard_after_hits": 2,
+      "speed": 1.0,
+      "power_up_at": 0.5
+    },
+    "hard": {
+      "label": "Hard",
+      "color": [235, 80, 70],
+      "hp": 1.8,
+      "damage": 2.5,
+      "damage_taken": 0.6,
+      "reaction_ms": 100,
+      "attack_cooldown": 0.75,
+      "guard_after_hits": 2,
+      "guard_ms": 700,
+      "speed": 1.25,
+      "power_up_at": 0.6
+    }
+  },
+  "enemies": {
+    "goku": {"difficulty": "normal", "dialog": ["Hey! Let's see how strong you've become!", "Don't hold back!"]},
+    "gohan": {"difficulty": "normal", "dialog": ["Hey! Let's see how strong you've become!", "I won't hold back this time!"]},
+    "vegeta": {"difficulty": "normal", "dialog": ["So you dare to challenge the Prince of all Saiyans?", "I'll show you true power!"]},
+    "trunks": {"difficulty": "normal", "dialog": ["I came from the future to get stronger.", "Let's train together!"]},
+    "broly": {"difficulty": "hard", "dialog": ["Kakarot...", "I am the Legendary Super Saiyan! Nothing can stop me!"]}
+  }
+}

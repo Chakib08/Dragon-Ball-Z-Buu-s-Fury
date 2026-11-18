@@ -21,6 +21,17 @@ class AnimationDirection(Enum):
     RIGHT = "Right"
 
 
+_sheets = {}
+
+
+def load_sheet(path):
+    """A sprite sheet image (relative to the game folder), loaded once."""
+    sheet = _sheets.get(path)
+    if sheet is None:
+        sheet = _sheets[path] = pygame.image.load(os.path.join(Config.ROOT_DIR, path))
+    return sheet
+
+
 class SpriteForm:
     """One look of a character: a sprite sheet and the frames cut from it.
 
@@ -36,7 +47,7 @@ class SpriteForm:
         with open(json_file) as file:
             data = json.load(file)
         self.character_name = data["Character"]
-        self.sheet = pygame.image.load(os.path.join(Config.ROOT_DIR, data["Image path"]))
+        self.sheet = load_sheet(data["Image path"])
         self.animations = data["Animations"]
         # The "Attack" frames are a combo of this many moves (punches, kicks)
         self.attack_moves = data.get("Attack moves", self.DEFAULT_ATTACK_MOVES)
@@ -96,14 +107,22 @@ class SpriteForm:
 
     def _cut(self, frame):
         size = (frame["Size"]["Width"], frame["Size"]["Height"])
-        background = frame["Background"]
+        # A frame can come from another sheet (e.g. an aura only drawn there)
+        sheet = load_sheet(frame["Sheet"]) if "Sheet" in frame else self.sheet
+        background = frame.get("Background")
+        if background is None:
+            # The colour around the sprite (sheets made of cells of two shades)
+            colour = sheet.get_at((frame["x"], frame["y"]))[:3]
+        else:
+            colour = (background["R"], background["G"], background["B"])
         image = pygame.Surface(size)
+        image.fill(colour)
         image.blit(
-            self.sheet,
+            sheet,
             (0, 0),
             (frame["x"], frame["y"], frame["Area Width"], frame["Area Height"]),
         )
-        image.set_colorkey((background["R"], background["G"], background["B"]))
+        image.set_colorkey(colour)
         # Some sheets draw a pose facing the other way than the game needs
         if frame.get("Flip"):
             image = pygame.transform.flip(image, True, False)
@@ -113,13 +132,16 @@ class SpriteForm:
 class Animation(pygame.sprite.Sprite):
     BASE_FORM = "base"
     SUPER_FORM = "ssj"
+    SUPER_3_FORM = "ssj3"
+    # Super Saiyan levels, weakest first
+    SUPER_FORMS = (SUPER_FORM, SUPER_3_FORM)
 
     def __init__(self, name):
         super().__init__()
         # Every form uses the same animation names, so switching form only
         # swaps what gets drawn
         self.forms = {}
-        for form in (self.BASE_FORM, self.SUPER_FORM):
+        for form in (self.BASE_FORM, *self.SUPER_FORMS):
             json_file = PathManager.character_json_path(name, form)
             if os.path.exists(json_file) and SpriteForm.sheet_exists(json_file):
                 self.forms[form] = SpriteForm.load(json_file)

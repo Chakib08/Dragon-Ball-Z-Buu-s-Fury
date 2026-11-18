@@ -82,8 +82,10 @@ class PlayerMovementTests(unittest.TestCase):
                 portals=[],
                 collisions=[pygame.Rect(26, 25, 4, 10)],
                 group=FakeGroup(),
+                npcs=[],
             )
         }
+        manager.opponents = []
 
         manager.check_collisions()
 

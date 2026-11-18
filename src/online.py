@@ -99,12 +99,13 @@ class RemoteFighter(Character):
             self.position[1] += dy * self.SMOOTHING
         self.update()
 
-    def take_damage(self, amount, source=None):
+    def take_damage(self, amount, source=None, push=1.0):
         """A hit landed on the opponent: its own game applies it."""
         self._send({
             "t": "hit",
             "damage": round(float(amount), 2),
             "source": [round(source[0], 2), round(source[1], 2)] if source else None,
+            "push": round(float(push), 2),
         })
         return amount
 
@@ -146,7 +147,7 @@ class OnlineMatch:
 
         game.character = self.player
         game.map_manager = MapManager(game.screen, self.player, versus=True, opponents=[self.opponent])
-        game.map_manager.combat.on_beam_fired = self._send_beam
+        game.map_manager.combat.on_technique = self._send_technique
         self.result = None
         self.result_since = None
         self.last_sent_ms = -self.SEND_INTERVAL_MS
@@ -156,13 +157,12 @@ class OnlineMatch:
         self.banner_font = pygame.font.Font(None, max(48, resolution[1] // 7))
         self.info_font = pygame.font.Font(None, max(22, resolution[1] // 28))
 
-    def _send_beam(self, beam):
-        self.net.send({
-            "t": "beam",
-            "origin": [round(value, 2) for value in beam["origin"]],
-            "direction": list(beam["direction"]),
-            "color": list(beam["color"]),
-        })
+    def _send_technique(self, technique_id, direction, origin, power=None):
+        """Show the opponent the technique just released (its own sprites)."""
+        message = {"t": "tech", "id": technique_id, "dir": direction, "origin": origin}
+        if power is not None:
+            message["power"] = round(power, 3)
+        self.net.send(message)
 
     def _finish(self, result):
         if self.result is None:
@@ -180,13 +180,18 @@ class OnlineMatch:
                 try:
                     damage = max(0.0, float(message.get("damage", 0)))
                     source = (float(source[0]), float(source[1])) if source else None
+                    push = min(5.0, max(0.0, float(message.get("push", 1.0))))
                 except (TypeError, ValueError, IndexError):
                     continue
-                self.player.take_damage(damage, source)
-            elif kind == "beam":
+                self.player.take_damage(damage, source, push)
+            elif kind == "tech":
                 try:
-                    combat.add_opponent_beam(message["origin"], message["direction"], message["color"])
-                except (KeyError, TypeError, ValueError):
+                    origin = (float(message["origin"][0]), float(message["origin"][1]))
+                    power = message.get("power")
+                    power = None if power is None else max(0.0, min(1.0, float(power)))
+                    combat.show_opponent_technique(self.opponent, str(message["id"]),
+                                                   str(message["dir"]), origin, power)
+                except (KeyError, TypeError, ValueError, IndexError):
                     pass
             elif kind == "ko":
                 # Its last state may not have arrived yet

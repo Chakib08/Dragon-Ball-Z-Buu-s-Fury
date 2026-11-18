@@ -1,46 +1,74 @@
 #!/usr/bin/env bash
-# Download the character and dialog sprite sheets the game needs.
+# Download the character sprite sheets the game needs.
 #
 # The sheets are not stored in this repository: run this once after cloning
 # (and before building the Android APK). Maps are part of the repository and
 # are not touched.
 #
-# Usage: ./setup.sh [--force]
-#   --force   download again even if a file is already there
+#   - Characters (Gohan, Vegeta, Trunks, Broly, Goku SSJ3) and the effects
+#     of Trunks' and Broly's techniques come from the private
+#     dbz-assets repository: set GH_TOKEN to a GitHub token that can read it.
+#   - Goku base / SSJ, and the special technique effects (blasts, beams...)
+#     come from spritedatabase.net.
+#
+# Usage: GH_TOKEN=... ./setup.sh [--force]
+#   --force   download again even if the files are already there
+#
+# Environment:
+#   GH_TOKEN        GitHub token with read access to the assets repository
+#   ASSETS_REPO     owner/name of that repository (default Chakib08/dbz-assets)
+#   ASSETS_BRANCH   its branch (default main)
+#   ASSETS_URL      where to get assets.zip (default: raw.githubusercontent.com)
 
 set -euo pipefail
 
 SPRITE_DB="https://spritedatabase.net/files/gba/976/Sprite"
+ASSETS_REPO="${ASSETS_REPO:-Chakib08/dbz-assets}"
+ASSETS_BRANCH="${ASSETS_BRANCH:-main}"
+ASSETS_URL="${ASSETS_URL:-https://raw.githubusercontent.com/$ASSETS_REPO/$ASSETS_BRANCH/assets.zip}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# One line per file: "<source URL> <destination, relative to the repository>"
-ASSETS=(
-    # Goku
+# spritedatabase.net: "<source URL> <destination, relative to the repository>"
+SPRITE_DB_ASSETS=(
+    # Goku (body and techniques)
     "$SPRITE_DB/Goku.gif               Graphics/assets/goku/base.png"
     "$SPRITE_DB/DBZBF_GokuSS1.png      Graphics/assets/goku/ssj.png"
-    "$SPRITE_DB/GokuSS3.png            Graphics/assets/goku/ssj3.png"
-    # Gohan
-    "$SPRITE_DB/Gohan.gif              Graphics/assets/gohan/base.png"
-    # Vegeta (only a Super Saiyan sheet exists, so he is always one)
-    "$SPRITE_DB/VegetaSS.png           Graphics/assets/vegeta/ssj.png"
+    # Only used for the effects of the techniques (and the SSJ3 aura)
+    "$SPRITE_DB/GokuSS3.png            Graphics/assets/effects/goku_ssj3.png"
+    "$SPRITE_DB/Gohan.gif              Graphics/assets/effects/gohan_base.png"
+    "$SPRITE_DB/VegetaSS.png           Graphics/assets/effects/vegeta_ssj.png"
 )
+
+# dbz-assets repository: "<path in the repository> <destination>"
+REPO_ASSETS=(
+    "goku/ssj3.png                     Graphics/assets/goku/ssj3.png"
+    "gohan-schooler/base.png           Graphics/assets/gohan/base.png"
+    "gohan-schooler/ssj.png            Graphics/assets/gohan/ssj.png"
+    "vegeta-bf/base.png                Graphics/assets/vegeta/base.png"
+    "vegeta-bf/ssj.png                 Graphics/assets/vegeta/ssj.png"
+    "trunks-future-armor/base.png      Graphics/assets/trunks/base.png"
+    "trunks-future-armor/ssj.png       Graphics/assets/trunks/ssj.png"
+    "broly/base.png                    Graphics/assets/broly/base.png"
+    # Effects of the techniques of Trunks and Broly
+    "effects/effects.png               Graphics/assets/effects/sfx.png"
+)
+# Written once the repository sheets are installed: older setups put other
+# images at some of these paths, so their presence alone proves nothing
+REPO_STAMP="Graphics/assets/.dbz-assets"
 
 force=false
 case "${1:-}" in
     "") ;;
     --force) force=true ;;
-    -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,21p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $1 (try --help)" >&2; exit 2 ;;
 esac
 
-if command -v curl >/dev/null 2>&1; then
-    fetch() { curl --fail --silent --show-error --location --retry 3 --output "$2" "$1"; }
-elif command -v wget >/dev/null 2>&1; then
-    fetch() { wget --quiet --tries=3 --output-document="$2" "$1"; }
-else
-    echo "error: curl or wget is required" >&2
+if ! command -v curl >/dev/null 2>&1; then
+    echo "error: curl is required" >&2
     exit 1
 fi
+fetch() { curl --fail --silent --show-error --location --retry 3 --output "$2" "$1"; }
 
 # The first bytes tell PNG and GIF images apart from an HTML error page
 is_image() {
@@ -49,32 +77,121 @@ is_image() {
     [[ "$magic" == "89504e47" || "$magic" == "47494638" ]]
 }
 
+# Moves a checked image into place in one step, so an interrupted run never
+# leaves a broken image behind
+install_image() {
+    local source="$1" target="$2"
+    if ! is_image "$source"; then
+        return 1
+    fi
+    mkdir -p "$(dirname "$target")"
+    cp "$source" "$target.part"
+    mv "$target.part" "$target"
+}
+
 downloaded=0
 skipped=0
 failed=0
-for entry in "${ASSETS[@]}"; do
+
+# ---- spritedatabase.net --------------------------------------------------------
+# Older setups kept the spritedatabase sheets where the repository ones go
+# now: move them to the effects folder instead of downloading them again
+migrate() {
+    local old="$ROOT/$1" new="$ROOT/$2"
+    if [[ -s "$old" && ! -e "$new" && ! -e "$ROOT/$REPO_STAMP" ]]; then
+        mkdir -p "$(dirname "$new")"
+        mv "$old" "$new"
+    fi
+}
+migrate Graphics/assets/goku/ssj3.png Graphics/assets/effects/goku_ssj3.png
+migrate Graphics/assets/gohan/base.png Graphics/assets/effects/gohan_base.png
+migrate Graphics/assets/vegeta/ssj.png Graphics/assets/effects/vegeta_ssj.png
+
+for entry in "${SPRITE_DB_ASSETS[@]}"; do
     read -r url destination <<<"$entry"
     target="$ROOT/$destination"
-
     if [[ -s "$target" && "$force" == false ]]; then
         skipped=$((skipped + 1))
         continue
     fi
-
     mkdir -p "$(dirname "$target")"
-    partial="$target.part"
     echo "Downloading $destination"
-    if fetch "$url" "$partial" && is_image "$partial"; then
-        # Written in one step, so an interrupted download never leaves a
-        # broken image behind
-        mv "$partial" "$target"
+    if fetch "$url" "$target.part" && is_image "$target.part"; then
+        mv "$target.part" "$target"
         downloaded=$((downloaded + 1))
     else
-        rm -f "$partial"
+        rm -f "$target.part"
         echo "  failed: $url" >&2
         failed=$((failed + 1))
     fi
 done
+
+# ---- dbz-assets repository -------------------------------------------------------
+repo_complete() {
+    [[ -e "$ROOT/$REPO_STAMP" ]] || return 1
+    local entry path destination
+    for entry in "${REPO_ASSETS[@]}"; do
+        read -r path destination <<<"$entry"
+        [[ -s "$ROOT/$destination" ]] || return 1
+    done
+}
+
+if repo_complete && [[ "$force" == false ]]; then
+    skipped=$((skipped + ${#REPO_ASSETS[@]}))
+elif [[ -z "${GH_TOKEN:-}" ]]; then
+    echo "error: GH_TOKEN is not set: the character sheets of $ASSETS_REPO cannot be downloaded" >&2
+    echo "  Run: GH_TOKEN=<token with read access to $ASSETS_REPO> ./setup.sh" >&2
+    failed=$((failed + ${#REPO_ASSETS[@]}))
+else
+    work="$(mktemp -d)"
+    trap 'rm -rf "$work"' EXIT
+    archive="$work/assets.zip"
+    echo "Downloading the character sheets from $ASSETS_REPO"
+    # The assets.zip release of the repository, else the whole repository
+    # as an archive (same files, inside one top folder)
+    if ! curl --fail --silent --show-error --location --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -o "$archive" \
+            "$ASSETS_URL" 2>/dev/null; then
+        curl --fail --silent --show-error --location --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -o "$archive" \
+            "https://api.github.com/repos/$ASSETS_REPO/zipball/$ASSETS_BRANCH" || rm -f "$archive"
+    fi
+
+    if [[ ! -s "$archive" ]]; then
+        echo "  failed: cannot download $ASSETS_REPO" >&2
+        echo "  GitHub answers \"not found\" when the token cannot see the repository: in the" >&2
+        echo "  token's settings, give it access to $ASSETS_REPO (Repository access: Only select" >&2
+        echo "  repositories) with the Contents: Read-only permission." >&2
+        failed=$((failed + ${#REPO_ASSETS[@]}))
+    else
+        mkdir -p "$work/files"
+        if command -v unzip >/dev/null 2>&1; then
+            unzip -q "$archive" -d "$work/files"
+        else
+            python3 -m zipfile -e "$archive" "$work/files"
+        fi
+        repo_failed=0
+        for entry in "${REPO_ASSETS[@]}"; do
+            read -r path destination <<<"$entry"
+            # The file, whatever top folder the archive puts it in
+            found="$(find "$work/files" -type f -path "*/$path" -print -quit)"
+            if [[ -n "$found" ]] && install_image "$found" "$ROOT/$destination"; then
+                echo "Installed $destination"
+                downloaded=$((downloaded + 1))
+            else
+                echo "  failed: $path not found in $ASSETS_REPO" >&2
+                repo_failed=$((repo_failed + 1))
+            fi
+        done
+        failed=$((failed + repo_failed))
+        if [[ "$repo_failed" -eq 0 ]]; then
+            date -u +%Y-%m-%dT%H:%M:%SZ > "$ROOT/$REPO_STAMP"
+        fi
+    fi
+fi
 
 echo "Done: $downloaded downloaded, $skipped already present, $failed failed."
 [[ "$failed" -eq 0 ]]

@@ -17,7 +17,7 @@ Client -> server
     {"t": "create"}                     open a room and wait in it
     {"t": "join", "room": int}          join a waiting room
     {"t": "leave"}                      leave the room (cancel or quit a match)
-    {"t": "state" | "hit" | "beam" | "ko", ...}   relayed to the opponent
+    {"t": "state" | "hit" | "tech" | "ko", ...}   relayed to the opponent
 
 Server -> client
     {"t": "welcome", "id": int}
@@ -39,7 +39,7 @@ import logging
 PROTOCOL_VERSION = 1
 DEFAULT_PORT = 5050
 # Messages forwarded as they are from one player of a match to the other
-RELAYED = {"state", "hit", "beam", "ko"}
+RELAYED = {"state", "hit", "tech", "ko"}
 MAX_LINE = 64 * 1024
 NAME_LENGTH = 24
 

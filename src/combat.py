@@ -5,7 +5,8 @@ import pygame
 
 from animation import AnimationDirection
 from character import DIRECTION_VECTORS
-from movement import resolve_movement_collisions
+from effects import ChargeGlow, build_effect, effect_origin
+from movement import resolve_movement_collisions, solid_bodies
 
 
 class CombatSystem:
@@ -16,26 +17,26 @@ class CombatSystem:
     ATTACK_LATERAL_TOLERANCE = 8
     NPC_ATTACK_RANGE = ATTACK_RANGE
     NPC_ATTACK_LATERAL_TOLERANCE = ATTACK_LATERAL_TOLERANCE
+    # Sprites up to this wide count as ordinary bodies; a bigger one (Broly)
+    # adds this share of the extra width to the reach, for hitting him and
+    # for his own hits, so fighters touching him can hit and be hit
+    STANDARD_BODY_WIDTH = 32
+    BIG_BODY_REACH = 0.4
     PATH_GRID_SIZE = 8
     # One punch or kick per button press, at most one every
     # Character.ATTACK_COOLDOWN_MS (the pace NPCs strike at too)
     PLAYER_ATTACK_DAMAGE = 15
-    PLAYER_ATTACK_COST = 3
     KI_REGEN_PER_SECOND = 12
     # Super Saiyan: hits harder, but burns ki instead of regenerating it
-    SUPER_DAMAGE_MULTIPLIER = 1.5
-    SUPER_KI_DRAIN_PER_SECOND = 5
-    # Special technique (energy beam)
-    SPECIAL_COST = 30
-    SPECIAL_DAMAGE = 70
-    SPECIAL_COOLDOWN_MS = 1200
-    SPECIAL_RANGE = 220
-    SPECIAL_SPEED = 9
-    SPECIAL_WIDTH = 10
-    SPECIAL_HOLD_TICKS = 30
-    SPECIAL_FADE_TICKS = 12
-    SPECIAL_COLORS = {"vegeta": (255, 225, 90)}
-    SPECIAL_DEFAULT_COLOR = (90, 200, 255)
+    # Super Saiyan punches, kicks and techniques do twice the damage (SSJ3
+    # even more); a powered-up NPC gets a smaller boost, so story fights
+    # stay winnable
+    SUPER_DAMAGE_MULTIPLIER = 2.0
+    SUPER_3_DAMAGE_MULTIPLIER = 2.5
+    NPC_SUPER_DAMAGE_MULTIPLIER = 1.5
+    # Ki drained per second by each Super Saiyan level: very slow (a full
+    # bar keeps SSJ going for about 100 s), a little more for SSJ3
+    SUPER_KI_DRAIN_PER_SECOND = {"ssj": 1, "ssj3": 2}
 
     def __init__(self, player, screen_size):
         self.player = player
@@ -44,11 +45,21 @@ class CombatSystem:
         self.last_player_attack_ms = self.last_update_ms - player.ATTACK_COOLDOWN_MS
         # True when the last update() started a player attack
         self.player_swung = False
-        self.last_special_ms = self.last_update_ms - self.SPECIAL_COOLDOWN_MS
-        self.beams = []
-        # Called with each beam the player fires (online play shows it to the
-        # opponent)
-        self.on_beam_fired = None
+        # Special techniques: the selected one, when each was last used, the
+        # effects on screen (and those added this frame, for the map to draw)
+        self.selected_technique = 0
+        self.last_technique_ms = {}
+        self.effects = []
+        self.new_effects = []
+        # Called with (technique id, direction, origin) when the player
+        # releases one (online play shows it to the opponent)
+        self.on_technique = None
+        # A technique being charged (button held), see start_special
+        self.charge = None
+        # Who can be hit and the walls, as of the last update
+        self._targets = []
+        self._collisions = []
+        self._fighters = [player]
         self.font = pygame.font.Font(None, 30)
         self.name_font = pygame.font.Font(None, 22)
         # Text is rendered once and reused every frame
@@ -62,7 +73,7 @@ class CombatSystem:
         self.last_update_ms = now
         if self.player.can_revert:
             self.player.ki = max(
-                0, self.player.ki - self.SUPER_KI_DRAIN_PER_SECOND * elapsed_seconds
+                0, self.player.ki - self.SUPER_KI_DRAIN_PER_SECOND.get(self.player.form, 1) * elapsed_seconds
             )
             if self.player.ki <= 0:
                 self.player.revert()
@@ -72,10 +83,14 @@ class CombatSystem:
                 self.player.ki + self.KI_REGEN_PER_SECOND * elapsed_seconds,
             )
         targets = [*npcs, *opponents]
-        self._update_beams(targets)
+        self._targets, self._collisions = targets, collisions
+        # Everyone on the field: their bodies block each other
+        self._fighters = [self.player, *targets]
+        self._update_charge()
+        self._update_effects(targets)
 
         self.player_swung = False
-        self.player.update_knockback(collisions)
+        self.player.update_knockback(collisions, solid_bodies(self._fighters, self.player))
         player_down = self.player.hp <= 0
         if player_down:
             self.player.faint()
@@ -92,7 +107,7 @@ class CombatSystem:
             # Pushed back, flinching or transforming: no chasing or attacking.
             # An NPC flinches on every hit, but strikes back out of the flinch
             # as soon as its next strike is due (it cannot be stun-locked)
-            pushed = npc.update_knockback(collisions)
+            pushed = npc.update_knockback(collisions, solid_bodies(self._fighters, npc))
             busy = npc.update_action()
             if busy and npc.action["name"] == "hurt" and self._npc_strike_due(npc, now):
                 npc.cancel_hurt()
@@ -117,7 +132,7 @@ class CombatSystem:
                 continue
 
             # Up close, the NPC always turns to face the player
-            if distance <= self.ATTACK_RANGE + self.ATTACK_LATERAL_TOLERANCE:
+            if distance <= self._reach(npc, self.player, self.ATTACK_RANGE) + self.ATTACK_LATERAL_TOLERANCE:
                 npc.face_toward(self.player.feet.center)
             # Guard after a flurry of hits, then riposte
             if npc.wants_guard:
@@ -175,7 +190,6 @@ class CombatSystem:
         if (
             now - self.last_player_attack_ms < player.ATTACK_COOLDOWN_MS
             or player.action is not None
-            or player.ki < self.PLAYER_ATTACK_COST
         ):
             return
 
@@ -190,137 +204,263 @@ class CombatSystem:
         target.take_damage(
             self.PLAYER_ATTACK_DAMAGE * self._damage_multiplier(player), player.feet.center
         )
-        player.ki -= self.PLAYER_ATTACK_COST
 
     def _damage_multiplier(self, attacker):
-        return self.SUPER_DAMAGE_MULTIPLIER if attacker.powered_up else 1
+        if not attacker.powered_up:
+            return 1
+        if attacker is self.player:
+            if attacker.form == attacker.SUPER_3_FORM:
+                return self.SUPER_3_DAMAGE_MULTIPLIER
+            return self.SUPER_DAMAGE_MULTIPLIER
+        return self.NPC_SUPER_DAMAGE_MULTIPLIER
 
-    # ---- Special technique -------------------------------------------------
+    # ---- Special techniques (ki) ---------------------------------------------
+    @property
+    def techniques(self):
+        return self.player.techniques
+
+    @property
+    def technique(self):
+        """The technique the ki button uses."""
+        techniques = self.techniques
+        if not techniques:
+            return None
+        return techniques[self.selected_technique % len(techniques)]
+
+    def cycle_technique(self, step):
+        if self.techniques:
+            self.selected_technique = (self.selected_technique + step) % len(self.techniques)
+
     def start_special(self):
-        """Charge, then fire an energy beam in the facing direction.
+        """Use the selected technique: the character's pose, then its effect.
 
-        Returns True if the technique started (enough ki, not busy, off cooldown).
+        Returns True if it started (enough ki, not busy, off cooldown).
         """
         player = self.player
+        technique = self.technique
         now = pygame.time.get_ticks()
-        if (
-            player.hp <= 0
-            or player.action is not None
-            or player.ki < self.SPECIAL_COST
-            or now - self.last_special_ms < self.SPECIAL_COOLDOWN_MS
-        ):
+        if technique is None or player.hp <= 0 or player.action is not None:
+            return False
+        if player.ki < technique.cost:
+            return False
+        last = self.last_technique_ms.get(technique.id)
+        if last is not None and now - last < technique.stats["cooldown_ms"]:
+            return False
+        sprites = technique.form_for(player)
+        facing = player.facing
+        frames = player.get_frames(technique.pose_macro(facing))
+        if sprites is None or not frames:
             return False
 
-        facing = player.facing
-        started = player.start_action(
-            "special",
-            f"Special {facing}",
-            clock_speed=player.SPECIAL_CLOCK_SPEED,
-            hold_ticks=self.SPECIAL_HOLD_TICKS,
-            on_last_frame=lambda: self._fire_beam(facing),
-        )
-        if not started:
-            return False
-        player.ki -= self.SPECIAL_COST
-        self.last_special_ms = now
+        if technique.kind in self.CHARGEABLE:
+            self._start_charge(technique, sprites, facing, frames, now)
+        elif technique.kind == "teleport":
+            player._play("teleport", frames, player.SPECIAL_CLOCK_SPEED,
+                         on_done=lambda: self._teleport(technique))
+        else:
+            hold = 40 if technique.kind == "beam" else 8
+            player._play(
+                "special", frames, player.SPECIAL_CLOCK_SPEED, hold_ticks=hold,
+                on_frame=(min(sprites.fire_frame(facing), len(frames) - 1),
+                          lambda: self._release(technique, facing)),
+            )
+        player.ki -= technique.cost
+        self.last_technique_ms[technique.id] = now
         return True
 
-    def _fire_beam(self, facing):
+    # ---- Charging (beams and ki balls) ------------------------------------------
+    CHARGEABLE = ("beam", "ball")
+    # Time to charge fully; the technique is released by itself then
+    CHARGE_MS = 1500
+
+    @property
+    def charging(self):
+        return self.charge is not None
+
+    @property
+    def charge_level(self):
+        """0 when the charge starts, 1 when full."""
+        if self.charge is None:
+            return 0.0
+        elapsed = pygame.time.get_ticks() - self.charge["start_ms"]
+        return max(0.0, min(1.0, elapsed / self.CHARGE_MS))
+
+    def _start_charge(self, technique, sprites, facing, frames, now):
+        """The charging pose (frames before the firing one) is held while the
+        button is held; the firing frames play on release."""
         player = self.player
-        direction = DIRECTION_VECTORS[facing]
-        # Start at the edge of the body, at chest height for sideways shots
-        origin = (
-            player.rect.centerx + direction[0] * player.rect.width / 2,
-            player.rect.centery + 2 + direction[1] * player.rect.height / 2,
-        )
-        beam = {
-            "origin": origin,
-            "direction": direction,
-            "length": 0,
-            "damage": self.SPECIAL_DAMAGE * self._damage_multiplier(player),
-            "color": self.SPECIAL_COLORS.get(player.character_name, self.SPECIAL_DEFAULT_COLOR),
-            "stopped": False,
-            "fade": self.SPECIAL_FADE_TICKS,
-        }
-        self.beams.append(beam)
-        if self.on_beam_fired is not None:
-            self.on_beam_fired(beam)
+        fire_at = max(0, min(sprites.fire_frame(facing), len(frames) - 1))
+        charge_frames = frames[:fire_at] or frames[:1]
+        fire_frames = frames[fire_at:] or frames[-1:]
+        player._play("charging", charge_frames, player.SPECIAL_CLOCK_SPEED, hold_ticks=10 ** 9)
+        glow_frames = sprites.cuts("charge") or sprites.cuts("grow")
+        glow = ChargeGlow(glow_frames, player) if glow_frames else None
+        if glow is not None:
+            self.add_effect(glow)
+        self.charge = {"technique": technique, "direction": facing, "start_ms": now,
+                       "fire_frames": fire_frames, "glow": glow}
 
-    def add_opponent_beam(self, origin, direction, color):
-        """Show a beam the online opponent fired. It stops on the player but
-        does no damage here: the opponent's game sends the hit."""
-        self.beams.append({
-            "origin": tuple(origin),
-            "direction": tuple(direction),
-            "length": 0,
-            "damage": 0,
-            "color": tuple(color),
-            "stopped": False,
-            "fade": self.SPECIAL_FADE_TICKS,
-            "from_opponent": True,
-        })
-
-    def _beam_rect(self, beam):
-        (x, y), (dx, dy) = beam["origin"], beam["direction"]
-        half = self.SPECIAL_WIDTH / 2
-        end_x, end_y = x + dx * beam["length"], y + dy * beam["length"]
-        left, top = min(x, end_x) - half * abs(dy), min(y, end_y) - half * abs(dx)
-        return pygame.Rect(
-            round(left),
-            round(top),
-            max(1, round(abs(end_x - x) + self.SPECIAL_WIDTH * abs(dy))),
-            max(1, round(abs(end_y - y) + self.SPECIAL_WIDTH * abs(dx))),
+    def release_charge(self):
+        """Let the charged technique go, as strong as it got."""
+        charge, self.charge = self.charge, None
+        if charge is None:
+            return
+        power = self.charge_level_of(charge)
+        if charge["glow"] is not None:
+            charge["glow"].done = True
+        technique, direction = charge["technique"], charge["direction"]
+        player = self.player
+        player._play(
+            "special", charge["fire_frames"], player.SPECIAL_CLOCK_SPEED,
+            hold_ticks=40 if technique.kind == "beam" else 8,
+            on_frame=(0, lambda: self._release(technique, direction, power)),
         )
 
-    def _update_beams(self, npcs):
-        for beam in tuple(self.beams):
-            if beam["stopped"]:
-                beam["fade"] -= 1
-                if beam["fade"] <= 0:
-                    self.beams.remove(beam)
-                continue
+    @staticmethod
+    def charge_level_of(charge):
+        elapsed = pygame.time.get_ticks() - charge["start_ms"]
+        return max(0.0, min(1.0, elapsed / CombatSystem.CHARGE_MS))
 
-            beam["length"] = min(self.SPECIAL_RANGE, beam["length"] + self.SPECIAL_SPEED)
-            rect = self._beam_rect(beam)
-            candidates = [self.player] if beam.get("from_opponent") else npcs
-            hit = [npc for npc in candidates if npc.hp > 0 and rect.colliderect(npc.rect)]
-            if hit:
-                target = min(hit, key=lambda npc: self._distance(beam["origin"], npc.rect.center))
-                if not beam.get("from_opponent"):
-                    target.take_damage(beam["damage"], beam["origin"])
-                # The beam ends on the enemy it hit
-                beam["length"] = min(
-                    beam["length"], self._distance(beam["origin"], target.rect.center)
-                )
-                beam["stopped"] = True
-            elif beam["length"] >= self.SPECIAL_RANGE:
-                beam["stopped"] = True
+    def _update_charge(self):
+        charge = self.charge
+        if charge is None:
+            return
+        action = self.player.action
+        if action is None or action["name"] != "charging":
+            # Hit (or knocked out) while charging: the charge is lost
+            self.charge = None
+            if charge["glow"] is not None:
+                charge["glow"].done = True
+            return
+        level = self.charge_level_of(charge)
+        if charge["glow"] is not None:
+            charge["glow"].level = level
+        if level >= 1:
+            self.release_charge()  # fully charged: it goes by itself
 
-    def draw_beams(self, screen, to_screen_rect):
-        for beam in self.beams:
-            rect = pygame.Rect(to_screen_rect(self._beam_rect(beam)))
-            alpha = 255 if not beam["stopped"] else round(255 * beam["fade"] / self.SPECIAL_FADE_TICKS)
-            horizontal = beam["direction"][0] != 0
-            thickness = rect.height if horizontal else rect.width
-            # Glowing head at the tip, a little wider than the beam
-            head_radius = round(thickness * 0.85)
-            pad = head_radius
-            layer = pygame.Surface((rect.width + pad * 2, rect.height + pad * 2), pygame.SRCALPHA)
-            body = pygame.Rect(pad, pad, rect.width, rect.height)
-            core = body.inflate(0, -thickness // 2) if horizontal else body.inflate(-thickness // 2, 0)
-            tip = {
-                (1, 0): body.midright, (-1, 0): body.midleft,
-                (0, 1): body.midbottom, (0, -1): body.midtop,
-            }[beam["direction"]]
-            pygame.draw.rect(layer, (*beam["color"], 235), body, border_radius=thickness // 2)
-            pygame.draw.circle(layer, (*beam["color"], 235), tip, head_radius)
-            pygame.draw.rect(layer, (255, 255, 255, 255), core, border_radius=thickness // 4)
-            pygame.draw.circle(layer, (255, 255, 255, 255), tip, head_radius // 2)
-            layer.set_alpha(alpha)
-            screen.blit(layer, (rect.x - pad, rect.y - pad))
+    def draw_charge(self, screen, to_screen_rect):
+        """A small bar above the player while a technique charges."""
+        if self.charge is None:
+            return
+        on_screen = pygame.Rect(to_screen_rect(self.player.rect))
+        width = max(48, on_screen.width)
+        bar = pygame.Rect(0, 0, width, 8)
+        bar.midbottom = (on_screen.centerx, on_screen.top - 6)
+        level = self.charge_level
+        pygame.draw.rect(screen, (35, 35, 42), bar)
+        color = (255, 230, 120) if level >= 1 else (120, 210, 255)
+        pygame.draw.rect(screen, color, (bar.x, bar.y, round(bar.width * level), bar.height))
+        pygame.draw.rect(screen, self.FRAME_COLOR, bar, 1)
+
+    def _hit_target(self, target, damage, source, push):
+        target.take_damage(damage, source, push)
+
+    def _release(self, technique, direction, power=None):
+        """The pose reached its firing frame: the effect leaves the hands.
+        power: how charged it was (0 to 1); a tap does half the damage."""
+        player = self.player
+        damage = technique.damage * self._damage_multiplier(player)
+        if power is not None:
+            damage *= 0.5 + 0.5 * power
+        effect = build_effect(technique, technique.form_for(player), player, direction,
+                              damage, self._hit_target, self.add_effect, power=power)
+        if effect is not None:
+            self.add_effect(effect)
+            if self.on_technique is not None:
+                self.on_technique(technique.id, direction, effect_origin(effect, player, direction), power)
+
+    def show_opponent_technique(self, opponent, technique_id, direction, origin, power=None):
+        """Draw a technique the online opponent used. It stops on the player
+        but does no damage here: the opponent's game sends the hit."""
+        technique = next((t for t in opponent.techniques if t.id == technique_id), None)
+        if technique is None or technique.kind == "teleport" or direction not in DIRECTION_VECTORS:
+            return
+        effect = build_effect(technique, technique.form_for(opponent), opponent, direction,
+                              0, None, self.add_effect, origin=origin, power=power)
+        if effect is not None:
+            effect.hits_player = True
+            self.add_effect(effect)
+
+    def add_effect(self, effect):
+        self.effects.append(effect)
+        self.new_effects.append(effect)
+
+    def _update_effects(self, targets):
+        for effect in tuple(self.effects):
+            effect.update_effect([self.player] if getattr(effect, "hits_player", False) else targets)
+            if effect.done:
+                self.effects.remove(effect)
+
+    @staticmethod
+    def _place_feet(character, feet):
+        """Move character so its feet are centred on feet."""
+        character.position = [
+            feet[0] - character.rect.width / 2,
+            feet[1] + character.feet.height / 2 - character.rect.height,
+        ]
+        character.update()
+
+    def _teleport(self, technique):
+        """Instant Transmission: reappear behind the closest opponent and hit."""
+        player = self.player
+        reach = technique.stats["reach"]
+        candidates = [t for t in self._targets if t.hp > 0
+                      and self._distance(player.feet.center, t.feet.center) <= reach]
+        target = min(candidates, key=lambda t: self._distance(player.feet.center, t.feet.center),
+                     default=None)
+        old_position = list(player.position)
+        if target is not None:
+            # Behind the target if there is room, else beside it, else in front
+            fx, fy = DIRECTION_VECTORS.get(target.facing, (0, 1))
+            spots = [(-fx, -fy), (fy, fx), (-fy, -fx), (fx, fy)]
+            # Far enough not to land in the target's body (Broly's is wide)
+            side_gap = max(16, (target.body_width + player.body_width) / 2 + 2)
+            others = solid_bodies(self._fighters, player)
+            for sx, sy in spots:
+                feet = (target.feet.centerx + sx * side_gap, target.feet.centery + sy * 12)
+                self._place_feet(player, feet)
+                if not any(player.feet.colliderect(wall) for wall in self._collisions) and \
+                        player.body.collidelist(others) == -1:
+                    break
+            else:
+                player.position = list(old_position)
+            # Face the target
+            dx = target.feet.centerx - player.feet.centerx
+            dy = target.feet.centery - player.feet.centery
+            if abs(dx) >= abs(dy):
+                player.facing = AnimationDirection.RIGHT.value if dx >= 0 else AnimationDirection.LEFT.value
+            else:
+                player.facing = AnimationDirection.DOWN.value if dy >= 0 else AnimationDirection.UP.value
+        else:
+            dx, dy = DIRECTION_VECTORS[player.facing]
+            player.position = [old_position[0] + dx * 60, old_position[1] + dy * 60]
+        player.update()
+        if any(player.feet.colliderect(wall) for wall in self._collisions):
+            player.position = old_position  # would land in a wall: stay
+            player.update()
+        player.save_location()
+        frames = player.get_frames(technique.pose_macro(player.facing))[::-1]
+        damage = technique.damage * self._damage_multiplier(player)
+
+        def strike():
+            player.strike()
+            if target is not None and target.hp > 0 and \
+                    self._distance(player.feet.center, target.feet.center) <= \
+                    self._reach(player, target, self.ATTACK_RANGE) + 12:
+                target.take_damage(damage, player.feet.center, 2.0)
+
+        player._play("teleport", frames, player.SPECIAL_CLOCK_SPEED, on_done=strike)
 
     def _player_attack_area(self):
         return self.player.feet.center, self.player.facing
+
+    @classmethod
+    def body_reach(cls, character):
+        """Extra melee reach for a body bigger than the ordinary ones."""
+        return max(0, character.rect.width - cls.STANDARD_BODY_WIDTH) * cls.BIG_BODY_REACH
+
+    def _reach(self, a, b, base):
+        return base + self.body_reach(a) + self.body_reach(b)
 
     def _is_in_attack_range(self, npc):
         origin, direction = self._player_attack_area()
@@ -329,7 +469,7 @@ class CombatSystem:
         lateral_tolerance = (
             self.player.feet.width + npc.feet.width
         ) / 2 + self.ATTACK_LATERAL_TOLERANCE
-        return 0 <= forward <= self.ATTACK_RANGE and abs(lateral) <= lateral_tolerance
+        return 0 <= forward <= self._reach(self.player, npc, self.ATTACK_RANGE) and abs(lateral) <= lateral_tolerance
 
     def _move_toward(self, npc, target, collisions):
         if npc.chase_path:
@@ -377,7 +517,7 @@ class CombatSystem:
         )
         npc.move(f"Walk {direction}", 4, (dx, dy))
         npc.update()
-        resolve_movement_collisions(npc, collisions)
+        resolve_movement_collisions(npc, collisions, solid_bodies(self._fighters, npc))
 
     def _npc_in_attack_range(self, npc):
         origin = npc.feet.center
@@ -386,7 +526,7 @@ class CombatSystem:
         tolerance = (
             self.player.feet.width + npc.feet.width
         ) / 2 + self.NPC_ATTACK_LATERAL_TOLERANCE
-        return 0 <= forward <= self.NPC_ATTACK_RANGE and abs(lateral) <= tolerance
+        return 0 <= forward <= self._reach(npc, self.player, self.NPC_ATTACK_RANGE) and abs(lateral) <= tolerance
 
     @staticmethod
     def _forward_lateral(direction, origin, target):
@@ -447,10 +587,11 @@ class CombatSystem:
         dx = target[0] - center[0]
         dy = target[1] - center[1]
         lateral_tolerance = self.NPC_ATTACK_LATERAL_TOLERANCE
+        reach = self._reach(npc, self.player, self.NPC_ATTACK_RANGE)
         return (
-            math.hypot(dx, dy) <= self.NPC_ATTACK_RANGE
-            and abs(dx) <= self.NPC_ATTACK_RANGE + lateral_tolerance
-            and abs(dy) <= self.NPC_ATTACK_RANGE + lateral_tolerance
+            math.hypot(dx, dy) <= reach
+            and abs(dx) <= reach + lateral_tolerance
+            and abs(dy) <= reach + lateral_tolerance
         )
 
     def _cell_is_walkable(self, npc, cell, collisions):
@@ -507,21 +648,29 @@ class CombatSystem:
         return math.hypot(first[0] - second[0], first[1] - second[1])
 
     def draw(self, screen):
-        self._draw_bar(screen, "HP", self.player.hp, self.player.max_hp, (220, 55, 55), 20)
+        self._draw_bar(screen, "HP", self.player.hp, self.player.max_hp, self.HP_COLOR, 20)
         ki_color = self.SUPER_COLOR if self.player.powered_up else (65, 145, 245)
         self._draw_bar(screen, "KI", self.player.ki, self.player.max_ki, ki_color, 58)
+        technique = self.technique
+        if technique is not None:
+            # Selected technique and its cost, dimmed while there is not enough ki
+            color = (255, 230, 120) if self.player.ki >= technique.cost else (150, 150, 160)
+            label = self._label(f"{technique.name} ({technique.cost} KI)", self.name_font, color)
+            screen.blit(label, (62, 88))
 
     NPC_BAR_MIN_WIDTH = 120
     NPC_BAR_HEIGHT = 14
     NPC_BAR_GAP = 8
     SUPER_COLOR = (245, 205, 60)
+    # Health bars (the player's and the enemies')
+    HP_COLOR = (70, 200, 90)
     FRAME_COLOR = (235, 235, 235)
 
-    def _label(self, text, font):
-        key = (text, font)
+    def _label(self, text, font, color=(255, 255, 255)):
+        key = (text, font, color)
         label = self._labels.get(key)
         if label is None:
-            label = self._labels[key] = font.render(text, True, (255, 255, 255))
+            label = self._labels[key] = font.render(text, True, color)
         return label
 
     def draw_npc_bars(self, screen, npcs, to_screen_rect):
@@ -541,7 +690,7 @@ class CombatSystem:
             pygame.draw.rect(screen, (35, 35, 42), bar)
             pygame.draw.rect(
                 screen,
-                (220, 55, 55),
+                self.HP_COLOR,
                 (bar.x, bar.y, round(bar.width * fraction), bar.height),
             )
             # Gold frame while the NPC is a Super Saiyan

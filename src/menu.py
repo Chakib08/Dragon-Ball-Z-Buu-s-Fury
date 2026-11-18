@@ -4,6 +4,7 @@ from enum import Enum
 
 from pathmanager import PathManager
 from animation import Animation
+from difficulty import enemy_profile
 
 # Define a custom event for the arrow blitting
 ARROW_BLIT_EVENT = pygame.USEREVENT + 1
@@ -12,6 +13,7 @@ class State(Enum):
     START = 1
     OPTIONS = 2
     CHARACTER_SELECT = 3
+    ENEMY_SELECT = 4
 
 # TODO: Remove magic numbers, retreive the latters from the app config
 class Menu:
@@ -52,11 +54,16 @@ class Menu:
         self.online = False
         self.online_font = pygame.font.Font(None, max(30, int(resolution[1] / 22)))
         self.state = State.START
-        self.character_names = ("goku", "vegeta", "gohan")
+        self.character_names = ("goku", "vegeta", "gohan", "trunks", "broly")
         self.selected_character = "goku"
+        # The enemy of the story mode (chosen after the character)
+        self.selected_enemy = "gohan"
+        self.enemy_difficulties = {name: enemy_profile(name).difficulty for name in self.character_names}
+        self.difficulty_font = pygame.font.Font(None, 32)
         self.character_font = pygame.font.Font(None, 42)
         self.character_title_font = pygame.font.Font(None, 58)
         self.character_previews = {}
+        self._fitted_previews = {}
         self.character_rects = {}
         for character_name in self.character_names:
             preview = Animation(character_name).image
@@ -89,26 +96,33 @@ class Menu:
                     self.state = State.START
             return
 
-        if self.state == State.CHARACTER_SELECT:
-            self._draw_character_select(screen, resolution)
+        if self.state in (State.CHARACTER_SELECT, State.ENEMY_SELECT):
+            choosing_enemy = self.state == State.ENEMY_SELECT
+            self._draw_character_select(screen, resolution, choosing_enemy)
             for event in events:
+                chosen = None
                 if event.type == pygame.KEYDOWN:
                     if event.key in (pygame.K_LEFT, pygame.K_a):
-                        self._cycle_character(-1)
+                        self._cycle_character(-1, choosing_enemy)
                     elif event.key in (pygame.K_RIGHT, pygame.K_d):
-                        self._cycle_character(1)
+                        self._cycle_character(1, choosing_enemy)
                     elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        self.isPlaying = True
+                        chosen = self.selected_enemy if choosing_enemy else self.selected_character
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = State.START
-                        self.online = False
+                        if choosing_enemy:
+                            self.state = State.CHARACTER_SELECT
+                        else:
+                            self.state = State.START
+                            self.online = False
                 elif self._is_tap(event, resolution):
                     position = self._event_position(event, resolution)
                     for character_name, rect in self.character_rects.items():
                         if rect.collidepoint(position):
-                            self.selected_character = character_name
-                            self.isPlaying = True
+                            chosen = character_name
                             break
+                if chosen is not None:
+                    self._choose(chosen, choosing_enemy)
+                    break
             return
 
         self.start_image = self.menu_images[State.START][self.state == State.START]
@@ -172,15 +186,46 @@ class Menu:
         screen.blit(text, rect)
         return box
 
-    def _cycle_character(self, direction):
-        current_index = self.character_names.index(self.selected_character)
-        self.selected_character = self.character_names[
-            (current_index + direction) % len(self.character_names)
-        ]
+    def _choose(self, character_name, choosing_enemy):
+        """The player chose a card: his character (then the enemy, except
+        online where the opponent is another player), or the enemy."""
+        if choosing_enemy:
+            self.selected_enemy = character_name
+            self.isPlaying = True
+        else:
+            self.selected_character = character_name
+            if self.online:
+                self.isPlaying = True
+            else:
+                self.state = State.ENEMY_SELECT
 
-    def _draw_character_select(self, screen, resolution):
+    def _cycle_character(self, direction, choosing_enemy=False):
+        selected = self.selected_enemy if choosing_enemy else self.selected_character
+        current_index = self.character_names.index(selected)
+        selected = self.character_names[(current_index + direction) % len(self.character_names)]
+        if choosing_enemy:
+            self.selected_enemy = selected
+        else:
+            self.selected_character = selected
+
+    def _fitted_preview(self, character_name, max_width, max_height):
+        """The preview, shrunk if needed to fit in its card (Broly's sprite
+        is twice the size of the others). Cached per size."""
+        key = (character_name, max_width, max_height)
+        fitted = self._fitted_previews.get(key)
+        if fitted is None:
+            preview = self.character_previews[character_name]
+            ratio = min(1, max_width / preview.get_width(), max_height / preview.get_height())
+            size = (int(preview.get_width() * ratio), int(preview.get_height() * ratio))
+            fitted = self._fitted_previews[key] = (
+                preview if ratio == 1 else pygame.transform.scale(preview, size)
+            )
+        return fitted
+
+    def _draw_character_select(self, screen, resolution, choosing_enemy=False):
         screen.blit(self.menu_image, (0, 0))
-        title = self.character_title_font.render("Choose your character", True, (255, 230, 120))
+        title_text = "Choose your opponent" if choosing_enemy else "Choose your character"
+        title = self.character_title_font.render(title_text, True, (255, 230, 120))
         screen.blit(title, title.get_rect(center=(resolution[0] / 2, resolution[1] * 0.22)))
 
         card_width = min(220, resolution[0] // (len(self.character_names) + 1))
@@ -198,7 +243,7 @@ class Menu:
                 card_height,
             )
             self.character_rects[character_name] = rect
-            selected = character_name == self.selected_character
+            selected = character_name == (self.selected_enemy if choosing_enemy else self.selected_character)
             pygame.draw.rect(screen, (80, 60, 25) if selected else (20, 20, 30), rect, border_radius=12)
             pygame.draw.rect(
                 screen,
@@ -208,14 +253,23 @@ class Menu:
                 border_radius=12,
             )
 
-            preview = self.character_previews[character_name]
-            screen.blit(preview, preview.get_rect(center=(rect.centerx, rect.top + card_height * 0.48)))
+            preview = self._fitted_preview(character_name, card_width - 16, int(card_height * 0.62))
+            if choosing_enemy:
+                # The opponent faces the player's character
+                preview = pygame.transform.flip(preview, True, False)
+            preview_y = rect.top + card_height * (0.42 if choosing_enemy else 0.48)
+            screen.blit(preview, preview.get_rect(center=(rect.centerx, preview_y)))
             label = self.character_font.render(character_name.title(), True, (255, 255, 255))
-            screen.blit(label, label.get_rect(center=(rect.centerx, rect.bottom - 42)))
+            label_y = rect.bottom - (58 if choosing_enemy else 42)
+            screen.blit(label, label.get_rect(center=(rect.centerx, label_y)))
+            if choosing_enemy:
+                difficulty = self.enemy_difficulties[character_name]
+                text = self.difficulty_font.render(difficulty.label, True, difficulty.color)
+                screen.blit(text, text.get_rect(center=(rect.centerx, rect.bottom - 26)))
 
-        instructions = self.character_font.render(
-            "Tap a character, or use Left/Right and Enter", True, (255, 255, 255)
-        )
+        hint = ("Tap an opponent, or Left/Right and Enter (Esc: back)" if choosing_enemy
+                else "Tap a character, or use Left/Right and Enter")
+        instructions = self.character_font.render(hint, True, (255, 255, 255))
         screen.blit(instructions, instructions.get_rect(center=(resolution[0] / 2, resolution[1] * 0.85)))
 
     def _draw_options(self, screen, resolution):
@@ -227,7 +281,9 @@ class Menu:
             "Attack: A key or the AUTO button (one punch or kick per press)",
             "Guard: hold F or the DEFENSE button",
             "Special technique: D key or the blast button",
+            "Choose technique: Q / E or the arrows above it",
             "Super Saiyan: S key or the transform button",
+            "Super Saiyan level (Goku): Z / X or the arrows above it",
             "Talk: T key",
             "Quit: Esc key or the X button (top right)",
             "Online 1v1: O key or the ONLINE button",

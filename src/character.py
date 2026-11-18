@@ -3,6 +3,7 @@ import pygame
 from animation import Animation, AnimationDirection, AnimationType
 from constants import C_FAINT_ANIMATION_COUNT
 from movement import resolve_movement_collisions
+from techniques import load_techniques
 from utils.config import Config
 
 DIRECTION_VECTORS = {
@@ -20,6 +21,8 @@ class Character(Animation):
     MAX_KI = 100
     WALK_SPEED = 1
     RUN_SPEED = 2
+    # A Super Saiyan (powered up) walks and runs this much faster
+    SUPER_SPEED_MULTIPLIER = 1.5
     # Share of incoming damage that gets through (lower = tougher)
     DAMAGE_TAKEN = 1.0
     SUPER_DAMAGE_TAKEN = 0.5
@@ -34,8 +37,15 @@ class Character(Animation):
     # KNOCKBACK_FRAMES frames (slowing down as it goes)
     KNOCKBACK_DISTANCE = 4
     KNOCKBACK_FRAMES = 6
-    # Guarding halves the damage (the hit still pushes)
-    BLOCK_DAMAGE_TAKEN = 0.5
+    # Guarding takes 70% less damage (the hit still pushes)
+    BLOCK_DAMAGE_TAKEN = 0.3
+    # Body on the ground (see body): this share of the standing sprite's
+    # width (at least the legs), this deep. The depth keeps a character who
+    # walks up to another from above from being drawn on top of him
+    BODY_SHARE_OF_WIDTH = 0.75
+    BODY_DEPTH = 10
+    LEGS_HEIGHT = 6
+    MIN_BODY_WIDTH = 6
 
     # Animation clock units added per frame (higher = faster animation)
     ATTACK_CLOCK_SPEED = 20
@@ -52,6 +62,7 @@ class Character(Animation):
         self.old_position = self.position.copy()
         self.rect = self.image.get_rect()
         self.feet = pygame.Rect(0, 0, self.rect.width / 4, 4)
+        self.body_width = self._measure_body_width()
         self.facing = AnimationDirection.DOWN.value
 
         self.max_hp = self.MAX_HP
@@ -66,6 +77,8 @@ class Character(Animation):
         self.knockback = None
         # Which move of the attack combo comes next
         self.attack_move_index = 0
+        # Special techniques (ki), from Config/characters/<name>/specials.json
+        self.techniques = load_techniques(self)
 
         # Short animation that locks the character (hurt, transform, special)
         self.action = None
@@ -97,6 +110,29 @@ class Character(Animation):
         return state
 
     # ---- Position -------------------------------------------------------------
+    def _measure_body_width(self):
+        """Width the character takes on the ground, from the standing pose:
+        most of the drawn width (arms, Broly's bulk), at least the legs."""
+        image = self.get_image_by_animation_name("IDLE Down")
+        mask = pygame.mask.from_surface(image)
+        rects = mask.get_bounding_rects()
+        if not rects:
+            return self.MIN_BODY_WIDTH
+        drawn = rects[0].unionall(rects[1:]).width
+        width, height = image.get_size()
+        legs = [x for x in range(width) for y in range(max(0, height - self.LEGS_HEIGHT), height)
+                if mask.get_at((x, y))]
+        legs_width = max(legs) - min(legs) + 1 if legs else 0
+        return max(self.MIN_BODY_WIDTH, legs_width, round(drawn * self.BODY_SHARE_OF_WIDTH))
+
+    @property
+    def body(self):
+        """The ground the character takes: other characters cannot walk
+        into it (its feet, self.feet, are what bumps into walls)."""
+        body = pygame.Rect(0, 0, self.body_width, self.BODY_DEPTH)
+        body.midbottom = self.rect.midbottom
+        return body
+
     def update(self):
         self.rect.topleft = self.position
         self.feet.midbottom = self.rect.midbottom
@@ -128,6 +164,8 @@ class Character(Animation):
         self.facing = side
         self.clock_speed = Config.CLOCK_SPEED
         self.speed = self.RUN_SPEED if macro == AnimationType.RUN.value else self.WALK_SPEED
+        if self.powered_up:
+            self.speed *= self.SUPER_SPEED_MULTIPLIER
 
         if movement is None:
             movement = DIRECTION_VECTORS[side]
@@ -156,7 +194,7 @@ class Character(Animation):
     # ---- Forms ------------------------------------------------------------------
     @property
     def is_super(self):
-        return self.form == self.SUPER_FORM
+        return self.form in self.SUPER_FORMS
 
     def transform(self):
         """Only characters that can transform do anything here (see saiyan.py)."""
@@ -184,9 +222,9 @@ class Character(Animation):
             self.face_idle()
 
     # ---- Damage -----------------------------------------------------------------
-    def take_damage(self, amount, source=None):
+    def take_damage(self, amount, source=None, push=1.0):
         """Lose health; source is the position the hit came from (it pushes
-        the character away from there)."""
+        the character away from there, push times the usual distance)."""
         amount *= self.damage_taken
         if self.powered_up:
             amount *= self.SUPER_DAMAGE_TAKEN
@@ -194,7 +232,7 @@ class Character(Animation):
             amount *= self.BLOCK_DAMAGE_TAKEN
         self.hp = max(0, self.hp - amount)
         if amount > 0 and source is not None:
-            self.push_from(source)
+            self.push_from(source, push)
         if amount > 0 and self.hp > 0 and not self.blocking:
             self._flinch()
         return amount
@@ -212,8 +250,9 @@ class Character(Animation):
         first_step = 2 * self.KNOCKBACK_DISTANCE * strength / (frames + 1)
         self.knockback = (dx / length * first_step, dy / length * first_step, frames)
 
-    def update_knockback(self, collisions):
-        """Move one step of the current push. Returns True while being pushed."""
+    def update_knockback(self, collisions, bodies=()):
+        """Move one step of the current push (stopped by walls and by other
+        characters' bodies). Returns True while being pushed."""
         if self.knockback is None:
             return False
         step_x, step_y, frames = self.knockback
@@ -222,7 +261,7 @@ class Character(Animation):
         self.position[0] += step_x * scale
         self.position[1] += step_y * scale
         self.update()
-        resolve_movement_collisions(self, collisions)
+        resolve_movement_collisions(self, collisions, bodies)
         self.knockback = (step_x, step_y, frames - 1) if frames > 1 else None
         return True
 
@@ -254,7 +293,8 @@ class Character(Animation):
 
     def _flinch(self):
         # Not while transforming, and not again right after the last flinch
-        if self.action is not None and self.action["name"] == "transform":
+        # Transforming and teleporting cannot be interrupted
+        if self.action is not None and self.action["name"] in ("transform", "teleport"):
             return
         now = pygame.time.get_ticks()
         if (
@@ -280,7 +320,9 @@ class Character(Animation):
         self._play(name, frames, clock_speed, hold_ticks, on_last_frame, on_done)
         return True
 
-    def _play(self, name, frames, clock_speed, hold_ticks=0, on_last_frame=None, on_done=None):
+    def _play(self, name, frames, clock_speed, hold_ticks=0, on_last_frame=None, on_done=None,
+              on_frame=None):
+        """on_frame: (index, callback), called when frame index appears."""
         self.action = {
             "name": name,
             "frames": frames,
@@ -290,11 +332,20 @@ class Character(Animation):
             "hold_ticks": hold_ticks,
             "on_last_frame": on_last_frame,
             "on_done": on_done,
+            "on_frame": on_frame,
         }
         self.reset_animation()
         self.image = frames[0]
+        self._fire_frame_callback(self.action)
         if len(frames) == 1:
             self._fire_last_frame(self.action)
+
+    @staticmethod
+    def _fire_frame_callback(action):
+        on_frame = action.get("on_frame")
+        if on_frame is not None and action["index"] >= on_frame[0]:
+            action["on_frame"] = None
+            on_frame[1]()
 
     def cancel_hurt(self):
         """Stop a hurt animation early (the player acting out of a flinch)."""
@@ -323,6 +374,7 @@ class Character(Animation):
                 action["clock"] = 0
                 action["index"] += 1
                 self.image = frames[action["index"]]
+                self._fire_frame_callback(action)
                 if action["index"] == last:
                     self._fire_last_frame(action)
             return True
@@ -337,8 +389,10 @@ class Character(Animation):
         self.action = None
         if action["on_done"] is not None:
             action["on_done"]()
-        self.face_idle()
-        return False
+        if self.action is None:  # on_done may have started the next action
+            self.face_idle()
+            return False
+        return True
 
     # ---- Knock-out --------------------------------------------------------------
     def _load_faint_frames(self):
