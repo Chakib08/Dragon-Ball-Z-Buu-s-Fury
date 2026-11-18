@@ -74,6 +74,28 @@ class Character(Animation):
         self.faint_clock = 0
         self.faint_finished = False
 
+    # ---- Online play ----------------------------------------------------------
+    def snapshot(self):
+        """What the other player needs to draw this character exactly."""
+        state = {
+            "x": round(self.position[0], 2),
+            "y": round(self.position[1], 2),
+            "facing": self.facing,
+            "form": self.form,
+            "hp": round(self.hp, 2),
+            "max_hp": self.max_hp,
+            "ki": round(self.ki, 2),
+            "blocking": self.blocking,
+            "powered": self.powered_up,
+        }
+        if self.faint_frames:
+            state["faint"] = self.faint_index
+        else:
+            key = self._sprites.frame_key(self.image)
+            if key is not None:
+                state["frame"] = list(key)
+        return state
+
     # ---- Position -------------------------------------------------------------
     def update(self):
         self.rect.topleft = self.position

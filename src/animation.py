@@ -45,6 +45,9 @@ class SpriteForm:
         for frame in self.animations:
             self.frames_by_name.setdefault(frame["AnimationName"], frame)
         self._images = {}
+        # id of a cached frame -> (animation name, flipped): lets a sprite say
+        # which frame it shows (online play sends that to the other player)
+        self._frame_keys = {}
         self._frame_counts = {}
 
     @staticmethod
@@ -84,7 +87,12 @@ class SpriteForm:
                 if flipped
                 else self._cut(self.frames_by_name[animation_name])
             )
+            self._frame_keys[id(image)] = key
         return image
+
+    def frame_key(self, image):
+        """(animation name, flipped) of a frame this form produced, else None."""
+        return self._frame_keys.get(id(image))
 
     def _cut(self, frame):
         size = (frame["Size"]["Width"], frame["Size"]["Height"])

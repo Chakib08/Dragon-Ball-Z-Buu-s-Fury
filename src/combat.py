@@ -46,12 +46,17 @@ class CombatSystem:
         self.player_swung = False
         self.last_special_ms = self.last_update_ms - self.SPECIAL_COOLDOWN_MS
         self.beams = []
+        # Called with each beam the player fires (online play shows it to the
+        # opponent)
+        self.on_beam_fired = None
         self.font = pygame.font.Font(None, 30)
         self.name_font = pygame.font.Font(None, 22)
         # Text is rendered once and reused every frame
         self._labels = {}
 
-    def update(self, npcs, collisions, player_attacking=False):
+    def update(self, npcs, collisions, player_attacking=False, opponents=()):
+        """One frame of combat. npcs are fought by the AI below; opponents
+        (online players) are only targets for the player's hits."""
         now = pygame.time.get_ticks()
         elapsed_seconds = max(0, now - self.last_update_ms) / 1000
         self.last_update_ms = now
@@ -66,7 +71,8 @@ class CombatSystem:
                 self.player.max_ki,
                 self.player.ki + self.KI_REGEN_PER_SECOND * elapsed_seconds,
             )
-        self._update_beams(npcs)
+        targets = [*npcs, *opponents]
+        self._update_beams(targets)
 
         self.player_swung = False
         self.player.update_knockback(collisions)
@@ -74,7 +80,7 @@ class CombatSystem:
         if player_down:
             self.player.faint()
         elif player_attacking:
-            self._player_attack(npcs, now)
+            self._player_attack(targets, now)
 
         for npc in tuple(npcs):
             if npc.hp <= 0:
@@ -227,7 +233,7 @@ class CombatSystem:
             player.rect.centerx + direction[0] * player.rect.width / 2,
             player.rect.centery + 2 + direction[1] * player.rect.height / 2,
         )
-        self.beams.append({
+        beam = {
             "origin": origin,
             "direction": direction,
             "length": 0,
@@ -235,6 +241,23 @@ class CombatSystem:
             "color": self.SPECIAL_COLORS.get(player.character_name, self.SPECIAL_DEFAULT_COLOR),
             "stopped": False,
             "fade": self.SPECIAL_FADE_TICKS,
+        }
+        self.beams.append(beam)
+        if self.on_beam_fired is not None:
+            self.on_beam_fired(beam)
+
+    def add_opponent_beam(self, origin, direction, color):
+        """Show a beam the online opponent fired. It stops on the player but
+        does no damage here: the opponent's game sends the hit."""
+        self.beams.append({
+            "origin": tuple(origin),
+            "direction": tuple(direction),
+            "length": 0,
+            "damage": 0,
+            "color": tuple(color),
+            "stopped": False,
+            "fade": self.SPECIAL_FADE_TICKS,
+            "from_opponent": True,
         })
 
     def _beam_rect(self, beam):
@@ -259,10 +282,12 @@ class CombatSystem:
 
             beam["length"] = min(self.SPECIAL_RANGE, beam["length"] + self.SPECIAL_SPEED)
             rect = self._beam_rect(beam)
-            hit = [npc for npc in npcs if npc.hp > 0 and rect.colliderect(npc.rect)]
+            candidates = [self.player] if beam.get("from_opponent") else npcs
+            hit = [npc for npc in candidates if npc.hp > 0 and rect.colliderect(npc.rect)]
             if hit:
                 target = min(hit, key=lambda npc: self._distance(beam["origin"], npc.rect.center))
-                target.take_damage(beam["damage"], beam["origin"])
+                if not beam.get("from_opponent"):
+                    target.take_damage(beam["damage"], beam["origin"])
                 # The beam ends on the enemy it hit
                 beam["length"] = min(
                     beam["length"], self._distance(beam["origin"], target.rect.center)
@@ -522,7 +547,8 @@ class CombatSystem:
             # Gold frame while the NPC is a Super Saiyan
             frame_color = self.SUPER_COLOR if npc.powered_up else self.FRAME_COLOR
             pygame.draw.rect(screen, frame_color, bar, 2)
-            name = self._label(npc.character_name.capitalize(), self.name_font)
+            label = getattr(npc, "bar_label", None) or npc.character_name.capitalize()
+            name = self._label(label, self.name_font)
             screen.blit(name, name.get_rect(midbottom=(bar.centerx, bar.top - 2)))
 
     def _draw_bar(self, screen, label, value, maximum, color, y):

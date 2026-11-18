@@ -118,9 +118,13 @@ class MapManager:
     # Alpha added per frame while fading to/from black between maps
     FADE_SPEED = 10
 
-    def __init__(self, screen, character, default_map="map") -> None:
+    def __init__(self, screen, character, default_map="map", versus=False, opponents=()) -> None:
+        """versus: an online match on this map, without NPCs or doors, the
+        opponents (remote players) drawn alongside the player."""
         self.screen = screen
         self.character = character
+        self.versus = versus
+        self.opponents = list(opponents)
         self.combat = CombatSystem(character, screen.get_size())
         self.definitions = {definition.name: definition for definition in map_definitions()}
         self.maps = {}
@@ -176,15 +180,16 @@ class MapManager:
             for obj in tmx_data.objects
             if obj.type == "collision"
         ]
-        npcs = definition.make_npcs() if definition.make_npcs else []
+        npcs = definition.make_npcs() if definition.make_npcs and not self.versus else []
+        portals = [] if self.versus else definition.portals
         group = CharacterGroup(map_layer=map_layer, default_layer=1)
-        group.add(self.character, *npcs)
+        group.add(self.character, *npcs, *self.opponents)
 
-        game_map = Map(name, collisions, group, tmx_data, definition.portals, npcs, definition.music)
+        game_map = Map(name, collisions, group, tmx_data, portals, npcs, definition.music)
         # Looked up once here instead of on every frame
         game_map.portal_rects = {
             portal.src_point: game_map.get_rect(game_map.get_object(portal.src_point))
-            for portal in definition.portals
+            for portal in portals
         }
         for npc in npcs:
             npc.load_points(game_map)
@@ -246,7 +251,9 @@ class MapManager:
         game_map = self.get_map()
         game_map.group.update()
         self.check_collisions()
-        self.combat.update(game_map.npcs, game_map.collisions, player_attacking)
+        for opponent in self.opponents:
+            opponent.follow_snapshot()
+        self.combat.update(game_map.npcs, game_map.collisions, player_attacking, self.opponents)
 
         self.current_music = game_map.music
         self.isMusicChanged = self.current_music != previous_music
@@ -260,7 +267,7 @@ class MapManager:
         # Drawn before re-centering so the overlays match the frame just rendered
         to_screen_rect = group._map_layer.translate_rect
         self.combat.draw_beams(self.screen, to_screen_rect)
-        self.combat.draw_npc_bars(self.screen, self.get_map().npcs, to_screen_rect)
+        self.combat.draw_npc_bars(self.screen, [*self.get_map().npcs, *self.opponents], to_screen_rect)
         group.center(self.character.rect.center)
         if self.transitioning:
             self.black_screen.set_alpha(self.transition_alpha)

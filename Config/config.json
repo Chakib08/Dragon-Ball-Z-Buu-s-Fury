@@ -1,6 +1,10 @@
 {
   "caption": "Dragon Ball Z Buu's Fury Pygame DP FAN Remake",
   "fullscreen": true,
+  "server": {
+    "host": "127.0.0.1",
+    "port": 5050
+  },
   "resolution": {
     "width": 1200,
     "heigth": 1000

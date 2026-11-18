@@ -37,6 +37,18 @@ To build locally, install [Buildozer](https://buildozer.readthedocs.io/) and run
 buildozer android debug
 ```
 
+## Online 1v1
+
+Two players can fight each other over the network through a small lobby server.
+
+1. Start the server on a computer both players can reach (standard library only, no install needed):
+   `$ python3 server/lobby_server.py` (listens on port 5050; `--port` to change it).
+2. In the game, choose **ONLINE 1V1** in the main menu (or press **O**), then pick your character.
+3. In the lobby, check the server address at the top. Tap it (or press **E**) to change it: on the same computer `127.0.0.1:5050`, from a phone or another PC the server computer's address on your network, for example `192.168.1.20:5050`. The address is remembered. The default comes from `server` in `Config/config.json`.
+4. One player taps **Create room** (or **C**), the other taps the room in the list (or presses its number). The match starts on its own.
+
+The match takes place in front of Goku's house with all the usual moves. The first player knocked out loses, then both go back to the lobby. Online, each hit counts for 40% so matches last. The server has no accounts or encryption: run it on your own network, or on a server you control.
+
 ## Game Mechanics
 
 ### Controls

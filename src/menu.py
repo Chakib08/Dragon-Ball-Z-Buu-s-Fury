@@ -48,6 +48,9 @@ class Menu:
         self.arrow_image = pygame.transform.scale(self.arrow_image, (50, 50))
         
         self.isPlaying = False
+        # True when the character was chosen for an online match
+        self.online = False
+        self.online_font = pygame.font.Font(None, max(30, int(resolution[1] / 22)))
         self.state = State.START
         self.character_names = ("goku", "vegeta", "gohan")
         self.selected_character = "goku"
@@ -98,6 +101,7 @@ class Menu:
                         self.isPlaying = True
                     elif event.key == pygame.K_ESCAPE:
                         self.state = State.START
+                        self.online = False
                 elif self._is_tap(event, resolution):
                     position = self._event_position(event, resolution)
                     for character_name, rect in self.character_rects.items():
@@ -114,6 +118,7 @@ class Menu:
         screen.blit(self.menu_image, (0, 0))
         screen.blit(self.start_image, image_start_rect.topleft)
         screen.blit(self.options_image, image_options_rect.topleft)
+        online_rect = self._draw_online_button(screen, resolution, image_options_rect)
         
         # Manage arrow visibility
         current_time = pygame.time.get_ticks()
@@ -145,6 +150,27 @@ class Menu:
                     self.state = State.CHARACTER_SELECT
                 elif image_options_rect.collidepoint(position):
                     self.state = State.OPTIONS
+                elif online_rect.collidepoint(position):
+                    self.open_online()
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_o:
+                self.open_online()
+
+    def open_online(self):
+        """Pick a character, then go to the online lobby."""
+        self.online = True
+        self.state = State.CHARACTER_SELECT
+
+    def _draw_online_button(self, screen, resolution, options_rect):
+        """Text button under OPTIONS (the others are images)."""
+        text = self.online_font.render("ONLINE 1V1", True, (255, 220, 90))
+        rect = text.get_rect(midtop=(options_rect.centerx, options_rect.bottom + options_rect.height * 0.5))
+        box = rect.inflate(24, 12)
+        shade = pygame.Surface(box.size, pygame.SRCALPHA)
+        shade.fill((15, 18, 30, 200))
+        screen.blit(shade, box.topleft)
+        pygame.draw.rect(screen, (255, 220, 90), box, 2, border_radius=6)
+        screen.blit(text, rect)
+        return box
 
     def _cycle_character(self, direction):
         current_index = self.character_names.index(self.selected_character)
@@ -204,6 +230,7 @@ class Menu:
             "Super Saiyan: S key or the transform button",
             "Talk: T key",
             "Quit: Esc key or the X button (top right)",
+            "Online 1v1: O key or the ONLINE button",
             "Press Esc or tap to return",
         ]
         line_height = int(self.options_font_size * 1.25)

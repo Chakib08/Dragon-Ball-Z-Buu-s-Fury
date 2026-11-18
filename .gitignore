@@ -13,3 +13,6 @@ Graphics/assets/vegeta/ssj.png
 # Never commit a ROM or what is extracted from it
 *.gba
 rips/
+
+# Settings changed in the game (server address)
+user_settings.json

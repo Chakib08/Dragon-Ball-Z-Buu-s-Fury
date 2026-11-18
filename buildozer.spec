@@ -5,11 +5,13 @@ package.name = dragonballzbuusfury
 package.domain = org.chakib08
 source.dir = .
 source.include_exts = py,png,jpg,ttf,tmx,tsx,json,wav
-source.exclude_dirs = .git,.github,.buildozer,.p4a,bin,__pycache__
+source.exclude_dirs = .git,.github,.buildozer,.p4a,bin,__pycache__,.venv,server,tools,tests,rips
 version = 0.1.0
 requirements = python3,pygame,pytmx==3.32,pyscroll==2.31
 orientation = landscape
 fullscreen = 1
+# Online 1v1 connects to the lobby server
+android.permissions = INTERNET
 
 android.api = 35
 android.minapi = 21

@@ -11,6 +11,8 @@ from constants import (
 from dialog.dialogbox import DialogBox
 from map import MapManager
 from menu import Menu, State
+from net import NetClient
+from online import LobbyScreen, OnlineMatch
 from pathmanager import PathManager
 from quit_prompt import QuitPrompt
 from saiyan import Saiyan
@@ -80,6 +82,11 @@ class Game:
         # Everything is laid out from the size the display really has
         self.resolution = self.screen.get_size()
         self.menu = None
+        # menu, story, lobby or online (an online match)
+        self.scene = "menu"
+        self.net = NetClient()
+        self.lobby = None
+        self.match = None
 
         self.music = None
         self.character = None
@@ -126,8 +133,15 @@ class Game:
             menu = Menu(self.resolution)
             menu.state = self.menu.state
             menu.isPlaying = self.menu.isPlaying
+            menu.online = self.menu.online
             menu.selected_character = self.menu.selected_character
             self.menu = menu
+        if self.lobby is not None:
+            lobby = self.lobby
+            lobby.screen_size = self.resolution
+            lobby.background = self.menu.menu_image if self.menu is not None else None
+        if self.match is not None:
+            self.match._fonts(self.resolution)
         self.release_input()
 
     def select_character(self, name):
@@ -247,34 +261,93 @@ class Game:
         if self.map_manager.isMusicChanged:
             self.play_music(self.map_manager.current_music)
 
+    # ---- Scenes -------------------------------------------------------------------
+    def start_story(self):
+        self.select_character(self.menu.selected_character)
+        self.play_music(self.map_manager.current_music)
+        self.scene = "story"
+
+    def open_lobby(self):
+        self.menu.isPlaying = False
+        self.menu.online = False
+        self.lobby = LobbyScreen(
+            self.net, self.resolution, self.menu.selected_character, self.menu.menu_image
+        )
+        self.scene = "lobby"
+
+    def back_to_menu(self):
+        self.net.close()
+        self.lobby = None
+        self.match = None
+        self.menu.isPlaying = False
+        self.menu.online = False
+        self.menu.state = State.START
+        self.release_input()
+        self.play_music(PathManager.soundtrack(MENU_MUSIC))
+        self.scene = "menu"
+
+    def start_match(self, start):
+        self.release_input()
+        self.match = OnlineMatch(self, self.net, start)
+        self.play_music(self.map_manager.current_music)
+        self.scene = "online"
+
+    def end_match(self):
+        self.net.send({"t": "leave"})
+        self.match = None
+        self.release_input()
+        self.lobby.after_match()
+        self.scene = "lobby"
+
+    def frame(self, events, paused):
+        """One frame of whichever scene is showing."""
+        if self.scene == "menu":
+            self.menu.launch_menu(self.screen, self.resolution, events)
+            if self.menu.isPlaying:
+                if self.menu.online:
+                    self.open_lobby()
+                else:
+                    self.start_story()
+        elif self.scene == "story":
+            self.play_frame(events, paused)
+        elif self.scene == "lobby":
+            action = self.lobby.update([] if paused else events)
+            if action == "back":
+                self.back_to_menu()
+            elif isinstance(action, dict):
+                self.start_match(action)
+            else:
+                self.lobby.draw(self.screen)
+        elif self.scene == "online":
+            # An online match never pauses: the opponent keeps playing
+            self.match.handle_messages(self.net.poll())
+            self.play_frame(events, False)
+            self.match.after_frame()
+            self.match.draw(self.screen)
+            if self.match.finished:
+                self.end_match()
+
     def run(self):
         clock = pygame.time.Clock()
         self.menu = Menu(self.resolution)
         self.play_music(PathManager.soundtrack(MENU_MUSIC))
-        game_started = False
 
         while self.isRunning:
             events = pygame.event.get()
-            # Quit button / Escape. Inside the menu's sub-screens Escape means
-            # "back", so it only asks to quit from the main menu or the game
+            # Quit button / Escape. Escape means "back" inside the menu's
+            # sub-screens and the lobby, so it only asks to quit from the main
+            # menu or while playing
             was_asking = self.quit_prompt.is_open
             events = self.quit_prompt.process(
                 events,
-                escape_opens=self.menu.isPlaying or self.menu.state == State.START,
+                escape_opens=self.scene in ("story", "online")
+                or (self.scene == "menu" and self.menu.state == State.START),
             )
             if self.quit_prompt.confirmed:
                 self.isRunning = False
             paused = was_asking or self.quit_prompt.is_open
 
-            if not self.menu.isPlaying:
-                self.menu.launch_menu(self.screen, self.resolution, events)
-            else:
-                if not game_started:
-                    if self.character.character_name != self.menu.selected_character:
-                        self.select_character(self.menu.selected_character)
-                    self.play_music(self.map_manager.current_music)
-                    game_started = True
-                self.play_frame(events, paused)
+            self.frame(events, paused)
             self.quit_prompt.draw(self.screen)
 
             for event in events:
@@ -286,4 +359,5 @@ class Game:
             pygame.display.flip()
             clock.tick(Config.FPS)
 
+        self.net.close()
         pygame.quit()
