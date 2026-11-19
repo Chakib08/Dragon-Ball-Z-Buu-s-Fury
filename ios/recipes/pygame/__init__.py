@@ -33,6 +33,8 @@ import sh
 
 from kivy_ios.toolchain import CythonRecipe, shprint
 
+SURFACE_LINE = ("surface src_c/simd_blitters_sse2.c src_c/simd_blitters_avx2.c src_c/surface.c "
+                "src_c/alphablit.c src_c/surface_fill.c $(SDL) $(DEBUG)")
 # Lines of the Android module list left out on iOS (see above)
 EXCLUDED_MODULES = ("_sdl2.", "_sprite ", "scrap ", "pypm ")
 
@@ -83,6 +85,9 @@ class PygameRecipe(CythonRecipe):
         )
         lines = [line for line in setup.splitlines()
                  if not line.lstrip().startswith(EXCLUDED_MODULES)]
+        # The Android list is behind pygame's own (Setup.SDL2.in): surface
+        # needs the SIMD blitters too (their x86 code is compiled only on x86)
+        lines = [SURFACE_LINE if line.startswith("surface ") else line for line in lines]
         with open(join(self.build_dir, "Setup"), "w") as file:
             file.write("\n".join(lines) + "\n")
 

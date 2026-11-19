@@ -106,13 +106,16 @@ jobs:
           path: |
             ios-build/build
             ios-build/dist
-          key: kivy-ios-${{ env.KIVY_IOS_VERSION }}-${{ hashFiles('ios/recipes/**') }}
+          key: kivy-ios-${{ env.KIVY_IOS_VERSION }}-python-sdl2
 
       - name: Build Python, SDL2 and pygame for iOS
         working-directory: ios-build
         run: |
           # On failure, the end of the output as an annotation (run summary page)
           report() { tail -150 "$1"; python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail "$1" "$2"; exit 1; }
+          # Python and SDL2 come from the cache when they can; pygame is
+          # always built again (our recipe may have changed)
+          toolchain clean pygame > /dev/null 2>&1 || true
           toolchain build python3 pygame > toolchain.log 2>&1 || report toolchain.log "kivy-ios build of Python, SDL2 or pygame failed"
           grep -E "^\[INFO\].*(Build|Install|Biglink)" toolchain.log | tail -20 || true
           ls dist/xcframework
@@ -125,7 +128,7 @@ jobs:
           path: |
             ios-build/build
             ios-build/dist
-          key: kivy-ios-${{ env.KIVY_IOS_VERSION }}-${{ hashFiles('ios/recipes/**') }}
+          key: kivy-ios-${{ env.KIVY_IOS_VERSION }}-python-sdl2
 
       - name: Create the Xcode project
         working-directory: ios-build
