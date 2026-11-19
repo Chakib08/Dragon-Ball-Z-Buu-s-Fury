@@ -33,7 +33,17 @@ def is_android():
     return "ANDROID_ARGUMENT" in os.environ
 
 
-# On Android the game draws at this height (and the screen's shape), and the
+def is_ios():
+    # Set by the kivy-ios app that runs the game (see ios/)
+    return os.environ.get("KIVY_BUILD") == "ios"
+
+
+def is_mobile():
+    """A phone or tablet: always full screen, drawn small and scaled up."""
+    return is_android() or is_ios()
+
+
+# On a phone (Android, iOS) the game draws at this height (and the screen's shape), and the
 # GPU scales the picture up to the whole screen: drawing every pixel of a
 # phone screen in Python is far too slow
 ANDROID_RENDER_HEIGHT = 540
@@ -55,14 +65,14 @@ def create_display(window_size, fullscreen):
     Android no system bars); the game lays itself out from the size it gets.
     Android is always fullscreen, drawn smaller and scaled up by the GPU.
     """
-    if is_android():
+    if is_mobile():
         try:
             info = pygame.display.Info()
             size = android_render_size((info.current_w, info.current_h))
             return pygame.display.set_mode(size, pygame.FULLSCREEN | pygame.SCALED)
         except pygame.error:
             pass  # fall back to the native size below
-    if fullscreen or is_android():
+    if fullscreen or is_mobile():
         try:
             screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
             if screen.get_width() > 0 and screen.get_height() > 0:
@@ -74,6 +84,9 @@ def create_display(window_size, fullscreen):
 
 class Game:
     def __init__(self, resolution, caption, fullscreen=False):
+        if is_ios():
+            # Landscape only, like the Android app (read when SDL starts)
+            os.environ.setdefault("SDL_IOS_ORIENTATIONS", "LandscapeLeft LandscapeRight")
         pygame.init()
         self.caption = caption
         self.isRunning = True
@@ -424,7 +437,7 @@ class Game:
             for event in events:
                 if event.type == pygame.QUIT:
                     self.isRunning = False
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11 and not is_android():
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11 and not is_mobile():
                     self.toggle_fullscreen()
 
             pygame.display.flip()

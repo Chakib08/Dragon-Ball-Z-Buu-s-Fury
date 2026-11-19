@@ -1,0 +1,200 @@
+name: Build iOS app
+
+# An iOS build of the game with kivy-ios: Python and SDL2 for iOS from
+# kivy-ios, pygame from our recipe (ios/recipes/pygame), and kivy-ios's
+# Xcode project around the game (ios/stage_app.py).
+#
+#   assets   downloads the sprite sheets (setup.sh, on Linux)
+#   build    on macOS: builds Python, SDL2 and pygame for iOS, the Xcode
+#            project, then
+#              - the app for the iOS Simulator (zipped .app), started once
+#                in a simulator in smoke-test mode (a short fight, then it
+#                quits by itself)
+#              - the app for iPhone/iPad, NOT signed (.ipa): to install it,
+#                sign it with your Apple account (Xcode, or a sideloading
+#                tool such as AltStore or Sideloadly)
+#   release  on a v* tag, attaches the .ipa to the GitHub release
+#
+# Run it by hand on any branch: Actions > this workflow > Run workflow.
+# The first run takes long (Python and SDL2 are built from source); later
+# runs reuse them (cache).
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  KIVY_IOS_VERSION: "2025.5.17"
+  APP_NAME: TrunksHope
+  # toolchain create names the Xcode project and its scheme in lower case
+  PROJECT: trunkshope
+  BUNDLE_ID: org.chakib08.trunkshope
+
+jobs:
+  assets:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download sprite sheets
+        run: ./setup.sh
+        env:
+          # A token that can read the private dbz-assets repository
+          GH_TOKEN: ${{ secrets.DBZ_ASSETS_TOKEN }}
+
+      - name: Keep them for the iOS build
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprite-sheets-ios
+          path: Graphics/assets/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  build:
+    needs: assets
+    runs-on: macos-14
+    timeout-minutes: 180
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Get the sprite sheets
+        uses: actions/download-artifact@v4
+        with:
+          name: sprite-sheets-ios
+          path: Graphics/assets/
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install kivy-ios and its tools
+        run: |
+          mkdir -p ios-build
+          brew install autoconf automake libtool pkg-config
+          python -m pip install --upgrade pip
+          python -m pip install "kivy-ios==${KIVY_IOS_VERSION}"
+
+      - name: Cache the iOS builds of Python, SDL2 and pygame
+        uses: actions/cache@v4
+        with:
+          path: |
+            ios-build/build
+            ios-build/dist
+          key: kivy-ios-${{ env.KIVY_IOS_VERSION }}-${{ hashFiles('ios/recipes/**') }}
+
+      - name: Build Python, SDL2 and pygame for iOS
+        working-directory: ios-build
+        run: |
+          toolchain build python3 pygame --add-custom-recipe "$GITHUB_WORKSPACE/ios/recipes/pygame"
+          toolchain pip install --no-deps pytmx==3.32 pyscroll==2.31
+
+      - name: Create the Xcode project
+        working-directory: ios-build
+        run: |
+          python "$GITHUB_WORKSPACE/ios/stage_app.py" app
+          toolchain create "$APP_NAME" app
+          plist="$PROJECT-ios/$PROJECT-Info.plist"
+          # Landscape only, named "Trunks Hope" on the home screen
+          for key in UISupportedInterfaceOrientations "UISupportedInterfaceOrientations~ipad"; do
+            /usr/libexec/PlistBuddy -c "Delete :$key" "$plist" || true
+            /usr/libexec/PlistBuddy -c "Add :$key array" "$plist"
+            /usr/libexec/PlistBuddy -c "Add :$key:0 string UIInterfaceOrientationLandscapeLeft" "$plist"
+            /usr/libexec/PlistBuddy -c "Add :$key:1 string UIInterfaceOrientationLandscapeRight" "$plist"
+          done
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Trunks Hope" "$plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $BUNDLE_ID" "$plist"
+          # iOS rounds the corners itself and wants 1024 px without transparency:
+          # the full-size picture, not the Android launcher icon
+          toolchain icon "$PROJECT-ios" "$GITHUB_WORKSPACE/Graphics/android_icon.png"
+
+      - name: Build the app for the iOS Simulator
+        working-directory: ios-build
+        run: |
+          xcodebuild -project "$PROJECT-ios/$PROJECT.xcodeproj" -scheme "$PROJECT" \
+            -sdk iphonesimulator -configuration Release -derivedDataPath derived-simulator \
+            CODE_SIGNING_ALLOWED=NO build
+          app=$(find derived-simulator -name "*.app" -path "*iphonesimulator*" | head -1)
+          ditto -c -k --keepParent "$app" "$GITHUB_WORKSPACE/$APP_NAME-simulator.zip"
+
+      - name: Build the app for iPhone and iPad (not signed)
+        working-directory: ios-build
+        run: |
+          xcodebuild -project "$PROJECT-ios/$PROJECT.xcodeproj" -scheme "$PROJECT" \
+            -sdk iphoneos -configuration Release -derivedDataPath derived-device \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          app=$(find derived-device -name "*.app" -path "*iphoneos*" | head -1)
+          version=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$GITHUB_WORKSPACE/src/version.py")
+          mkdir -p Payload
+          cp -R "$app" Payload/
+          zip -qry "$GITHUB_WORKSPACE/$APP_NAME-v$version-ios-unsigned.ipa" Payload
+
+      - name: Upload the apps
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-apps
+          path: |
+            ${{ env.APP_NAME }}-*-ios-unsigned.ipa
+            ${{ env.APP_NAME }}-simulator.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Start it once in a simulator (smoke test)
+        working-directory: ios-build
+        run: |
+          device=$(xcrun simctl list devices available -j | python -c "
+          import json, sys
+          devices = json.load(sys.stdin)['devices']
+          print(next(d['udid'] for runtime, items in devices.items() if 'iOS' in runtime
+                     for d in items if d['name'].startswith('iPhone')))")
+          xcrun simctl boot "$device"
+          app=$(find derived-simulator -name "*.app" -path "*iphonesimulator*" | head -1)
+          xcrun simctl install "$device" "$app"
+          # SIMCTL_CHILD_ variables reach the app: a short fight, then it quits
+          export SIMCTL_CHILD_DBZ_SMOKE_TEST=arcade SIMCTL_CHILD_DBZ_SMOKE_TEST_SECONDS=8
+          python - "$device" <<'EOF'
+          import os, subprocess, sys
+          try:
+              run = subprocess.run(["xcrun", "simctl", "launch", "--console-pty", sys.argv[1], os.environ["BUNDLE_ID"]],
+                                   capture_output=True, text=True, timeout=300)
+              output = run.stdout + run.stderr
+          except subprocess.TimeoutExpired as expired:
+              output = (expired.stdout or b"").decode(errors="replace") + "\n(no exit after 300 s)"
+          print(output[-6000:])
+          sys.exit(0 if "smoke test passed" in output else "The game did not run its smoke test")
+          EOF
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download the apps
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-apps
+          path: dist/
+
+      - name: Attach the iPhone app to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.ipa
+          generate_release_notes: true

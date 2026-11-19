@@ -64,7 +64,12 @@ python tools/build_desktop.py   # -> dist/DragonBallZTrunksHope/
 
 ## iOS
 
-There is no iOS build: pygame has no iOS version (no iOS package on PyPI, and kivy-ios, the iOS counterpart of python-for-android, has no pygame recipe), and an iPhone app also needs an Apple developer account to be signed.
+The **Build iOS app** GitHub Actions workflow builds the game for iPhone and iPad with [kivy-ios](https://github.com/kivy/kivy-ios), on macOS, on the same events as the others (and by hand). kivy-ios builds Python and SDL2 for iOS; pygame, which kivy-ios has no recipe for, is built by ours, `ios/recipes/pygame` (it explains how). `ios/stage_app.py` gathers the game's files for the app. The workflow uploads, as the `ios-apps` artifact:
+
+- `TrunksHope-v<version>-ios-unsigned.ipa`: the app for iPhone/iPad, **not signed**. Apple only lets signed apps on a device: sign it with your Apple account in Xcode, or install it with a sideloading tool (AltStore, Sideloadly; with a free Apple account the app has to be reinstalled every 7 days). A version tag also attaches it to the GitHub Release.
+- `TrunksHope-simulator.zip`: the app for the iOS Simulator (Xcode on a Mac); the workflow also starts it once in a simulator to check it (a short fight in smoke-test mode).
+
+The first run takes long (Python and SDL2 are built from source); later runs reuse them.
 
 ## Online 1v1
 

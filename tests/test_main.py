@@ -76,3 +76,55 @@ class DesktopBuildTests(unittest.TestCase):
                                 cwd=os.path.dirname(project), env=env, capture_output=True, text=True, timeout=120)
         self.assertEqual(result.returncode, 0, result.stderr[-2000:])
         self.assertIn("smoke test passed: story scene", result.stdout)
+
+
+class IosTests(unittest.TestCase):
+    """What the iOS app (kivy-ios, ios/) relies on in the game."""
+
+    def test_the_game_knows_it_runs_on_ios(self):
+        import game
+        with patch.dict(os.environ, {"KIVY_BUILD": "ios"}):
+            self.assertTrue(game.is_ios())
+            self.assertTrue(game.is_mobile())
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("KIVY_BUILD", None)
+            os.environ.pop("ANDROID_ARGUMENT", None)
+            self.assertFalse(game.is_ios())
+            self.assertFalse(game.is_mobile())
+
+    def test_settings_go_to_the_apps_documents_folder(self):
+        import settings
+        from utils.config import Config
+        Config.init()
+        with patch.dict(os.environ, {"KIVY_BUILD": "ios", "HOME": "/var/mobile/Containers/Data/Application/X"}):
+            os.environ.pop("ANDROID_PRIVATE", None)
+            self.assertEqual(settings.settings_path(),
+                             "/var/mobile/Containers/Data/Application/X/Documents/user_settings.json")
+
+    def test_ios_is_landscape_only(self):
+        """Set before SDL starts (pygame.init), which is when SDL reads it."""
+        import game
+
+        class Started(Exception):
+            pass
+
+        def init():
+            seen.append(os.environ.get("SDL_IOS_ORIENTATIONS"))
+            raise Started
+
+        seen = []
+        with patch.dict(os.environ, {"KIVY_BUILD": "ios"}):
+            os.environ.pop("SDL_IOS_ORIENTATIONS", None)
+            with patch("game.pygame.init", side_effect=init), self.assertRaises(Started):
+                game.Game((1200, 540), "test", fullscreen=False)
+        self.assertEqual(seen, ["LandscapeLeft LandscapeRight"])
+
+    def test_the_ios_recipe_names_pygames_modules_for_kivy_ios(self):
+        project = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(project, "ios", "recipes", "pygame", "__init__.py")) as file:
+            source = file.read()
+        self.assertIn("PyInit_pygame_##mod_name", source)
+        self.assertIn('version = "2.6.1"', source)
+        with open(os.path.join(project, "requirements.txt")) as file:
+            self.assertIn("pygame==2.6.1", file.read())  # the same pygame as on desktop
+

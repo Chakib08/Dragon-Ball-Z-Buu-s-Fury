@@ -1,7 +1,7 @@
 """Player settings that can change in the game (saved between sessions).
 
 The file lives where the app may write: the app's private folder on Android,
-the project folder elsewhere.
+its Documents folder on iOS, the project folder elsewhere.
 """
 
 import json
@@ -14,7 +14,13 @@ DEFAULT_SERVER_PORT = 5050
 
 
 def settings_path():
-    folder = os.environ.get("ANDROID_PRIVATE") or Config.ROOT_DIR
+    if os.environ.get("ANDROID_PRIVATE"):
+        folder = os.environ["ANDROID_PRIVATE"]
+    elif os.environ.get("KIVY_BUILD") == "ios":
+        # The app itself is read-only on iOS: the app's Documents folder
+        folder = os.path.join(os.path.expanduser("~"), "Documents")
+    else:
+        folder = Config.ROOT_DIR
     return os.path.join(folder, FILE_NAME)
 
 
