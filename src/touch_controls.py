@@ -306,6 +306,8 @@ class TouchControls:
             position = (event.x * self.screen_size[0], event.y * self.screen_size[1])
             is_down = event.type == pygame.FINGERDOWN
             is_up = event.type == pygame.FINGERUP
+        elif getattr(event, "touch", False):
+            return  # the mouse copy of a touch: the FINGER event is the one used
         elif event.type in (pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP) and event.button == 1:
             pointer = ("mouse", 0)
             position = event.pos
@@ -314,7 +316,8 @@ class TouchControls:
         elif event.type == pygame.MOUSEMOTION and event.buttons[0]:
             pointer = ("mouse", 0)
             position = event.pos
-        elif event.type == pygame.WINDOWFOCUSLOST:
+        elif event.type in self.RELEASE_ALL_EVENTS:
+            # The finger-up events of that moment may never come
             self.clear()
             return
 
@@ -345,6 +348,12 @@ class TouchControls:
             self.pointers[pointer] = control
             if control in self.ACTIONS and control != previous:
                 self.pressed_actions.add(control)
+
+    # The window lost the focus, or the app went to the background (Android)
+    RELEASE_ALL_EVENTS = tuple(
+        getattr(pygame, name) for name in ("WINDOWFOCUSLOST", "APP_WILLENTERBACKGROUND", "APP_DIDENTERBACKGROUND")
+        if hasattr(pygame, name)
+    )
 
     def consume_action(self, action):
         if action in self.pressed_actions:

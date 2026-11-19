@@ -21,6 +21,9 @@ class NetClient:
         self._send_lock = threading.Lock()
         self._inbox = queue.Queue()
         self._closed = False
+        # Number of the current connection: a thread of an older one (closed
+        # by a reconnect) must not touch the new one's state
+        self._generation = 0
 
     @property
     def connected(self):
@@ -30,27 +33,34 @@ class NetClient:
         """Start connecting in the background (check status / poll later)."""
         self.close()
         self._closed = False
+        self._generation += 1
+        # Messages of the previous connection are no news for this one
+        self._inbox = queue.Queue()
         self.status = "connecting"
         self.error = ""
-        threading.Thread(target=self._run, args=(host, port), daemon=True).start()
+        threading.Thread(target=self._run, args=(host, port, self._generation), daemon=True).start()
 
-    def _run(self, host, port):
+    def _current(self, generation):
+        return generation == self._generation and not self._closed
+
+    def _run(self, host, port, generation):
+        inbox = self._inbox
         try:
             sock = socket.create_connection((host, int(port)), timeout=CONNECT_TIMEOUT)
             sock.settimeout(None)
             # Small messages many times a second: send them right away
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         except ConnectionRefusedError:
-            self._fail(f"No server on {host}:{port}: is lobby_server.py running on that port?")
+            self._fail(f"No server on {host}:{port}: is lobby_server.py running on that port?", generation)
             return
         except socket.timeout:
-            self._fail(f"No answer from {host}:{port}: wrong address, or a firewall blocks it")
+            self._fail(f"No answer from {host}:{port}: wrong address, or a firewall blocks it", generation)
             return
         except (OSError, ValueError) as error:
-            self._fail(f"Cannot reach {host}:{port} ({error})")
+            self._fail(f"Cannot reach {host}:{port} ({error})", generation)
             return
-        if self._closed:
-            sock.close()
+        if not self._current(generation):
+            sock.close()  # closed, or another connection started meanwhile
             return
         self._socket = sock
         self.status = "connected"
@@ -62,13 +72,16 @@ class NetClient:
                     except json.JSONDecodeError:
                         continue
                     if isinstance(message, dict):
-                        self._inbox.put(message)
+                        inbox.put(message)
         except OSError:
             pass
-        if not self._closed:
-            self._fail("Disconnected from the server")
+        self._fail("Disconnected from the server", generation)
 
-    def _fail(self, error):
+    def _fail(self, error, generation=None):
+        """Report a lost connection; generation: only if it is still the
+        current one (an old thread finishing after a reconnect says nothing)."""
+        if generation is not None and not self._current(generation):
+            return
         self.status = "error"
         self.error = error
         self._socket = None

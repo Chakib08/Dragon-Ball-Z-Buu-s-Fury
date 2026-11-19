@@ -58,7 +58,7 @@ class DialogBox:
     def open(self, dialog_texts=()):
         if self.isBoxOpened:
             self.next_text()
-        else:
+        elif dialog_texts:  # nothing to say: stay closed (no line to show)
             self.isBoxOpened = True
             self.text_idx = 0
             self.texts = dialog_texts

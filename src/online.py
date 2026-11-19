@@ -7,6 +7,7 @@ that receives the hit applies it with its own rules (guard, knockback,
 Super Saiyan), so both games agree on every health bar.
 """
 
+import math
 import random
 
 import pygame
@@ -16,6 +17,16 @@ from map import MapManager
 from saiyan import Saiyan
 import settings as user_settings
 from taps import tap_position
+
+
+def _number(value, default=None):
+    """value as a finite float, else default: JSON from the network may hold
+    NaN or Infinity, which would crash the drawing (health bars, positions)."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    return number if math.isfinite(number) else default
 
 
 def _tap_position(event, screen_size):
@@ -51,9 +62,8 @@ class RemoteFighter(Character):
         self.update()
 
     def apply_snapshot(self, state):
-        try:
-            x, y = float(state["x"]), float(state["y"])
-        except (KeyError, TypeError, ValueError):
+        x, y = _number(state.get("x")), _number(state.get("y"))
+        if x is None or y is None:
             return
         if self.target_position is None:
             self.position = [x, y]
@@ -62,9 +72,9 @@ class RemoteFighter(Character):
         form = state.get("form")
         if form in self.forms:
             self.set_form(form)
-        self.hp = float(state.get("hp", self.hp))
-        self.max_hp = float(state.get("max_hp", self.max_hp))
-        self.ki = float(state.get("ki", self.ki))
+        self.max_hp = max(1.0, _number(state.get("max_hp"), self.max_hp))
+        self.hp = min(self.max_hp, max(0.0, _number(state.get("hp"), self.hp)))
+        self.ki = max(0.0, _number(state.get("ki"), self.ki))
         self.blocking = bool(state.get("blocking", False))
         self._remote_powered = bool(state.get("powered", False))
 
@@ -72,7 +82,7 @@ class RemoteFighter(Character):
             if not self.faint_frames:
                 self.faint_frames = self._load_faint_frames()
             if self.faint_frames:
-                self.faint_index = min(int(state["faint"]), len(self.faint_frames) - 1)
+                self.faint_index = min(max(0, int(_number(state["faint"], 0))), len(self.faint_frames) - 1)
                 self.image = self.faint_frames[self.faint_index]
                 self.faint_finished = self.faint_index == len(self.faint_frames) - 1
             return
@@ -174,17 +184,21 @@ class OnlineMatch:
             elif kind == "hit" and self.result is None and self.player.hp > 0:
                 source = message.get("source")
                 try:
-                    damage = max(0.0, float(message.get("damage", 0)))
-                    source = (float(source[0]), float(source[1])) if source else None
-                    push = min(5.0, max(0.0, float(message.get("push", 1.0))))
-                except (TypeError, ValueError, IndexError):
+                    damage = max(0.0, _number(message.get("damage", 0), 0.0))
+                    source = (_number(source[0]), _number(source[1])) if source else None
+                    push = min(5.0, max(0.0, _number(message.get("push", 1.0), 1.0)))
+                except (TypeError, IndexError, KeyError):
                     continue
+                if source is not None and None in source:
+                    source = None
                 self.player.take_damage(damage, source, push)
             elif kind == "tech":
                 try:
-                    origin = (float(message["origin"][0]), float(message["origin"][1]))
+                    origin = (_number(message["origin"][0]), _number(message["origin"][1]))
+                    if None in origin:
+                        continue
                     power = message.get("power")
-                    power = None if power is None else max(0.0, min(1.0, float(power)))
+                    power = None if power is None else max(0.0, min(1.0, _number(power, 1.0)))
                     combat.show_opponent_technique(self.opponent, str(message["id"]),
                                                    str(message["dir"]), origin, power)
                 except (KeyError, TypeError, ValueError, IndexError):

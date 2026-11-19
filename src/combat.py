@@ -523,6 +523,14 @@ class CombatSystem:
         self.effects.append(effect)
         self.new_effects.append(effect)
 
+    def clear_effects(self):
+        """End every effect at once (the player went to another map: a blast
+        left behind must not fly on there, nor stay drawn on the old map)."""
+        for effect in self.effects:
+            effect.done = True
+        self.effects.clear()
+        self.new_effects.clear()
+
     def _update_effects(self):
         for effect in tuple(self.effects):
             if getattr(effect, "hits_player", False):
@@ -750,10 +758,8 @@ class CombatSystem:
         )
 
     def _cell_is_walkable(self, npc, cell, collisions):
-        return not any(
-            self._feet_at_position(npc, self._cell_to_position(npc, cell)).colliderect(obstacle)
-            for obstacle in collisions
-        )
+        # collidelist tests every wall in C: a search visits thousands of cells
+        return self._feet_at_position(npc, self._cell_to_position(npc, cell)).collidelist(collisions) == -1
 
     def _path_bounds(self, npc, target, collisions):
         points_x = [npc.feet.centerx, target[0]]

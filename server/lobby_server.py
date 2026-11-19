@@ -41,6 +41,10 @@ DEFAULT_PORT = 5050
 # Messages forwarded as they are from one player of a match to the other
 RELAYED = {"state", "hit", "tech", "ko"}
 MAX_LINE = 64 * 1024
+# A client that stops reading (frozen app, dead link not noticed yet) while
+# its opponent keeps playing: past this much unsent data it is dropped,
+# instead of the server keeping its messages forever
+MAX_PENDING_BYTES = 256 * 1024
 NAME_LENGTH = 24
 
 log = logging.getLogger("lobby")
@@ -56,6 +60,10 @@ class Player:
 
     def send(self, message):
         if self.writer.is_closing():
+            return
+        if self.writer.transport.get_write_buffer_size() > MAX_PENDING_BYTES:
+            log.info("player %s does not read its messages: dropped", self.id)
+            self.writer.close()  # its handler then ends and leaves the room
             return
         self.writer.write(json.dumps(message, separators=(",", ":")).encode() + b"\n")
 

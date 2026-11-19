@@ -166,11 +166,19 @@ class Beam(Effect):
         self.length = 0
         self.hit = False
         self.stopped = False
+        self._composed = None
         self._compose()
 
     def _compose(self):
+        """Build the beam's picture; only when what it shows changed (it
+        grows a few pixels a frame, and its head animates every few ticks):
+        drawing, scaling and turning it is the costly part."""
+        frame = self.ticks // self.FRAME_TICKS
+        state = (int(self.length), self.hit, frame)
+        if state == self._composed:
+            return
+        self._composed = state
         start = self.pieces.get("start")
-        frame = (self.ticks // self.FRAME_TICKS)
         heads = self.pieces["impacts"] if self.hit and self.pieces.get("impacts") else self.pieces["heads"]
         head = heads[frame % len(heads)]
         bodies = self.pieces["bodies"]
@@ -215,7 +223,7 @@ class Beam(Effect):
                 self.length = max(1, math.dist(self.origin, target.rect.center))
             elif self.length >= self.max_range:
                 self.stopped = True
-            self._compose()
+            self._compose()  # nothing to do unless it just hit
             return
         self.hold_ticks -= 1
         self._compose()
@@ -245,7 +253,7 @@ class Burst(Effect):
         if index >= len(self.frames):
             self.done = True
             return
-        # The rings are drawn flat on the ground: twice as wide as tall
+        # The rings are drawn twice their size on the sheet
         frame = self.frames[index]
         self.image = pygame.transform.scale(frame, (frame.get_width() * 2, frame.get_height() * 2))
         self.rect = self.image.get_rect(center=self.center)

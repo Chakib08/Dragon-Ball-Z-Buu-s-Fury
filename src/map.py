@@ -311,9 +311,10 @@ class MapManager:
         for effect in self.combat.new_effects:
             game_map.group.add(effect, layer=EFFECT_LAYER)
         self.combat.new_effects.clear()
-        for effect in game_map.group.sprites():
-            if getattr(effect, "done", False):
-                game_map.group.remove(effect)
+        for loaded in self.maps.values():  # finished effects, on any map
+            for effect in loaded.group.get_sprites_from_layer(EFFECT_LAYER):
+                if getattr(effect, "done", False):
+                    loaded.group.remove(effect)
 
         self.current_music = game_map.music
         self.isMusicChanged = self.current_music != previous_music
@@ -343,6 +344,7 @@ class MapManager:
             if self.transition_alpha >= 255:
                 self.transition_alpha = 255
                 self.transitioning_in = False
+                self.combat.clear_effects()
                 self.load_map(self.new_map)
                 self.current_map = self.new_map
                 self.position_character(self.new_position)
