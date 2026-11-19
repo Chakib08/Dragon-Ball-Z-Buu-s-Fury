@@ -7,7 +7,8 @@ class Config:
     
     @classmethod
     def load_config(cls):
-        config_path = cls.get_filename(cls.CONFIG_FILE)
+        # Next to the game's other files, wherever it is started from
+        config_path = os.path.join(cls.root_dir(), cls.CONFIG_FILE)
         if os.path.exists(config_path):
             with open(config_path, 'r') as file:
                 cls.config_data = json.load(file)
@@ -76,6 +77,11 @@ class Config:
     
     @staticmethod
     def root_dir():
+        """The game's folder (Config/, Graphics/, Sounds/...): the project
+        folder, or in a PyInstaller build (Windows) the folder it unpacks
+        its data to."""
+        if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
+            return sys._MEIPASS
         current_file_path = os.path.abspath(__file__)
         return os.path.dirname(os.path.dirname(os.path.dirname(current_file_path)))
 

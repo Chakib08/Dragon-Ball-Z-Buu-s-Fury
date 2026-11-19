@@ -1,5 +1,8 @@
 import faulthandler
+import os
 import sys
+
+import pygame
 
 from utils.config import Config
 from game import Game
@@ -19,13 +22,26 @@ def enable_crash_traces():
     return True
 
 
+# Set (e.g. DBZ_SMOKE_TEST=arcade) by the build pipelines to check a build:
+# the game goes straight into an arcade fight, plays it for
+# DBZ_SMOKE_TEST_SECONDS, then quits; any error ends it with a failure
+SMOKE_TEST = "DBZ_SMOKE_TEST"
+
+
 def main():
     enable_crash_traces()
     Config.init()
     resolution = (Config.WIDTH, Config.HEIGHT)
     caption = Config.CAPTION
-    app = Game(resolution, caption, fullscreen=Config.FULLSCREEN)
+    smoke_test = os.environ.get(SMOKE_TEST)
+    app = Game(resolution, caption, fullscreen=Config.FULLSCREEN and not smoke_test)
+    if smoke_test:
+        seconds = float(os.environ.get("DBZ_SMOKE_TEST_SECONDS", "5"))
+        pygame.time.set_timer(pygame.QUIT, int(seconds * 1000), 1)
+        app.start_in = smoke_test
     app.run()
+    if smoke_test:
+        print(f"smoke test passed: {app.scene} scene, {app.character.character_name} on {app.map_manager.current_map}")
 
 
 if __name__ == '__main__':

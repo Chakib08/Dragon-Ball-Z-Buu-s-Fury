@@ -43,3 +43,36 @@ class StartupTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class DesktopBuildTests(unittest.TestCase):
+    """What the Windows build (PyInstaller, tools/build_desktop.py) relies on."""
+
+    def test_the_game_folder_is_pyinstallers_data_folder_once_packaged(self):
+        from utils.config import Config
+        with patch.object(sys, "frozen", True, create=True), \
+                patch.object(sys, "_MEIPASS", "/somewhere/_internal", create=True):
+            self.assertEqual(Config.root_dir(), "/somewhere/_internal")
+        project = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.assertEqual(os.path.realpath(Config.root_dir()), os.path.realpath(project))
+
+    def test_the_config_is_found_from_any_folder(self):
+        from utils.config import Config
+        here = os.getcwd()
+        try:
+            os.chdir(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+            Config.init()
+        finally:
+            os.chdir(here)
+        self.assertEqual(Config.WIDTH, 1200)
+        self.assertTrue(Config.CAPTION)
+
+    def test_smoke_test_mode_plays_a_fight_and_quits(self):
+        import subprocess
+        project = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        env = dict(os.environ, DBZ_SMOKE_TEST="arcade", DBZ_SMOKE_TEST_SECONDS="2",
+                   SDL_VIDEODRIVER="dummy", SDL_AUDIODRIVER="dummy")
+        result = subprocess.run([sys.executable, os.path.join(project, "src", "main.py")],
+                                cwd=os.path.dirname(project), env=env, capture_output=True, text=True, timeout=120)
+        self.assertEqual(result.returncode, 0, result.stderr[-2000:])
+        self.assertIn("smoke test passed: story scene", result.stdout)

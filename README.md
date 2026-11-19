@@ -50,6 +50,22 @@ buildozer android debug
 
 The workflow downloads the sheets with the `DBZ_ASSETS_TOKEN` repository secret (Settings > Secrets and variables > Actions): set it to a token that can read dbz-assets.
 
+## Windows
+
+The **Build Windows game** GitHub Actions workflow builds the game for Windows on the same events as the Android one (and by hand: Actions > Build Windows game > Run workflow). It runs the tests on Windows, builds the game with PyInstaller, starts it once to check it (a short fight in smoke-test mode, then it quits by itself), and uploads `DragonBallZTrunksHope-v<version>-windows.zip` as the `windows-game` artifact; a version tag also attaches it to the GitHub Release. Unzip it and run `DragonBallZTrunksHope.exe`.
+
+To build it on your own Windows PC (or Linux, macOS):
+
+```sh
+pip install -r requirements.txt pyinstaller pillow
+./setup.sh                      # with GH_TOKEN, see above
+python tools/build_desktop.py   # -> dist/DragonBallZTrunksHope/
+```
+
+## iOS
+
+There is no iOS build: pygame has no iOS version (no iOS package on PyPI, and kivy-ios, the iOS counterpart of python-for-android, has no pygame recipe), and an iPhone app also needs an Apple developer account to be signed.
+
 ## Online 1v1
 
 Two players can fight each other over the network through a small lobby server.

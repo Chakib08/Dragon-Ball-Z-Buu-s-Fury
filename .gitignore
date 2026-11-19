@@ -19,3 +19,7 @@ Graphics/assets/.dbz-assets
 
 # Local secrets (GH_TOKEN for setup.sh)
 .env
+
+# Desktop builds (tools/build_desktop.py)
+build/
+dist/

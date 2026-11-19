@@ -390,6 +390,9 @@ class Game:
         clock = pygame.time.Clock()
         self.menu = Menu(self.resolution)
         self.play_music(PathManager.soundtrack(MENU_MUSIC))
+        if getattr(self, "start_in", None) == "arcade":
+            # Straight into a fight with the default team (build checks)
+            self.menu.isPlaying = True
 
         while self.isRunning:
             events = pygame.event.get()

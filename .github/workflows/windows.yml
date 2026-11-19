@@ -1,0 +1,132 @@
+name: Build Windows game
+
+# A Windows build of the game, made with PyInstaller (tools/build_desktop.py):
+# a folder with DragonBallZTrunksHope.exe and the game's files, zipped.
+#
+#   assets   downloads the sprite sheets (setup.sh, on Linux)
+#   build    on Windows: runs the tests, builds the game, starts it once in
+#            smoke-test mode (a short fight, then it quits by itself), zips it
+#   release  on a v* tag, attaches the zip to the GitHub release
+#
+# Run it by hand on any branch: Actions > this workflow > Run workflow.
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  assets:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Download sprite sheets
+        run: ./setup.sh
+        env:
+          # A token that can read the private dbz-assets repository
+          GH_TOKEN: ${{ secrets.DBZ_ASSETS_TOKEN }}
+
+      - name: Keep them for the Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: sprite-sheets
+          path: Graphics/assets/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  build:
+    needs: assets
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Get the sprite sheets
+        uses: actions/download-artifact@v4
+        with:
+          name: sprite-sheets
+          path: Graphics/assets/
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the game's requirements and PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller pillow
+
+      - name: Run the tests
+        run: python -m unittest discover -s tests
+        env:
+          PYTHONPATH: src
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+
+      - name: Build the game
+        run: python tools/build_desktop.py
+
+      - name: Start it once (smoke test)
+        shell: pwsh
+        env:
+          DBZ_SMOKE_TEST: arcade
+          DBZ_SMOKE_TEST_SECONDS: "5"
+          SDL_VIDEODRIVER: dummy
+          SDL_AUDIODRIVER: dummy
+        run: |
+          $game = Start-Process -FilePath "dist\DragonBallZTrunksHope\DragonBallZTrunksHope.exe" -PassThru
+          if (-not $game.WaitForExit(120000)) {
+            Stop-Process -Id $game.Id -Force
+            throw "The game did not quit by itself"
+          }
+          if ($game.ExitCode -ne 0) { throw "The game failed (exit code $($game.ExitCode))" }
+          Write-Host "The game started, played a fight and quit"
+
+      - name: Zip it
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path src\version.py -Pattern '__version__ = "(.*)"').Matches[0].Groups[1].Value
+          Compress-Archive -Path dist\DragonBallZTrunksHope -DestinationPath "DragonBallZTrunksHope-v$version-windows.zip"
+
+      - name: Upload the game
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-game
+          path: DragonBallZTrunksHope-*-windows.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download the game
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-game
+          path: dist/
+
+      - name: Attach it to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true
