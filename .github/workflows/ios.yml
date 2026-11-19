@@ -65,8 +65,9 @@ jobs:
 
   build:
     needs: assets
-    runs-on: macos-14
-    timeout-minutes: 180
+    # macos-14 is retired; the first build compiles Python and SDL2 (long)
+    runs-on: macos-latest
+    timeout-minutes: 300
 
     steps:
       - name: Check out repository
@@ -101,14 +102,19 @@ jobs:
       - name: Build Python, SDL2 and pygame for iOS
         working-directory: ios-build
         run: |
-          toolchain build python3 pygame --add-custom-recipe "$GITHUB_WORKSPACE/ios/recipes/pygame"
-          toolchain pip install --no-deps pytmx==3.32 pyscroll==2.31
+          # On failure, the end of the output as an annotation (run summary page)
+          report() { tail -150 "$1"; python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail "$1" "$2"; exit 1; }
+          toolchain build python3 pygame --add-custom-recipe "$GITHUB_WORKSPACE/ios/recipes/pygame" \
+            > toolchain.log 2>&1 || report toolchain.log "kivy-ios build of Python, SDL2 or pygame failed"
+          grep -E "^\[INFO\].*(Build|Install|Biglink)" toolchain.log | tail -20 || true
+          toolchain pip install --no-deps pytmx==3.32 pyscroll==2.31 > pip.log 2>&1 || report pip.log "toolchain pip failed"
 
       - name: Create the Xcode project
         working-directory: ios-build
         run: |
           python "$GITHUB_WORKSPACE/ios/stage_app.py" app
-          toolchain create "$APP_NAME" app
+          toolchain create "$APP_NAME" app > create.log 2>&1 \
+            || { cat create.log; python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail create.log "toolchain create failed"; exit 1; }
           plist="$PROJECT-ios/$PROJECT-Info.plist"
           # Landscape only, named "Trunks Hope" on the home screen
           for key in UISupportedInterfaceOrientations "UISupportedInterfaceOrientations~ipad"; do
@@ -128,7 +134,9 @@ jobs:
         run: |
           xcodebuild -project "$PROJECT-ios/$PROJECT.xcodeproj" -scheme "$PROJECT" \
             -sdk iphonesimulator -configuration Release -derivedDataPath derived-simulator \
-            CODE_SIGNING_ALLOWED=NO build
+            CODE_SIGNING_ALLOWED=NO build > xcode-simulator.log 2>&1 \
+            || { grep -E "error:|Error|failed" xcode-simulator.log | tail -60 > xcode-errors.log; tail -40 xcode-simulator.log >> xcode-errors.log;
+                 python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail xcode-errors.log "Xcode build (simulator) failed"; exit 1; }
           app=$(find derived-simulator -name "*.app" -path "*iphonesimulator*" | head -1)
           ditto -c -k --keepParent "$app" "$GITHUB_WORKSPACE/$APP_NAME-simulator.zip"
 
@@ -137,7 +145,9 @@ jobs:
         run: |
           xcodebuild -project "$PROJECT-ios/$PROJECT.xcodeproj" -scheme "$PROJECT" \
             -sdk iphoneos -configuration Release -derivedDataPath derived-device \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build > xcode-device.log 2>&1 \
+            || { grep -E "error:|Error|failed" xcode-device.log | tail -60 > xcode-errors.log; tail -40 xcode-device.log >> xcode-errors.log;
+                 python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail xcode-errors.log "Xcode build (device) failed"; exit 1; }
           app=$(find derived-device -name "*.app" -path "*iphoneos*" | head -1)
           version=$(sed -n 's/^__version__ = "\(.*\)"/\1/p' "$GITHUB_WORKSPACE/src/version.py")
           mkdir -p Payload
@@ -176,7 +186,10 @@ jobs:
           except subprocess.TimeoutExpired as expired:
               output = (expired.stdout or b"").decode(errors="replace") + "\n(no exit after 300 s)"
           print(output[-6000:])
-          sys.exit(0 if "smoke test passed" in output else "The game did not run its smoke test")
+          if "smoke test passed" not in output:
+              tail = "\n".join(output.splitlines()[-40:])
+              print("::error title=Smoke test in the simulator failed::" + tail.replace("%", "%25").replace("\n", "%0A"))
+              sys.exit(1)
           EOF
 
   release:

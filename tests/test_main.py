@@ -96,10 +96,11 @@ class IosTests(unittest.TestCase):
         import settings
         from utils.config import Config
         Config.init()
-        with patch.dict(os.environ, {"KIVY_BUILD": "ios", "HOME": "/var/mobile/Containers/Data/Application/X"}):
+        home = os.path.join(os.sep, "var", "mobile", "Containers", "Data", "Application", "X")
+        with patch.dict(os.environ, {"KIVY_BUILD": "ios"}), \
+                patch("settings.os.path.expanduser", return_value=home):
             os.environ.pop("ANDROID_PRIVATE", None)
-            self.assertEqual(settings.settings_path(),
-                             "/var/mobile/Containers/Data/Application/X/Documents/user_settings.json")
+            self.assertEqual(settings.settings_path(), os.path.join(home, "Documents", "user_settings.json"))
 
     def test_ios_is_landscape_only(self):
         """Set before SDL starts (pygame.init), which is when SDL reads it."""

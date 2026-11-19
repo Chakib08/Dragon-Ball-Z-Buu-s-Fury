@@ -71,15 +71,27 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt pyinstaller pillow
 
+      # On failure, tools/ci_annotate.py shows why on the run's summary page
       - name: Run the tests
-        run: python -m unittest discover -s tests
+        shell: bash
+        run: |
+          set +e
+          python -m unittest discover -s tests > tests.log 2>&1
+          status=$?
+          cat tests.log
+          [ $status -eq 0 ] || python tools/ci_annotate.py tests tests.log
+          exit $status
         env:
           PYTHONPATH: src
           SDL_VIDEODRIVER: dummy
           SDL_AUDIODRIVER: dummy
+          PYTHONIOENCODING: utf-8
 
       - name: Build the game
-        run: python tools/build_desktop.py
+        shell: bash
+        run: |
+          python tools/build_desktop.py > build.log 2>&1 || { cat build.log; python tools/ci_annotate.py tail build.log "PyInstaller build failed"; exit 1; }
+          tail -5 build.log
 
       - name: Start it once (smoke test)
         shell: pwsh
