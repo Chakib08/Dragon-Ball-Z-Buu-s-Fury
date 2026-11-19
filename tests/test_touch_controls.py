@@ -198,7 +198,7 @@ class TouchControlsTests(unittest.TestCase):
         resolution = (1200, 1000)
         screen = pygame.Surface(resolution)
         menu = Menu(resolution)
-        start_center = (resolution[0] - 520, resolution[1] / 1.5)
+        start_center = menu.item_rects["arcade"].center
         menu.launch_menu(
             screen,
             resolution,
@@ -255,7 +255,7 @@ class TouchControlsTests(unittest.TestCase):
         self.assertEqual(menu.selected_character, "vegeta")
 
         menu = Menu(resolution)
-        options_center = (resolution[0] - 520, resolution[1] / 1.35)
+        options_center = menu.item_rects["options"].center
         menu.launch_menu(
             screen,
             resolution,
@@ -403,6 +403,61 @@ class TouchControlsTests(unittest.TestCase):
                     self.assertEqual(menu.back_rect.collidelist(list(menu.character_rects.values())), -1)
                     if menu.continue_rect is not None:
                         self.assertFalse(menu.back_rect.colliderect(menu.continue_rect))
+
+    def main_menu(self, resolution=(1200, 540)):
+        screen = pygame.Surface(resolution)
+        menu = Menu(resolution)
+        run = lambda events=(): menu.launch_menu(screen, resolution, list(events))
+        run()
+        return menu, run
+
+    def test_main_menu_has_the_four_modes_in_order(self):
+        menu, _ = self.main_menu()
+        self.assertEqual([item for item, _, _ in Menu.MAIN_ITEMS], ["story", "arcade", "online", "options"])
+        self.assertEqual(Menu.MAIN_ITEMS[menu.selected_item][0], "arcade")  # highlighted at first
+        rects = [menu.item_rects[item] for item, _, _ in Menu.MAIN_ITEMS]
+        for index, rect in enumerate(rects):
+            self.assertEqual(rect.collidelist(rects[index + 1:]), -1)
+            self.assertTrue(pygame.Rect(0, 0, 1200, 540).contains(rect))
+
+    def test_story_mode_says_it_is_not_available_yet(self):
+        menu, run = self.main_menu()
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP)])
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)])
+        self.assertTrue(menu.notice_shown)
+        self.assertEqual(menu.state, State.START)
+        self.assertFalse(menu.isPlaying)
+        # Any key or tap closes it, and does nothing else
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)])
+        self.assertFalse(menu.notice_shown)
+        self.assertEqual(menu.state, State.START)
+
+    def test_arcade_online_and_options_open_their_screens(self):
+        for item, state, online in (("arcade", State.CHARACTER_SELECT, False),
+                                    ("online", State.CHARACTER_SELECT, True),
+                                    ("options", State.OPTIONS, False)):
+            with self.subTest(item=item):
+                menu, run = self.main_menu()
+                x, y = menu.item_rects[item].center
+                run([pygame.event.Event(pygame.FINGERDOWN, finger_id=1, x=x / 1200, y=y / 540)])
+                self.assertEqual(menu.state, state)
+                self.assertEqual(menu.online, online)
+
+    def test_keyboard_and_mouse_move_the_highlight(self):
+        menu, run = self.main_menu()
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN)] * 3)  # wraps around
+        self.assertEqual(Menu.MAIN_ITEMS[menu.selected_item][0], "story")
+        run([pygame.event.Event(pygame.MOUSEMOTION, pos=menu.item_rects["options"].center, rel=(0, 0), buttons=(0, 0, 0))])
+        self.assertEqual(Menu.MAIN_ITEMS[menu.selected_item][0], "options")
+        self.assertEqual(menu.state, State.START)  # pointing is not choosing
+
+    def test_the_menu_no_longer_uses_the_old_images(self):
+        import inspect
+        import menu as menu_module
+        source = inspect.getsource(menu_module)
+        for old in ("start-active", "start-inactive", "options-active", "options-inactive", "arrow.png",
+                    "menu_image_box"):
+            self.assertNotIn(old, source)
 
     def test_main_menu_shows_the_version_the_android_app_gets(self):
         import configparser

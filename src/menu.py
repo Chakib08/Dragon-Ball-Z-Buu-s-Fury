@@ -9,8 +9,10 @@ from taps import tap_position
 from version import __version__
 from map import MAX_ALLIES, MAX_ENEMIES
 
-# Define a custom event for the arrow blitting
-ARROW_BLIT_EVENT = pygame.USEREVENT + 1
+GAME_TITLE = "DRAGON BALL Z"
+GAME_SUBTITLE = "TRUNKS HOPE"
+DEVELOPER = "Developed by Chakib08"
+BACKGROUND_IMAGE = "dbz-game-menu.jpg"
 
 class State(Enum):
     START = 1
@@ -19,44 +21,45 @@ class State(Enum):
     ENEMY_SELECT = 4
     ALLY_SELECT = 5
 
-# TODO: Remove magic numbers, retreive the latters from the app config
 class Menu:
-    # Start/Options sit at this fraction of the screen width (the background
-    # image is stretched to the screen), with the arrow just left of them
-    BUTTONS_X = 680 / 1200
-    ARROW_GAP = 25
+    # The main menu's entries: id, label, and the line shown under the list
+    # while the entry is highlighted
+    MAIN_ITEMS = (
+        ("story", "Story Mode", "The story of Trunks' hope (coming soon)"),
+        ("arcade", "Arcade Mode", "Pick your team and fight: from 1v1 up to 4v4"),
+        ("online", "Online Mode", "1v1 against another player on a lobby server"),
+        ("options", "Options", "Controls and settings"),
+    )
+    GOLD = (255, 205, 60)
+    NOTICE_MS = 2600
 
     def __init__(self, resolution) -> None:
-        # Main menu image
-        self.menu_image = pygame.image.load(PathManager.menu_image_path("menu_image_box.png"))
-        self.menu_image = pygame.transform.scale(self.menu_image, resolution)
-        
-        # Start and options
-        self.menu_images = {
-            State.START: {
-                False: pygame.image.load(PathManager.menu_image_path("start-inactive.png")),
-                True: pygame.image.load(PathManager.menu_image_path("start-active.png")),
-            },
-            State.OPTIONS: {
-                False: pygame.image.load(PathManager.menu_image_path("options-inactive.png")),
-                True: pygame.image.load(PathManager.menu_image_path("options-active.png")),
-            },
-        }
-        self.start_image = self.menu_images[State.START][False]
-        self.options_image = self.menu_images[State.OPTIONS][False]
+        artwork = pygame.image.load(PathManager.menu_image_path(BACKGROUND_IMAGE))
+        # The artwork fills the screen without being stretched
+        self.background = self._cover(artwork, resolution)
+        # Behind the other screens (characters, options, lobby): darker, so
+        # their cards and text stand out
+        self.menu_image = self.background.copy()
+        shade = pygame.Surface(resolution, pygame.SRCALPHA)
+        shade.fill((8, 10, 20, 150))
+        self.menu_image.blit(shade, (0, 0))
+        # Main menu: dark on the left, where the title and entries are
+        self.main_image = self.background.copy()
+        self.main_image.blit(self._left_gradient(resolution), (0, 0))
+        self._layout_main(resolution)
+        # Highlighted entry (Arcade: the one most players want)
+        self.selected_item = 1
+        # "Not available yet" message (Story mode) until this time
+        self.notice_until = 0
+
         # The control guide must fit on any screen height
         self.options_font_size = max(20, min(42, int(resolution[1] / 25)))
         self.options_font = pygame.font.Font(None, self.options_font_size)
         self.options_title_font = pygame.font.Font(None, int(self.options_font_size * 1.4))
 
-        # Arrow selector image
-        self.arrow_image = pygame.image.load(PathManager.menu_image_path("arrow.png"))
-        self.arrow_image = pygame.transform.scale(self.arrow_image, (50, 50))
-        
         self.isPlaying = False
         # True when the character was chosen for an online match
         self.online = False
-        self.online_font = pygame.font.Font(None, max(30, int(resolution[1] / 22)))
         self.state = State.START
         self.character_names = ("goku", "vegeta", "gohan", "trunks", "broly")
         self.selected_character = "goku"
@@ -83,22 +86,8 @@ class Menu:
                 preview, (preview.get_width() * 4, preview.get_height() * 4)
             )
         
-        # Set the timer to trigger the event every specific laps of time
-        pygame.time.set_timer(ARROW_BLIT_EVENT, 500)
-        
-        # Arrow visibility flag and timestamp
-        self.arrow_visible = False
-        self.arrow_last_time = pygame.time.get_ticks()
-        
+
     def launch_menu(self, screen: pygame.Surface, resolution: tuple, events: List[pygame.event.Event]) -> None:
-        # Set up the start image rect
-        image_start_rect = self.start_image.get_rect()
-        image_start_rect.center = (resolution[0] * self.BUTTONS_X, resolution[1] / 1.5)
-        # Set up the options image rect
-        image_options_rect = self.options_image.get_rect()
-        image_options_rect.center = (resolution[0] * self.BUTTONS_X, resolution[1] / 1.35)
-        # Set up the arrow image rect
-        image_arrow_rect = self.arrow_image.get_rect()
         if self.state == State.OPTIONS:
             self._draw_options(screen, resolution)
             for event in events:
@@ -166,50 +155,169 @@ class Menu:
                     break
             return
 
-        self.start_image = self.menu_images[State.START][self.state == State.START]
-        self.options_image = self.menu_images[State.OPTIONS][self.state == State.OPTIONS]
-
-        # Blit images
-        screen.blit(self.menu_image, (0, 0))
-        screen.blit(self.start_image, image_start_rect.topleft)
-        screen.blit(self.options_image, image_options_rect.topleft)
-        online_rect = self._draw_online_button(screen, resolution, image_options_rect)
-        self._draw_version(screen, resolution)
-        
-        # Manage arrow visibility
-        current_time = pygame.time.get_ticks()
-        if self.arrow_visible and current_time - self.arrow_last_time >= 200:
-            self.arrow_visible = False
-        
-        # Blit the arrow image according to the selected state
-        if self.arrow_visible:
-            if self.state == State.START:
-                image_arrow_rect.center = (image_start_rect.left - self.ARROW_GAP, resolution[1] / 1.5)
-            elif self.state == State.OPTIONS:
-                image_arrow_rect.center = (image_options_rect.left - self.ARROW_GAP, resolution[1] / 1.35)
-            screen.blit(self.arrow_image, image_arrow_rect.topleft)
-        # Handle keyboard and touch selection.
+        self._draw_main(screen, resolution)
         for event in events:
+            if self.notice_until and (event.type == pygame.KEYDOWN or self._is_tap(event, resolution)):
+                self.notice_until = 0  # any key or tap closes the message
+                continue
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_UP, pygame.K_w):
-                    self.state = State.START
-                if event.key == pygame.K_RETURN and self.state == State.START:
-                    self.state = State.CHARACTER_SELECT
+                    self.selected_item = (self.selected_item - 1) % len(self.MAIN_ITEMS)
                 elif event.key in (pygame.K_DOWN, pygame.K_s):
-                    self.state = State.OPTIONS                                                 
-            elif event.type == ARROW_BLIT_EVENT:
-                self.arrow_visible = True
-                self.arrow_last_time = current_time
+                    self.selected_item = (self.selected_item + 1) % len(self.MAIN_ITEMS)
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                    self.choose(self.MAIN_ITEMS[self.selected_item][0])
+                elif event.key == pygame.K_o:
+                    self.choose("online")
+            elif event.type == pygame.MOUSEMOTION and not getattr(event, "touch", False):
+                item = self._item_at(event.pos)
+                if item is not None:
+                    self.selected_item = item  # the mouse highlights what it points at
             elif self._is_tap(event, resolution):
-                position = self._event_position(event, resolution)
-                if image_start_rect.collidepoint(position):
-                    self.state = State.CHARACTER_SELECT
-                elif image_options_rect.collidepoint(position):
-                    self.state = State.OPTIONS
-                elif online_rect.collidepoint(position):
-                    self.open_online()
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_o:
-                self.open_online()
+                item = self._item_at(self._event_position(event, resolution))
+                if item is not None:
+                    self.selected_item = item
+                    self.choose(self.MAIN_ITEMS[item][0])
+            if self.state != State.START:
+                break
+
+    # ---- Main menu ----------------------------------------------------------------
+    def choose(self, item):
+        """Open a main menu entry."""
+        if item == "story":
+            # Not there yet: say so instead of doing nothing
+            self.notice_until = pygame.time.get_ticks() + self.NOTICE_MS
+        elif item == "arcade":
+            self.online = False
+            self.state = State.CHARACTER_SELECT
+        elif item == "online":
+            self.open_online()
+        elif item == "options":
+            self.state = State.OPTIONS
+
+    @property
+    def notice_shown(self):
+        return self.notice_until and pygame.time.get_ticks() < self.notice_until
+
+    def _item_at(self, position):
+        for index, (item, _, _) in enumerate(self.MAIN_ITEMS):
+            if self.item_rects[item].collidepoint(position):
+                return index
+        return None
+
+    @staticmethod
+    def _cover(image, size):
+        """image scaled to fill size, keeping its shape: what is too much is
+        cut off (more from the bottom than the top, where the faces are)."""
+        scale = max(size[0] / image.get_width(), size[1] / image.get_height())
+        scaled = pygame.transform.smoothscale(
+            image.convert() if pygame.display.get_surface() else image,
+            (max(size[0], round(image.get_width() * scale)), max(size[1], round(image.get_height() * scale))))
+        x = (scaled.get_width() - size[0]) // 2
+        y = int((scaled.get_height() - size[1]) * 0.3)
+        return scaled.subsurface((x, y, size[0], size[1])).copy()
+
+    @staticmethod
+    def _left_gradient(size):
+        """Dark on the left, fading out by the middle of the screen."""
+        gradient = pygame.Surface(size, pygame.SRCALPHA)
+        fade_end = int(size[0] * 0.6)
+        for x in range(fade_end):
+            alpha = int(225 * (1 - x / fade_end) ** 1.3)
+            pygame.draw.line(gradient, (6, 8, 18, alpha), (x, 0), (x, size[1]))
+        return gradient
+
+    @staticmethod
+    def _outlined(font, text, color, outline=(10, 10, 20), width=2):
+        """Text with a dark outline: reads over any part of the artwork."""
+        inner = font.render(text, True, color)
+        edge = font.render(text, True, outline)
+        surface = pygame.Surface((inner.get_width() + 2 * width, inner.get_height() + 2 * width), pygame.SRCALPHA)
+        for dx in range(-width, width + 1):
+            for dy in range(-width, width + 1):
+                if dx or dy:
+                    surface.blit(edge, (width + dx, width + dy))
+        surface.blit(inner, (width, width))
+        return surface
+
+    def _layout_main(self, resolution):
+        """Fonts, the pre-drawn texts and where every entry goes."""
+        width, height = resolution
+        self.main_left = int(width * 0.06)
+        title_font = pygame.font.Font(None, max(36, int(height * 0.085)))
+        subtitle_font = pygame.font.Font(None, max(44, int(height * 0.12)))
+        item_font = pygame.font.Font(None, max(30, int(height * 0.07)))
+        self.description_font = pygame.font.Font(None, max(20, int(height * 0.04)))
+        small_font = pygame.font.Font(None, max(20, int(height * 0.036)))
+
+        self.title_label = self._outlined(title_font, GAME_TITLE, (255, 255, 255))
+        self.subtitle_label = self._outlined(subtitle_font, GAME_SUBTITLE, self.GOLD, width=3)
+        self.title_top = int(height * 0.07)
+        items_top = self.title_top + self.title_label.get_height() + self.subtitle_label.get_height() \
+            + int(height * 0.07)
+        step = int(height * 0.095)
+        self.item_labels = {}
+        self.item_rects = {}
+        for index, (item, label, _) in enumerate(self.MAIN_ITEMS):
+            self.item_labels[item] = {
+                False: self._outlined(item_font, label.upper(), (235, 235, 240)),
+                True: self._outlined(item_font, label.upper(), self.GOLD),
+            }
+            text = self.item_labels[item][False]
+            # The whole row can be tapped, not just the letters
+            self.item_rects[item] = pygame.Rect(self.main_left - 14, items_top + index * step - 6,
+                                                max(text.get_width() + 60, int(width * 0.3)),
+                                                text.get_height() + 12)
+        self.description_top = items_top + len(self.MAIN_ITEMS) * step + int(height * 0.01)
+        self.developer_label = self._outlined(small_font, DEVELOPER, (230, 230, 235))
+        self.notice_fonts = (pygame.font.Font(None, max(30, int(height * 0.07))), self.description_font)
+
+    def _draw_main(self, screen, resolution):
+        screen.blit(self.main_image, (0, 0))
+        screen.blit(self.title_label, (self.main_left, self.title_top))
+        screen.blit(self.subtitle_label, (self.main_left - 2, self.title_top + self.title_label.get_height() - 4))
+        for index, (item, _, description) in enumerate(self.MAIN_ITEMS):
+            rect = self.item_rects[item]
+            selected = index == self.selected_item
+            if selected:
+                # Highlight: a translucent plate and a gold bar on its left
+                plate = pygame.Surface(rect.size, pygame.SRCALPHA)
+                plate.fill((255, 205, 60, 38))
+                screen.blit(plate, rect.topleft)
+                pygame.draw.rect(screen, self.GOLD, (rect.x, rect.y, 5, rect.height))
+            label = self.item_labels[item][selected]
+            offset = 14 if selected else 0  # the highlighted entry steps forward
+            screen.blit(label, (self.main_left + offset, rect.centery - label.get_height() // 2))
+        description = self.MAIN_ITEMS[self.selected_item][2]
+        text = self._outlined(self.description_font, description, (210, 210, 220), width=1)
+        screen.blit(text, (self.main_left, self.description_top))
+        self._draw_version(screen, resolution)
+        margin = max(8, int(resolution[1] * 0.015))
+        screen.blit(self.developer_label, self.developer_label.get_rect(
+            bottomright=(resolution[0] - margin, resolution[1] - margin)))
+        if self.notice_shown:
+            self._draw_notice(screen, resolution)
+
+    def _draw_notice(self, screen, resolution):
+        """Story mode is not there yet."""
+        title_font, text_font = self.notice_fonts
+        title = title_font.render("Story Mode", True, self.GOLD)
+        lines = [text_font.render(line, True, (235, 235, 240)) for line in
+                 ("The game is still under development:", "this mode is not available yet.")]
+        width = max(title.get_width(), *(line.get_width() for line in lines)) + 60
+        height = title.get_height() + sum(line.get_height() + 6 for line in lines) + 50
+        panel = pygame.Rect(0, 0, width, height)
+        panel.center = (resolution[0] // 2, resolution[1] // 2)
+        shade = pygame.Surface(panel.size, pygame.SRCALPHA)
+        pygame.draw.rect(shade, (14, 16, 28, 235), shade.get_rect(), border_radius=14)
+        screen.blit(shade, panel.topleft)
+        pygame.draw.rect(screen, self.GOLD, panel, 2, border_radius=14)
+        y = panel.top + 18
+        screen.blit(title, title.get_rect(midtop=(panel.centerx, y)))
+        y += title.get_height() + 10
+        for line in lines:
+            screen.blit(line, line.get_rect(midtop=(panel.centerx, y)))
+            y += line.get_height() + 6
 
     @property
     def version_text(self):
@@ -231,18 +339,6 @@ class Menu:
         """Pick a character, then go to the online lobby."""
         self.online = True
         self.state = State.CHARACTER_SELECT
-
-    def _draw_online_button(self, screen, resolution, options_rect):
-        """Text button under OPTIONS (the others are images)."""
-        text = self.online_font.render("ONLINE 1V1", True, (255, 220, 90))
-        rect = text.get_rect(midtop=(options_rect.centerx, options_rect.bottom + options_rect.height * 0.5))
-        box = rect.inflate(24, 12)
-        shade = pygame.Surface(box.size, pygame.SRCALPHA)
-        shade.fill((15, 18, 30, 200))
-        screen.blit(shade, box.topleft)
-        pygame.draw.rect(screen, (255, 220, 90), box, 2, border_radius=6)
-        screen.blit(text, rect)
-        return box
 
     def go_back(self):
         """One screen back (Esc or the Back button): opponents -> allies ->
@@ -436,7 +532,7 @@ class Menu:
             "Super Saiyan level (Goku): Z / X or the arrows above it",
             "Talk: T key",
             "Quit or main menu: Esc key or the X button (top right)",
-            "Online 1v1: O key or the ONLINE button",
+            "Online 1v1: O key or Online Mode in the main menu",
             "Press Esc or tap to return",
         ]
         line_height = int(self.options_font_size * 1.25)

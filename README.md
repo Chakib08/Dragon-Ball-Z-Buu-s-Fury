@@ -1,5 +1,5 @@
-# Dragon-Ball-Z-Buu-s-Fury
-Dragon Ball Z Buu's Fury (Fan remake in python) powered by pygame
+# Dragon Ball Z Trunks Hope
+Dragon Ball Z Trunks Hope, a Dragon Ball Z fan game in Python (started as a Buu's Fury remake), developed by Chakib08 and powered by pygame
 
 ## Disclaimer
 This game is a fan-made project and is not affiliated with or endorsed by Akira Toriyama, Toei Animation, Funimation, Shueisha, Webfoot Technologies, or Atari. Dragon Ball Z and all related characters and elements are trademarks of their respective owners. This project is intended for non-commercial use only and is a tribute to the original "Dragon Ball Z: Buu's Fury" game. Please support the official releases.
@@ -56,7 +56,7 @@ Two players can fight each other over the network through a small lobby server.
 
 1. Start the server on a computer both players can reach (standard library only, no install needed):
    `$ python3 server/lobby_server.py` (listens on port 5050; `--port` to change it).
-2. In the game, choose **ONLINE 1V1** in the main menu (or press **O**), then pick your character.
+2. In the game, choose **Online Mode** in the main menu (or press **O**), then pick your character.
 3. In the lobby, check the server address at the top. Tap it (or press **E**) to change it: on the same computer `127.0.0.1:5050`, from a phone or another PC the server computer's address on your network, for example `192.168.1.20:5050`. The address is remembered. The default comes from `server` in `Config/config.json`.
 4. One player taps **Create room** (or **C**), the other taps the room in the list (or presses its number). The match starts on its own.
 
@@ -66,7 +66,7 @@ The match takes place in front of Goku's house with all the usual moves. The fir
 
 ### Controls
 
-- **Choose your team**: After Start, pick your character (Goku, Vegeta, Gohan, Trunks or Broly), then up to 3 **allies** who fight on your side (or none, to fight alone), then up to 4 **opponents** (shown with how hard they are): anything from 1v1 to 4v4, 4v1 or 1v4, up to 8 fighters on the field. Tap a card or press Space to pick or unpick it, Enter or the button under the cards to go on. The **Back** button (top left) or Esc goes back one screen. Online matches skip the allies and opponents (the opponent is the other player).
+- **Choose your team**: In **Arcade Mode**, pick your character (Goku, Vegeta, Gohan, Trunks or Broly), then up to 3 **allies** who fight on your side (or none, to fight alone), then up to 4 **opponents** (shown with how hard they are): anything from 1v1 to 4v4, 4v1 or 1v4, up to 8 fighters on the field. Tap a card or press Space to pick or unpick it, Enter or the button under the cards to go on. The **Back** button (top left) or Esc goes back one screen. Online matches skip the allies and opponents (the opponent is the other player).
 - **Health bars**: Your HP and KI are top left, with one row per ally under them (blue names); the enemies (or your online opponent) are top right, under the quit button, their names in the colour of their difficulty (Hard in red). A row's bar gets a gold frame while that fighter is a Super Saiyan, and turns grey with "KO" once they are down. Over each fighter's head a thin bar, blue for allies and red for enemies, shows who is who in a crowd.
 - **Allies and enemies**: The enemies spread along their patrol route and fight the closest of you and your allies; your allies start next to you, follow you when there is nobody to fight, and attack the closest enemy. Your punches and techniques never hit your allies, and an enemy's never hits another enemy. Allies and enemies also use their **special techniques** now and then (when the target is in line, close enough, and they have the ki), not just punches; harder enemies use them more often and harder.
 - **End of the fight**: When you are knocked out, **You lost** offers **Retry** (Enter: the same fight again, same team) or **Main menu** (Esc). When every enemy is down, **Victory!** offers **Play again** or **Main menu**. The fight is frozen behind the choice.
@@ -95,6 +95,6 @@ The match takes place in front of Goku's house with all the usual moves. The fir
 - **Talking to NPCs**: Press **T** while near an NPC (no on-screen button yet).
 - **Full screen**: The game opens full screen at the display's own resolution (always on Android). On desktop, press **F11** to switch between full screen and a window, or set `"fullscreen": false` in `Config/config.json` to start in a window.
 - **Quit or back to the menu**: Press **Esc** (or the Android back button), or tap the **X** button in the top-right corner. While playing it offers **Quit** (Enter), **Main menu** (M) or **No** (Esc); from the main menu it only asks whether to quit. While the question is open the game is paused.
-- **Menu**: Select Start or Options with the keyboard or tap. Options shows the control guide; press Esc or tap to return.
+- **Main menu**: **Story Mode** (still under development: not available yet), **Arcade Mode** (pick your team and fight), **Online Mode** (1v1 on a lobby server) and **Options** (the control guide; Esc or a tap returns). Up/Down or W/S and Enter, the mouse, or a tap. The version is in the bottom-left corner. The background is `Graphics/menu/dbz-game-menu.jpg`.
 - **Enemies**: Enemies are tough (they only take 60% of each hit); they flinch when hit but strike back as soon as they can, and guard after a few quick hits. The enemy (Gohan unless you choose another) powers up when his health drops to half (sooner on Hard): his bar's frame turns gold, he moves faster, hits 50% harder and takes half damage.
 - **Combat resources**: The HUD shows HP and KI (mana). Punches and kicks are free; special techniques cost KI, which regenerates over time. Nearby hostile NPCs pursue and attack back.

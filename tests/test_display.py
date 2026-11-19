@@ -74,7 +74,7 @@ class DisplayTests(unittest.TestCase):
         size = (2400, 1080)
         screen = pygame.Surface(size)
         menu = Menu(size)
-        start = (round(size[0] * Menu.BUTTONS_X), round(size[1] / 1.5))
+        start = menu.item_rects["arcade"].center
         tap = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=start)
         menu.launch_menu(screen, size, [tap])
         self.assertEqual(menu.state, State.CHARACTER_SELECT)

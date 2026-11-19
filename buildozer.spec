@@ -1,6 +1,6 @@
 [app]
 
-title = Dragon Ball Z Buus Fury
+title = Dragon Ball Z Trunks Hope
 package.name = dragonballzbuusfury
 package.domain = org.chakib08
 source.dir = .
