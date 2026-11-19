@@ -5,6 +5,7 @@ from enum import Enum
 from pathmanager import PathManager
 from animation import Animation
 from difficulty import enemy_profile
+from version import __version__
 from map import MAX_ALLIES, MAX_ENEMIES
 
 # Define a custom event for the arrow blitting
@@ -66,6 +67,7 @@ class Menu:
         self.focus = 0
         self.continue_rect = None
         self.button_font = pygame.font.Font(None, 40)
+        self._version_label = None
         self.enemy_difficulties = {name: enemy_profile(name).difficulty for name in self.character_names}
         self.difficulty_font = pygame.font.Font(None, 32)
         self.character_font = pygame.font.Font(None, 42)
@@ -164,6 +166,7 @@ class Menu:
         screen.blit(self.start_image, image_start_rect.topleft)
         screen.blit(self.options_image, image_options_rect.topleft)
         online_rect = self._draw_online_button(screen, resolution, image_options_rect)
+        self._draw_version(screen, resolution)
         
         # Manage arrow visibility
         current_time = pygame.time.get_ticks()
@@ -199,6 +202,22 @@ class Menu:
                     self.open_online()
             if event.type == pygame.KEYDOWN and event.key == pygame.K_o:
                 self.open_online()
+
+    @property
+    def version_text(self):
+        return f"v{__version__}"
+
+    def _draw_version(self, screen, resolution):
+        """The version, small, in the bottom-left corner of the main menu."""
+        if self._version_label is None:
+            font = pygame.font.Font(None, max(22, int(resolution[1] / 30)))
+            text = font.render(self.version_text, True, (255, 255, 255))
+            label = pygame.Surface((text.get_width() + 16, text.get_height() + 8), pygame.SRCALPHA)
+            label.fill((15, 18, 30, 170))
+            label.blit(text, (8, 4))
+            self._version_label = label
+        margin = max(8, int(resolution[1] * 0.015))
+        screen.blit(self._version_label, (margin, resolution[1] - margin - self._version_label.get_height()))
 
     def open_online(self):
         """Pick a character, then go to the online lobby."""

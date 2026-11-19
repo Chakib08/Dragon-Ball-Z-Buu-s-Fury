@@ -8,7 +8,9 @@ source.include_exts = py,png,jpg,ttf,tmx,tsx,json,wav
 source.exclude_dirs = .git,.github,.buildozer,.p4a,bin,__pycache__,.venv,server,tools,tests,rips
 # The full-size icon picture (the launcher uses Graphics/android/icon.png)
 source.exclude_patterns = Graphics/android_icon.png
-version = 0.1.0
+# Read from src/version.py (the version shown on the main menu)
+version.regex = __version__ = ['"](.*)['"]
+version.filename = %(source.dir)s/src/version.py
 requirements = python3,pygame,pytmx==3.32,pyscroll==2.31
 orientation = landscape
 fullscreen = 1

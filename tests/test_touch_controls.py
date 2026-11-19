@@ -317,6 +317,28 @@ class TouchControlsTests(unittest.TestCase):
         self.assertEqual(menu.selected_character, "vegeta")
         self.assertEqual(menu.selected_allies, ["gohan"])
 
+    def test_main_menu_shows_the_version_the_android_app_gets(self):
+        import configparser
+        import re
+        from version import __version__
+        resolution = (1200, 540)
+        screen = pygame.Surface(resolution)
+        menu = Menu(resolution)
+        menu.launch_menu(screen, resolution, [])
+        self.assertEqual(menu.version_text, f"v{__version__}")
+        # Drawn in the bottom-left corner, inside the screen
+        label = menu._version_label
+        self.assertIsNotNone(label)
+        self.assertLess(label.get_width(), resolution[0] // 4)
+        # buildozer.spec reads the same number from src/version.py
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        spec = configparser.ConfigParser()
+        spec.read(os.path.join(root, "buildozer.spec"))
+        self.assertFalse(spec.has_option("app", "version"))
+        with open(os.path.join(root, "src", "version.py")) as file:
+            found = re.search(spec.get("app", "version.regex"), file.read())
+        self.assertEqual(found.group(1), __version__)
+
     def test_online_skips_the_opponent_choice(self):
         resolution = (1200, 1000)
         screen = pygame.Surface(resolution)

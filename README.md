@@ -33,6 +33,10 @@ Launch the game
 `cd Dragon-Ball-Z-Buu-s-Fury/`
 `python3 src/main.py`
 
+## Version
+
+The version (shown in the bottom-left corner of the main menu, and used for the Android app) is in `src/version.py`. Change it there when tagging a release (e.g. `v0.0.6`); `buildozer.spec` reads it from that file.
+
 ## Android APK
 
 The **Build Android APK** GitHub Actions workflow builds a debug APK on pushes to `main`, pull requests targeting `main`, and manual runs. Download the `android-apk` artifact from the completed workflow run. Pushing a version tag such as `v1.0.0` also attaches the APK to a GitHub Release.
