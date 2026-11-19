@@ -12,7 +12,8 @@ an object file and biglink gathers them into libpygame.a, linked into the
 app. The pygame source on PyPI already holds the C files Cython makes, so no
 Cython runs.
 
-Two things differ from a desktop build:
+Three things differ from a desktop build (the third: see get_recipe_env,
+the C symbols every module shares are hidden):
 
 - iOS apps cannot load native code at run time: every module is linked into
   the app, and kivy-ios's importer finds "pygame.base" by looking up the C
@@ -94,6 +95,13 @@ class PygameRecipe(CythonRecipe):
     def get_recipe_env(self, plat):
         env = super().get_recipe_env(plat)
         env["CFLAGS"] = env.get("CFLAGS", "") + " -I" + join(plat.sysroot, "usr", "include")
+        # Every pygame module defines the same global C tables (_PGSLOTS_*),
+        # harmless when each is a library of its own, duplicate symbols once
+        # they are all linked into the app. Hidden, they become private to
+        # each module when kivy-ios's liblink merges its files (ld -r); the
+        # module init functions stay visible (Python marks them exported),
+        # and pygame's modules only reach each other through Python capsules
+        env["CFLAGS"] += " -fvisibility=hidden"
         # pygame's setup.py then leaves the docs and tests out (as for Android)
         env["PYGAME_ANDROID"] = "TRUE"
         env["PYGAME_CROSS_COMPILE"] = "TRUE"
