@@ -202,21 +202,39 @@ jobs:
           xcrun simctl boot "$device"
           app=$(find derived-simulator -name "*.app" -path "*iphonesimulator*" | head -1)
           xcrun simctl install "$device" "$app"
-          # SIMCTL_CHILD_ variables reach the app: a short fight, then it quits
+          # SIMCTL_CHILD_ variables reach the app: a short fight, then it quits.
+          # The game also writes its progress to Documents/smoke_test.log
           export SIMCTL_CHILD_DBZ_SMOKE_TEST=arcade SIMCTL_CHILD_DBZ_SMOKE_TEST_SECONDS=8
           python - "$device" <<'EOF'
-          import os, subprocess, sys
+          import glob, os, subprocess, sys
+          device, bundle = sys.argv[1], os.environ["BUNDLE_ID"]
           try:
-              run = subprocess.run(["xcrun", "simctl", "launch", "--console-pty", sys.argv[1], os.environ["BUNDLE_ID"]],
+              run = subprocess.run(["xcrun", "simctl", "launch", "--console-pty", device, bundle],
                                    capture_output=True, text=True, timeout=300)
-              output = run.stdout + run.stderr
+              console = run.stdout + run.stderr
           except subprocess.TimeoutExpired as expired:
-              output = (expired.stdout or b"").decode(errors="replace") + "\n(no exit after 300 s)"
-          print(output[-6000:])
-          if "smoke test passed" not in output:
-              tail = "\n".join(output.splitlines()[-40:])
-              print("::error title=Smoke test in the simulator failed::" + tail.replace("%", "%25").replace("\n", "%0A"))
-              sys.exit(1)
+              console = (expired.stdout or b"").decode(errors="replace") + "\n(no exit after 300 s)"
+          data = subprocess.run(["xcrun", "simctl", "get_app_container", device, bundle, "data"],
+                                capture_output=True, text=True).stdout.strip()
+          progress_file = os.path.join(data, "Documents", "smoke_test.log")
+          progress = open(progress_file, errors="replace").read() if os.path.exists(progress_file) else "(no smoke_test.log)"
+          print("== console\n" + console[-4000:] + "\n== smoke_test.log\n" + progress)
+          if "smoke test passed" in console or "smoke test passed" in progress:
+              sys.exit(0)
+          system_log = subprocess.run(
+              ["xcrun", "simctl", "spawn", device, "log", "show", "--last", "8m", "--style", "compact",
+               "--predicate", 'process == "trunkshope"'], capture_output=True, text=True).stdout
+          crashes = sorted(glob.glob(os.path.expanduser("~/Library/Logs/DiagnosticReports/*trunkshope*")))
+          crash = open(crashes[-1], errors="replace").read()[:3000] if crashes else "(no crash report)"
+          print("== system log\n" + system_log[-8000:] + "\n== crash\n" + crash)
+          report = "\n".join([
+              "smoke_test.log:", progress.strip()[-1500:],
+              "console:", console.strip()[-800:],
+              "system log:", "\n".join(system_log.strip().splitlines()[-25:]),
+              "crash:", crash[:1200]])
+          print("::error title=Smoke test in the simulator failed::"
+                + report.replace("%", "%25").replace("\r", "").replace("\n", "%0A"))
+          sys.exit(1)
           EOF
 
   release:

@@ -13,6 +13,7 @@ from gamepad import Gamepad
 from map import DEFAULT_ENEMY, MapManager
 from npc import HEROES
 from result_screen import ResultScreen
+import smoke
 from menu import Menu, State
 from net import NetClient
 from online import LobbyScreen, OnlineMatch
@@ -349,6 +350,7 @@ class Game:
                               tuple(self.menu.selected_allies))
         self.play_music(self.map_manager.current_music)
         self.scene = "story"
+        smoke.report("fight started")
 
     def open_lobby(self):
         self.menu.isPlaying = False

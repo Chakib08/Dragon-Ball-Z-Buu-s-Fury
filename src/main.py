@@ -4,6 +4,7 @@ import sys
 
 import pygame
 
+import smoke
 from utils.config import Config
 from game import Game
 
@@ -34,14 +35,19 @@ def main():
     resolution = (Config.WIDTH, Config.HEIGHT)
     caption = Config.CAPTION
     smoke_test = os.environ.get(SMOKE_TEST)
-    app = Game(resolution, caption, fullscreen=Config.FULLSCREEN and not smoke_test)
-    if smoke_test:
-        seconds = float(os.environ.get("DBZ_SMOKE_TEST_SECONDS", "5"))
-        pygame.time.set_timer(pygame.QUIT, int(seconds * 1000), 1)
-        app.start_in = smoke_test
-    app.run()
-    if smoke_test:
-        print(f"smoke test passed: {app.scene} scene, {app.character.character_name} on {app.map_manager.current_map}")
+    try:
+        app = Game(resolution, caption, fullscreen=Config.FULLSCREEN and not smoke_test)
+        smoke.report(f"game created ({app.resolution[0]}x{app.resolution[1]})")
+        if smoke_test:
+            seconds = float(os.environ.get("DBZ_SMOKE_TEST_SECONDS", "5"))
+            pygame.time.set_timer(pygame.QUIT, int(seconds * 1000), 1)
+            app.start_in = smoke_test
+        app.run()
+    except BaseException:
+        smoke.report_error()
+        raise
+    smoke.report(f"smoke test passed: {app.scene} scene, {app.character.character_name} "
+                 f"on {app.map_manager.current_map}")
 
 
 if __name__ == '__main__':
