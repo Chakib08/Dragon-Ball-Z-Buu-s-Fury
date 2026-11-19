@@ -10,6 +10,8 @@ from constants import (
 )
 from dialog.dialogbox import DialogBox
 from map import DEFAULT_ENEMY, MapManager
+from npc import HEROES
+from result_screen import ResultScreen
 from menu import Menu, State
 from net import NetClient
 from online import LobbyScreen, OnlineMatch
@@ -87,6 +89,8 @@ class Game:
         self.net = NetClient()
         self.lobby = None
         self.match = None
+        # Result of the story fight (ResultScreen) once it is over
+        self.result = None
 
         self.music = None
         self.character = None
@@ -135,7 +139,8 @@ class Game:
             menu.isPlaying = self.menu.isPlaying
             menu.online = self.menu.online
             menu.selected_character = self.menu.selected_character
-            menu.selected_enemy = self.menu.selected_enemy
+            menu.selected_allies = list(self.menu.selected_allies)
+            menu.selected_enemies = list(self.menu.selected_enemies)
             self.menu = menu
         if self.lobby is not None:
             lobby = self.lobby
@@ -145,10 +150,13 @@ class Game:
             self.match._fonts(self.resolution)
         self.release_input()
 
-    def select_character(self, name, enemy=DEFAULT_ENEMY):
-        """Start the world over with the given playable character and enemy."""
+    def select_character(self, name, enemies=(DEFAULT_ENEMY,), allies=()):
+        """Start the world over with the given playable character, the
+        enemies to fight and the allies fighting on his side."""
+        if isinstance(enemies, str):
+            enemies = (enemies,)
         self.character = Saiyan(*PLAYER_SPAWN, False, name)
-        self.map_manager = MapManager(self.screen, self.character, enemy=enemy)
+        self.map_manager = MapManager(self.screen, self.character, enemies=enemies, allies=allies)
 
     def play_music(self, music):
         pygame.mixer.music.stop()
@@ -283,7 +291,12 @@ class Game:
 
     # ---- Scenes -------------------------------------------------------------------
     def start_story(self):
-        self.select_character(self.menu.selected_character, self.menu.selected_enemy)
+        """Start (or restart, for Retry) the fight with the team chosen in
+        the menu."""
+        self.result = None
+        self.release_input()
+        self.select_character(self.menu.selected_character, tuple(self.menu.selected_enemies),
+                              tuple(self.menu.selected_allies))
         self.play_music(self.map_manager.current_music)
         self.scene = "story"
 
@@ -295,7 +308,19 @@ class Game:
         )
         self.scene = "lobby"
 
+    def story_outcome(self):
+        """"defeat" once the player's knock-out animation is over, "victory"
+        once every enemy's is, else None."""
+        if self.character.faint_finished:
+            return "defeat"
+        world = self.map_manager.maps.get("map")
+        enemies = [npc for npc in (world.npcs if world else []) if npc.team != HEROES]
+        if enemies and all(npc.faint_finished for npc in enemies):
+            return "victory"
+        return None
+
     def back_to_menu(self):
+        self.result = None
         self.net.close()
         self.lobby = None
         self.match = None
@@ -329,7 +354,21 @@ class Game:
                 else:
                     self.start_story()
         elif self.scene == "story":
-            self.play_frame(events, paused)
+            if self.result is None:
+                self.play_frame(events, paused)
+                outcome = self.story_outcome()
+                if outcome is not None:
+                    self.release_input()
+                    self.result = ResultScreen(self.resolution, victory=outcome == "victory")
+            else:
+                # The fight is over: the world stays frozen behind the choice
+                self.play_frame([], True)
+                choice = None if paused else self.result.process(events)
+                self.result.draw(self.screen)
+                if choice == "retry":
+                    self.start_story()
+                elif choice == "menu":
+                    self.back_to_menu()
         elif self.scene == "lobby":
             action = self.lobby.update([] if paused else events)
             if action == "back":
@@ -358,13 +397,22 @@ class Game:
             # sub-screens and the lobby, so it only asks to quit from the main
             # menu or while playing
             was_asking = self.quit_prompt.is_open
+            playing = self.scene in ("story", "online")
             events = self.quit_prompt.process(
                 events,
-                escape_opens=self.scene in ("story", "online")
+                # On the result screen Esc means "main menu"
+                escape_opens=(playing and self.result is None)
                 or (self.scene == "menu" and self.menu.state == State.START),
+                menu_available=playing,
             )
             if self.quit_prompt.confirmed:
                 self.isRunning = False
+            if self.quit_prompt.to_menu:
+                self.quit_prompt.to_menu = False
+                if self.scene == "online":
+                    self.net.send({"t": "leave"})
+                self.back_to_menu()
+                events = []
             paused = was_asking or self.quit_prompt.is_open
 
             self.frame(events, paused)

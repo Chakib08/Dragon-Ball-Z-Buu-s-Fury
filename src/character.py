@@ -44,6 +44,8 @@ class Character(Animation):
     # walks up to another from above from being drawn on top of him
     BODY_SHARE_OF_WIDTH = 0.75
     BODY_DEPTH = 10
+    BODY_DEPTH_SHARE = 0.55
+    MAX_FEET_WIDTH = 10
     LEGS_HEIGHT = 6
     MIN_BODY_WIDTH = 6
 
@@ -54,6 +56,8 @@ class Character(Animation):
     FAINT_CLOCK_SPEED = 8
 
     can_transform = False
+    # The player's side (NPCs say which side they are on, see npc.py)
+    team = "heroes"
 
     def __init__(self, pos_x, pos_y, name):
         super().__init__(name)
@@ -61,8 +65,12 @@ class Character(Animation):
         self.position = [pos_x, pos_y]
         self.old_position = self.position.copy()
         self.rect = self.image.get_rect()
-        self.feet = pygame.Rect(0, 0, self.rect.width / 4, 4)
+        # What bumps into walls; capped so that a big sprite (Broly) still
+        # fits through the passages everyone else uses
+        self.feet = pygame.Rect(0, 0, min(self.rect.width / 4, self.MAX_FEET_WIDTH), 4)
         self.body_width = self._measure_body_width()
+        # A big body is deeper too, or others could stand right in it
+        self.body_depth = max(self.BODY_DEPTH, round(self.body_width * self.BODY_DEPTH_SHARE))
         self.facing = AnimationDirection.DOWN.value
 
         self.max_hp = self.MAX_HP
@@ -129,7 +137,7 @@ class Character(Animation):
     def body(self):
         """The ground the character takes: other characters cannot walk
         into it (its feet, self.feet, are what bumps into walls)."""
-        body = pygame.Rect(0, 0, self.body_width, self.BODY_DEPTH)
+        body = pygame.Rect(0, 0, self.body_width, self.body_depth)
         body.midbottom = self.rect.midbottom
         return body
 

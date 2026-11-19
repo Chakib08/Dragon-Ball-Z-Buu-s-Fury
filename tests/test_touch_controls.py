@@ -227,26 +227,32 @@ class TouchControlsTests(unittest.TestCase):
             ],
         )
         self.assertEqual(menu.selected_character, "vegeta")
-        # Then the opponent
-        self.assertEqual(menu.state, State.ENEMY_SELECT)
         self.assertFalse(menu.isPlaying)
+
+        def tap(rect):
+            menu.launch_menu(screen, resolution, [])  # lays the screen out
+            menu.launch_menu(screen, resolution, [pygame.event.Event(
+                pygame.FINGERDOWN, finger_id=6, x=rect.centerx / resolution[0], y=rect.centery / resolution[1])])
+
+        # Then the allies: tapping toggles a card, Vegeta (the player) can't be one
+        self.assertEqual(menu.state, State.ALLY_SELECT)
         menu.launch_menu(screen, resolution, [])
-        broly_rect = menu.character_rects["broly"]
-        menu.launch_menu(
-            screen,
-            resolution,
-            [
-                pygame.event.Event(
-                    pygame.FINGERDOWN,
-                    finger_id=6,
-                    x=broly_rect.centerx / resolution[0],
-                    y=broly_rect.centery / resolution[1],
-                )
-            ],
-        )
-        self.assertEqual(menu.selected_enemy, "broly")
-        self.assertEqual(menu.selected_character, "vegeta")
+        tap(menu.character_rects["vegeta"])
+        self.assertEqual(menu.selected_allies, [])
+        tap(menu.character_rects["goku"])
+        tap(menu.character_rects["trunks"])
+        self.assertEqual(menu.selected_allies, ["goku", "trunks"])
+        tap(menu.continue_rect)
+        # Then the opponents, several of them
+        self.assertEqual(menu.state, State.ENEMY_SELECT)
+        tap(menu.character_rects["broly"])
+        tap(menu.character_rects["gohan"])  # was picked by default: unpicked
+        tap(menu.character_rects["vegeta"])
+        self.assertEqual(menu.selected_enemies, ["broly", "vegeta"])
+        self.assertFalse(menu.isPlaying)
+        tap(menu.continue_rect)
         self.assertTrue(menu.isPlaying)
+        self.assertEqual(menu.selected_character, "vegeta")
 
         menu = Menu(resolution)
         options_center = (resolution[0] - 520, resolution[1] / 1.35)
@@ -268,40 +274,48 @@ class TouchControlsTests(unittest.TestCase):
         resolution = (1200, 1000)
         screen = pygame.Surface(resolution)
         menu = Menu(resolution)
-        menu.launch_menu(
-            screen,
-            resolution,
-            [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)],
-        )
+        key = lambda k: menu.launch_menu(screen, resolution, [pygame.event.Event(pygame.KEYDOWN, key=k)])
+        key(pygame.K_RETURN)
         self.assertEqual(menu.state, State.CHARACTER_SELECT)
-
-        menu.launch_menu(
-            screen,
-            resolution,
-            [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RIGHT)],
-        )
+        key(pygame.K_RIGHT)
         self.assertEqual(menu.selected_character, "vegeta")
+        key(pygame.K_RETURN)
 
-        menu.launch_menu(
-            screen,
-            resolution,
-            [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)],
-        )
-        self.assertEqual(menu.state, State.ENEMY_SELECT)
+        # Allies: none, Enter goes on (fight alone)
+        self.assertEqual(menu.state, State.ALLY_SELECT)
         self.assertFalse(menu.isPlaying)
-
-        # Esc goes back to the character, Enter there comes back here
-        key = lambda k: [pygame.event.Event(pygame.KEYDOWN, key=k)]
-        menu.launch_menu(screen, resolution, key(pygame.K_ESCAPE))
-        self.assertEqual(menu.state, State.CHARACTER_SELECT)
-        menu.launch_menu(screen, resolution, key(pygame.K_RETURN))
+        key(pygame.K_RETURN)
         self.assertEqual(menu.state, State.ENEMY_SELECT)
+        self.assertEqual(menu.selected_allies, [])
 
-        menu.launch_menu(screen, resolution, key(pygame.K_LEFT))
-        self.assertEqual(menu.selected_enemy, "vegeta")  # left of Gohan
-        menu.launch_menu(screen, resolution, key(pygame.K_RETURN))
+        # Esc goes back one screen at a time
+        key(pygame.K_ESCAPE)
+        self.assertEqual(menu.state, State.ALLY_SELECT)
+        key(pygame.K_ESCAPE)
+        self.assertEqual(menu.state, State.CHARACTER_SELECT)
+        key(pygame.K_RETURN)
+
+        # Allies: the cursor starts on the player's card (unavailable); Space picks
+        key(pygame.K_RIGHT)
+        key(pygame.K_SPACE)
+        self.assertEqual(menu.selected_allies, ["gohan"])
+        key(pygame.K_RETURN)
+
+        # Opponents: Gohan by default; Space on two more, a fourth replaces the first
+        self.assertEqual(menu.state, State.ENEMY_SELECT)
+        self.assertEqual(menu.selected_enemies, ["gohan"])
+        for name in ("trunks", "broly", "goku"):
+            menu.focus = menu.character_names.index(name)
+            key(pygame.K_SPACE)
+        self.assertEqual(menu.selected_enemies, ["trunks", "broly", "goku"])
+        # With none picked, Enter picks the card under the cursor and starts
+        menu.selected_enemies.clear()
+        menu.focus = menu.character_names.index("broly")
+        key(pygame.K_RETURN)
+        self.assertEqual(menu.selected_enemies, ["broly"])
         self.assertTrue(menu.isPlaying)
         self.assertEqual(menu.selected_character, "vegeta")
+        self.assertEqual(menu.selected_allies, ["gohan"])
 
     def test_online_skips_the_opponent_choice(self):
         resolution = (1200, 1000)

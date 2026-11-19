@@ -35,6 +35,8 @@ class CombatTests(unittest.TestCase):
         # Feet 15 map pixels apart: within melee reach
         self.enemy = NPC(120, 100, False, "gohan", 0, [])
         self.place(self.enemy, 15)
+        # Punches only: the tests of NPC techniques turn them back on
+        self.enemy.next_technique_ms = float("inf")
 
     def place(self, fighter, gap):
         """Put fighter gap map pixels right of the player (feet to feet)."""

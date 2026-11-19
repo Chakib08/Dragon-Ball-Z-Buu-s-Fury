@@ -6,16 +6,21 @@ class QuitPrompt:
 
     Escape, the Android back button or a tap on the corner button opens the
     confirmation; nothing closes the game without a second, explicit answer.
+    While playing it also offers to go back to the main menu instead (M).
     """
 
     OPEN_KEYS = (pygame.K_ESCAPE, pygame.K_AC_BACK)
     YES_KEYS = (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_y)
     NO_KEYS = (pygame.K_ESCAPE, pygame.K_AC_BACK, pygame.K_n)
+    MENU_KEYS = (pygame.K_m,)
 
     def __init__(self, screen_size):
         self.screen_size = screen_size
         self.is_open = False
         self.confirmed = False
+        # "Main menu" chosen (only offered while menu_available)
+        self.to_menu = False
+        self.menu_available = False
 
         shortest = min(screen_size)
         # Top-right: clear of the HP/KI bars (top-left) and the touch controls
@@ -35,6 +40,14 @@ class QuitPrompt:
         self.no_rect = pygame.Rect(0, button_y, button_width, button_height)
         self.yes_rect.centerx = self.panel.left + panel_width * 0.27
         self.no_rect.centerx = self.panel.left + panel_width * 0.73
+        # With a "Main menu" button: three narrower buttons
+        third = int(panel_width * 0.28)
+        self.menu_rect = pygame.Rect(0, button_y, third, button_height)
+        self.menu_rect.centerx = self.panel.left + panel_width * 0.5
+        self._wide = (self.yes_rect.copy(), self.no_rect.copy())
+        self._narrow = (pygame.Rect(0, button_y, third, button_height), pygame.Rect(0, button_y, third, button_height))
+        self._narrow[0].centerx = self.panel.left + panel_width * 0.18
+        self._narrow[1].centerx = self.panel.left + panel_width * 0.82
 
         self.title_font = pygame.font.Font(None, max(36, int(panel_height * 0.24)))
         self.button_font = pygame.font.Font(None, max(30, int(button_height * 0.55)))
@@ -72,12 +85,19 @@ class QuitPrompt:
         # A little larger than drawn: easier to hit with a thumb
         return dx * dx + dy * dy <= (self.radius * 1.3) ** 2
 
-    def process(self, events, escape_opens=True):
+    def _layout(self):
+        """Yes and No, with Main menu between them while it is offered."""
+        self.yes_rect, self.no_rect = (r.copy() for r in (self._narrow if self.menu_available else self._wide))
+
+    def process(self, events, escape_opens=True, menu_available=False):
         """Handle the quit keys/taps and return the events the game may use.
 
         While the confirmation is open the game gets no input at all (only
-        window events such as QUIT pass through).
+        window events such as QUIT pass through). menu_available: offer
+        "Main menu" too (sets to_menu when chosen, and closes).
         """
+        self.menu_available = menu_available
+        self._layout()
         remaining = []
         for event in events:
             position = self._tap_position(event)
@@ -85,11 +105,17 @@ class QuitPrompt:
                 if event.type == pygame.KEYDOWN:
                     if event.key in self.YES_KEYS:
                         self.confirmed = True
+                    elif menu_available and event.key in self.MENU_KEYS:
+                        self.to_menu = True
+                        self.is_open = False
                     elif event.key in self.NO_KEYS:
                         self.is_open = False
                 elif position is not None:
                     if self.yes_rect.collidepoint(position):
                         self.confirmed = True
+                    elif menu_available and self.menu_rect.collidepoint(position):
+                        self.to_menu = True
+                        self.is_open = False
                     elif self.no_rect.collidepoint(position):
                         self.is_open = False
                 elif event.type == pygame.QUIT:
@@ -117,10 +143,11 @@ class QuitPrompt:
         pygame.draw.rect(screen, (245, 245, 245), self.panel, 3, border_radius=14)
         title = self.title_font.render("Quit game?", True, (255, 230, 120))
         screen.blit(title, title.get_rect(center=(self.panel.centerx, self.panel.top + self.panel.height * 0.27)))
-        for rect, label, color in (
-            (self.yes_rect, "Yes", (200, 60, 60)),
-            (self.no_rect, "No", (60, 110, 190)),
-        ):
+        buttons = [(self.yes_rect, "Quit" if self.menu_available else "Yes", (200, 60, 60)),
+                   (self.no_rect, "No", (60, 110, 190))]
+        if self.menu_available:
+            buttons.insert(1, (self.menu_rect, "Main menu", (50, 130, 70)))
+        for rect, label, color in buttons:
             pygame.draw.rect(screen, color, rect, border_radius=10)
             pygame.draw.rect(screen, (245, 245, 245), rect, 2, border_radius=10)
             text = self.button_font.render(label, True, (255, 255, 255))

@@ -12,6 +12,12 @@ ordinary enemy, "normal": 1.0) and every enemy its difficulty:
     guard_ms          how long it guards (optional)
     speed             walking speed (times)
     power_up_at       share of HP left at which it powers up (Super Saiyan)
+    technique_every_ms  about how often it tries a special technique
+    technique_damage  share of a technique's damage it does (the player's
+                      techniques do it all: an enemy's would be too strong)
+
+"ally" is the strength of the support characters fighting on the player's
+side.
 
 Change an enemy's difficulty, or a difficulty's numbers, in that file.
 """
@@ -24,6 +30,7 @@ from typing import List, Tuple
 from utils.config import Config
 
 DEFAULT_DIFFICULTY = "normal"
+ALLY_DIFFICULTY = "ally"
 
 
 @dataclass(frozen=True)
@@ -40,6 +47,8 @@ class Difficulty:
     guard_ms: int = None
     speed: float = 1.0
     power_up_at: float = 0.5
+    technique_every_ms: int = 5000
+    technique_damage: float = 0.2
 
 
 @dataclass(frozen=True)

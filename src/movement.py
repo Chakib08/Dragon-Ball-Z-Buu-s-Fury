@@ -14,7 +14,7 @@ def _body_at(character, position):
     """The character's body (see Character.body) if it stood at position."""
     rect = character.rect.copy()
     rect.topleft = position  # rounded like Character.update rounds it
-    body = pygame.Rect(0, 0, character.body_width, character.BODY_DEPTH)
+    body = pygame.Rect(0, 0, character.body_width, character.body_depth)
     body.midbottom = rect.midbottom
     return body
 

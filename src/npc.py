@@ -5,12 +5,20 @@ import pygame
 from animation import AnimationDirection
 from character import Character
 from constants import C_WALK_ANIMATION_COUNT
-from difficulty import Difficulty, difficulty as find_difficulty, enemy_profile
+from difficulty import ALLY_DIFFICULTY, Difficulty, difficulty as find_difficulty, enemy_profile
 from saiyan import SuperSaiyanMixin
 
 
+# The two sides of a fight: the player and his support characters, and the
+# enemies
+HEROES = "heroes"
+ENEMIES = "enemies"
+
+
 class NPC(Character):
-    """A character that patrols a path and fights back when the player is near."""
+    """A character the game controls. An enemy patrols a path and fights the
+    player (and his allies) when they come near; an ally (team HEROES)
+    follows the player and fights the enemies."""
 
     MAX_HP = 400
     # NPCs are tough: only this share of a hit gets through
@@ -32,10 +40,17 @@ class NPC(Character):
     PATROL_ARRIVAL_DISTANCE = 2
 
     def __init__(self, pos_x, pos_y, is_transformed, name, nb_points, dialog_texts, path_name=None,
-                 difficulty=None):
+                 difficulty=None, team=ENEMIES):
         """difficulty: a Difficulty or its name; by default the one
-        Config/enemies.json gives this character."""
+        Config/enemies.json gives this character (an ally: "ally")."""
         super().__init__(pos_x, pos_y, name)
+        self.team = team
+        # Who it fights right now (chosen by the combat each frame)
+        self.target = None
+        # The target could not be reached (no path): leave it until then
+        self.unreachable_until = 0
+        # When it next considers a special technique (see CombatSystem)
+        self.next_technique_ms = 0
         self.name = name
         # Map objects "<path_name>_path_<i>" mark the patrol route
         self.path_name = path_name or name
@@ -63,7 +78,7 @@ class NPC(Character):
         self.guard_until_ms = None
         self.riposte_ready = False
         if difficulty is None:
-            difficulty = enemy_profile(name).difficulty
+            difficulty = find_difficulty(ALLY_DIFFICULTY) if team == HEROES else enemy_profile(name).difficulty
         elif not isinstance(difficulty, Difficulty):
             difficulty = find_difficulty(difficulty)
         self.apply_difficulty(difficulty)
@@ -86,6 +101,8 @@ class NPC(Character):
         self.WALK_SPEED = self.WALK_SPEED * difficulty.speed
         self.RUN_SPEED = self.RUN_SPEED * difficulty.speed
         self.TRANSFORM_AT_HP = difficulty.power_up_at
+        self.technique_every_ms = difficulty.technique_every_ms
+        self.technique_damage = difficulty.technique_damage
 
     def update_ai(self):
         """Decisions the NPC takes on its own during a fight."""
@@ -132,10 +149,25 @@ class NPC(Character):
             elif self.action is None:
                 self.face_idle()
 
+    # The map's spawn and patrol points are the top-left corner of a sprite
+    # of this size (most sheets); bigger or smaller sprites are placed so
+    # their feet stand on the same spot (Broly's would else be 32 px lower,
+    # on the other side of a cliff)
+    MAP_SPRITE_SIZE = 32
+
+    def position_at(self, point):
+        """The position (top-left) that puts the feet where point says."""
+        return (
+            point.x + (self.MAP_SPRITE_SIZE - self.rect.width) / 2,
+            point.y + self.MAP_SPRITE_SIZE - self.rect.height,
+        )
+
     def teleport_spawn(self):
-        location = self.points[self.current_point]
-        self.position[0] = location.x
-        self.position[1] = location.y
+        if not self.points:
+            return  # placed by whoever created it (an ally)
+        self.position = list(self.position_at(self.points[self.current_point]))
+        self.update()
+        self.save_location()
 
     def load_points(self, game_map):
         """Read the patrol path ("<path_name>_path_<i>" objects) from the map."""
@@ -160,8 +192,8 @@ class NPC(Character):
         nearest = min(
             range(len(self.points)),
             key=lambda index: math.hypot(
-                self.points[index].x - self.position[0],
-                self.points[index].y - self.position[1],
+                self.position_at(self.points[index])[0] - self.position[0],
+                self.position_at(self.points[index])[1] - self.position[1],
             ),
         )
         # current_point is the last point reached, the target is the next one
@@ -177,11 +209,11 @@ class NPC(Character):
             self.face_idle()
             return
 
-        target_rect = self.points[self._target_index()]
-        # The patrol points are expressed in the same coordinates as the
-        # sprite position (see teleport_spawn), so steer from the real position
-        dx = target_rect.x - self.position[0]
-        dy = target_rect.y - self.position[1]
+        # Steer from the real position to where the next point puts the
+        # sprite (see position_at)
+        target_x, target_y = self.position_at(self.points[self._target_index()])
+        dx = target_x - self.position[0]
+        dy = target_y - self.position[1]
 
         if math.hypot(dx, dy) <= self.PATROL_ARRIVAL_DISTANCE:
             self.current_point = self._target_index()

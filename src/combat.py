@@ -1,5 +1,6 @@
 import math
 import heapq
+import random
 
 import pygame
 
@@ -7,6 +8,7 @@ from animation import AnimationDirection
 from character import DIRECTION_VECTORS
 from effects import ChargeGlow, build_effect, effect_origin
 from movement import resolve_movement_collisions, solid_bodies
+from npc import HEROES
 
 
 class CombatSystem:
@@ -60,14 +62,17 @@ class CombatSystem:
         self._targets = []
         self._collisions = []
         self._fighters = [player]
+        self._heroes = [player]
         self.font = pygame.font.Font(None, 30)
         self.name_font = pygame.font.Font(None, 22)
         # Text is rendered once and reused every frame
         self._labels = {}
 
     def update(self, npcs, collisions, player_attacking=False, opponents=()):
-        """One frame of combat. npcs are fought by the AI below; opponents
-        (online players) are only targets for the player's hits."""
+        """One frame of combat. npcs are fought by the AI below: enemies
+        fight the player and his allies, allies (team HEROES) fight the
+        enemies. opponents (online players) are only targets for the
+        player's hits."""
         now = pygame.time.get_ticks()
         elapsed_seconds = max(0, now - self.last_update_ms) / 1000
         self.last_update_ms = now
@@ -82,90 +87,212 @@ class CombatSystem:
                 self.player.max_ki,
                 self.player.ki + self.KI_REGEN_PER_SECOND * elapsed_seconds,
             )
-        targets = [*npcs, *opponents]
+        enemies = [npc for npc in npcs if npc.team != HEROES]
+        allies = [npc for npc in npcs if npc.team == HEROES]
+        # What the player, and his allies' and his techniques, can hit
+        targets = [*enemies, *opponents]
         self._targets, self._collisions = targets, collisions
+        self._heroes = [self.player, *allies]
         # Everyone on the field: their bodies block each other
-        self._fighters = [self.player, *targets]
+        self._fighters = [self.player, *npcs, *opponents]
+        for npc in npcs:
+            npc.ki = min(npc.max_ki, npc.ki + self.NPC_KI_REGEN_PER_SECOND * elapsed_seconds)
         self._update_charge()
-        self._update_effects(targets)
+        self._update_effects()
 
         self.player_swung = False
         self.player.update_knockback(collisions, solid_bodies(self._fighters, self.player))
-        player_down = self.player.hp <= 0
-        if player_down:
+        if self.player.hp <= 0:
             self.player.faint()
         elif player_attacking:
             self._player_attack(targets, now)
 
         for npc in tuple(npcs):
-            if npc.hp <= 0:
-                npc.is_defeated = True
-                npc.combat_engaged = True
-                npc.faint()
-                continue
+            self._update_npc(npc, now, collisions)
 
-            # Pushed back, flinching or transforming: no chasing or attacking.
-            # An NPC flinches on every hit, but strikes back out of the flinch
-            # as soon as its next strike is due (it cannot be stun-locked)
-            pushed = npc.update_knockback(collisions, solid_bodies(self._fighters, npc))
-            busy = npc.update_action()
-            if busy and npc.action["name"] == "hurt" and self._npc_strike_due(npc, now):
-                npc.cancel_hurt()
-                busy = False
-            if pushed or busy:
-                continue
+    # An ally walks back to the player when he is farther than this
+    FOLLOW_DISTANCE = 40
+    NPC_KI_REGEN_PER_SECOND = 6
+    # Time an NPC leaves a target it found no path to
+    UNREACHABLE_MS = 3000
 
-            distance = self._distance(self.player.feet.center, npc.feet.center)
-            was_engaged = npc.combat_engaged
-            npc.combat_engaged = distance <= self.AGGRO_RANGE and not player_down
-            if not npc.combat_engaged:
-                npc.chase_path = []
-                npc.chase_target = None
-                npc.chase_stuck_frames = 0
-                if was_engaged:
-                    # The player got away: go back to the patrol path
-                    npc.resume_patrol()
-                continue
+    def foes_of(self, npc):
+        """The fighters npc's side fights."""
+        return self._targets if npc.team == HEROES else self._heroes
 
-            npc.update_ai()
-            if npc.action is not None:
-                continue
+    def _choose_target(self, npc, now):
+        """The closest foe still standing within reach of the fight (for an
+        ally: near itself or near the player), or None."""
+        if now < npc.unreachable_until:
+            return None
+        near = [npc.feet.center]
+        if npc.team == HEROES:
+            near.append(self.player.feet.center)  # protects the player too
+        candidates = [
+            foe for foe in self.foes_of(npc)
+            if foe.hp > 0 and min(self._distance(point, foe.feet.center) for point in near) <= self.AGGRO_RANGE
+        ]
+        return min(candidates, key=lambda foe: self._distance(npc.feet.center, foe.feet.center), default=None)
 
-            # Up close, the NPC always turns to face the player
-            if distance <= self._reach(npc, self.player, self.ATTACK_RANGE) + self.ATTACK_LATERAL_TOLERANCE:
-                npc.face_toward(self.player.feet.center)
-            # Guard after a flurry of hits, then riposte
-            if npc.wants_guard:
-                npc.start_guard(now)
-            if npc.update_guard(now):
-                continue
+    def _update_npc(self, npc, now, collisions):
+        if npc.hp <= 0:
+            npc.is_defeated = True
+            npc.combat_engaged = True
+            npc.faint()
+            return
 
-            if not was_engaged:
+        # Pushed back, flinching or transforming: no chasing or attacking.
+        # An NPC flinches on every hit, but strikes back out of the flinch
+        # as soon as its next strike is due (it cannot be stun-locked)
+        pushed = npc.update_knockback(collisions, solid_bodies(self._fighters, npc))
+        busy = npc.update_action()
+        if busy and npc.action["name"] == "hurt" and npc.target is None:
+            npc.target = self._choose_target(npc, now)  # hit before it picked one
+        if busy and npc.action["name"] == "hurt" and npc.target is not None and self._npc_strike_due(npc, now):
+            npc.cancel_hurt()
+            busy = False
+        if pushed or busy:
+            return
+
+        target = self._choose_target(npc, now)
+        was_engaged = npc.combat_engaged
+        npc.combat_engaged = target is not None
+        npc.target = target
+        if target is None:
+            npc.chase_path = []
+            npc.chase_target = None
+            npc.chase_stuck_frames = 0
+            if npc.blocking:
+                npc.stop_block()
+            if npc.team == HEROES:
+                self._follow_player(npc, collisions)
+            elif was_engaged:
+                # Everyone got away: go back to the patrol path
+                npc.resume_patrol()
+            return
+
+        npc.update_ai()
+        if npc.action is not None:
+            return
+
+        distance = self._distance(target.feet.center, npc.feet.center)
+        # Up close, the NPC always turns to face its target
+        if distance <= self._reach(npc, target, self.ATTACK_RANGE) + self.ATTACK_LATERAL_TOLERANCE:
+            npc.face_toward(target.feet.center)
+        # Guard after a flurry of hits, then riposte
+        if npc.wants_guard:
+            npc.start_guard(now)
+        if npc.update_guard(now):
+            return
+
+        if not was_engaged:
+            npc.last_attack_ms = now
+            npc.chase_stuck_frames = 0
+            npc.chase_path = []
+            npc.chase_target = None
+            npc.next_technique_ms = now + self._technique_delay(npc)
+
+        # Now and then a special technique instead of a punch
+        if self._try_npc_technique(npc, target, now):
+            return
+
+        if self._npc_in_attack_range(npc):
+            npc.chase_stuck_frames = 0
+            npc.chase_path = []
+            # One punch or kick at a time, at the same pace as the player,
+            # after a short reaction time
+            if self._npc_strike_due(npc, now):
                 npc.last_attack_ms = now
-                npc.chase_stuck_frames = 0
-                npc.chase_path = []
-                npc.chase_target = None
-
-            if self._npc_in_attack_range(npc):
-                npc.chase_stuck_frames = 0
-                npc.chase_path = []
-                # One punch or kick at a time, at the same pace as the player,
-                # after a short reaction time
-                if self._npc_strike_due(npc, now):
-                    npc.last_attack_ms = now
-                    npc.strike()
-                    self.player.take_damage(
-                        npc.attack_damage * self._damage_multiplier(npc), npc.feet.center
-                    )
-                else:
-                    npc.face_idle()
+                npc.strike()
+                target.take_damage(npc.attack_damage * self._damage_multiplier(npc), npc.feet.center)
             else:
-                if npc.out_of_reach_since is None:
-                    npc.out_of_reach_since = now
-                # A short trip out of reach (a hit's push) keeps the reaction
-                if now - npc.out_of_reach_since > npc.REACH_GRACE_MS:
-                    npc.in_reach_since = None
-                self._move_toward(npc, self.player.feet.center, collisions)
+                npc.face_idle()
+        else:
+            if npc.out_of_reach_since is None:
+                npc.out_of_reach_since = now
+            # A short trip out of reach (a hit's push) keeps the reaction
+            if now - npc.out_of_reach_since > npc.REACH_GRACE_MS:
+                npc.in_reach_since = None
+            self._move_toward(npc, target.feet.center, collisions)
+
+    def _follow_player(self, npc, collisions):
+        """An ally with nobody to fight stays close to the player."""
+        if self.player.hp <= 0 or \
+                self._distance(npc.feet.center, self.player.feet.center) <= self.FOLLOW_DISTANCE:
+            if npc.action is None:
+                npc.face_idle()
+            return
+        npc.target = self.player  # for the path search's reach
+        self._move_toward(npc, self.player.feet.center, collisions)
+        npc.target = None
+
+    # ---- NPC special techniques -------------------------------------------------
+    def _technique_delay(self, npc):
+        """Some randomness, so the NPCs do not all fire at once."""
+        return random.uniform(0.6, 1.4) * npc.technique_every_ms
+
+    def _technique_fits(self, npc, technique, target):
+        """Whether the technique can reach the target from where npc stands."""
+        dx = target.feet.centerx - npc.feet.centerx
+        dy = target.feet.centery - npc.feet.centery
+        distance = math.hypot(dx, dy)
+        stats = technique.stats
+        if technique.kind in ("projectile", "beam", "ball"):
+            # They fly straight: the target must be roughly in line
+            in_line = min(abs(dx), abs(dy)) <= self.NPC_AIM_TOLERANCE
+            return in_line and self.ATTACK_RANGE < distance <= stats["range"] * 0.9
+        if technique.kind == "burst":
+            return distance <= stats["radius"] * 0.8
+        if technique.kind == "teleport":
+            return 60 <= distance <= stats["reach"]
+        return False
+
+    NPC_AIM_TOLERANCE = 12
+
+    def _try_npc_technique(self, npc, target, now):
+        """When its next try is due, the NPC uses one of the techniques that
+        fit (randomly chosen) if it has the ki. Returns True if it did."""
+        if not npc.techniques or now < npc.next_technique_ms:
+            return False
+        options = [t for t in npc.techniques
+                   if npc.ki >= t.cost and t.form_for(npc) is not None and self._technique_fits(npc, t, target)]
+        if not options:
+            return False  # tried again as soon as one fits
+        npc.next_technique_ms = now + self._technique_delay(npc)
+        return self.use_technique(npc, random.choice(options), target)
+
+    def use_technique(self, user, technique, target=None):
+        """An NPC (or any character but the player, who uses start_special)
+        uses a technique towards target: its pose, then the effect. Charged
+        techniques go off at three quarters of their power."""
+        if user.hp <= 0 or user.action is not None:
+            return False
+        direction = user.facing
+        if target is not None:
+            dx = target.feet.centerx - user.feet.centerx
+            dy = target.feet.centery - user.feet.centery
+            if abs(dx) >= abs(dy):
+                direction = AnimationDirection.RIGHT.value if dx >= 0 else AnimationDirection.LEFT.value
+            else:
+                direction = AnimationDirection.DOWN.value if dy >= 0 else AnimationDirection.UP.value
+        user.facing = direction
+        sprites = technique.form_for(user)
+        frames = user.get_frames(technique.pose_macro(direction))
+        if sprites is None or not frames:
+            return False
+        if technique.kind == "teleport":
+            user._play("teleport", frames, user.SPECIAL_CLOCK_SPEED,
+                       on_done=lambda: self._teleport(technique, user, target))
+        else:
+            power = 0.75 if technique.kind in self.CHARGEABLE else None
+            user._play(
+                "special", frames, user.SPECIAL_CLOCK_SPEED,
+                hold_ticks=40 if technique.kind == "beam" else 8,
+                on_frame=(min(sprites.fire_frame(direction), len(frames) - 1),
+                          lambda: self._release_by(user, technique, direction, power)),
+            )
+        user.ki -= technique.cost
+        return True
 
     def _npc_strike_due(self, npc, now):
         """In reach of the player and either riposting after a guard, or past
@@ -356,18 +483,29 @@ class CombatSystem:
         target.take_damage(damage, source, push)
 
     def _release(self, technique, direction, power=None):
-        """The pose reached its firing frame: the effect leaves the hands.
-        power: how charged it was (0 to 1); a tap does half the damage."""
-        player = self.player
-        damage = technique.damage * self._damage_multiplier(player)
+        """The player's pose reached its firing frame (see _release_by)."""
+        effect = self._release_by(self.player, technique, direction, power)
+        if effect is not None and self.on_technique is not None:
+            self.on_technique(technique.id, direction, effect_origin(effect, self.player, direction), power)
+
+    def _release_by(self, user, technique, direction, power=None):
+        """The pose reached its firing frame: the effect leaves user's hands,
+        towards the other side. power: how charged it was (0 to 1); a tap
+        does half the damage. An NPC's technique does a share of it (see
+        difficulty.py)."""
+        if user.hp <= 0:
+            return None
+        damage = technique.damage * self._damage_multiplier(user)
+        if user is not self.player:
+            damage *= getattr(user, "technique_damage", 1.0)
         if power is not None:
             damage *= 0.5 + 0.5 * power
-        effect = build_effect(technique, technique.form_for(player), player, direction,
+        effect = build_effect(technique, technique.form_for(user), user, direction,
                               damage, self._hit_target, self.add_effect, power=power)
         if effect is not None:
+            effect.team = user.team
             self.add_effect(effect)
-            if self.on_technique is not None:
-                self.on_technique(technique.id, direction, effect_origin(effect, player, direction), power)
+        return effect
 
     def show_opponent_technique(self, opponent, technique_id, direction, origin, power=None):
         """Draw a technique the online opponent used. It stops on the player
@@ -385,9 +523,15 @@ class CombatSystem:
         self.effects.append(effect)
         self.new_effects.append(effect)
 
-    def _update_effects(self, targets):
+    def _update_effects(self):
         for effect in tuple(self.effects):
-            effect.update_effect([self.player] if getattr(effect, "hits_player", False) else targets)
+            if getattr(effect, "hits_player", False):
+                victims = [self.player]  # drawn for the online opponent
+            elif getattr(effect, "team", HEROES) == HEROES:
+                victims = self._targets
+            else:
+                victims = self._heroes
+            effect.update_effect(victims)
             if effect.done:
                 self.effects.remove(effect)
 
@@ -400,14 +544,17 @@ class CombatSystem:
         ]
         character.update()
 
-    def _teleport(self, technique):
-        """Instant Transmission: reappear behind the closest opponent and hit."""
-        player = self.player
+    def _teleport(self, technique, user=None, target=None):
+        """Instant Transmission: reappear behind the closest foe (or target)
+        and hit. user: the player unless an NPC uses it."""
+        player = user or self.player
         reach = technique.stats["reach"]
-        candidates = [t for t in self._targets if t.hp > 0
-                      and self._distance(player.feet.center, t.feet.center) <= reach]
-        target = min(candidates, key=lambda t: self._distance(player.feet.center, t.feet.center),
-                     default=None)
+        if target is None or target.hp <= 0:
+            foes = self._targets if player is self.player else self.foes_of(player)
+            candidates = [t for t in foes if t.hp > 0
+                          and self._distance(player.feet.center, t.feet.center) <= reach]
+            target = min(candidates, key=lambda t: self._distance(player.feet.center, t.feet.center),
+                         default=None)
         old_position = list(player.position)
         if target is not None:
             # Behind the target if there is room, else beside it, else in front
@@ -441,6 +588,8 @@ class CombatSystem:
         player.save_location()
         frames = player.get_frames(technique.pose_macro(player.facing))[::-1]
         damage = technique.damage * self._damage_multiplier(player)
+        if player is not self.player:
+            damage *= getattr(player, "technique_damage", 1.0)
 
         def strike():
             player.strike()
@@ -504,6 +653,10 @@ class CombatSystem:
             if npc.chase_path:
                 waypoint = self._cell_to_feet_center(npc, npc.chase_path[0])
                 self._step_toward(npc, waypoint, collisions)
+            elif hasattr(npc, "unreachable_until"):
+                # No way there (across water, behind a wall): instead of
+                # pushing against the obstacle forever, leave it for a while
+                npc.unreachable_until = pygame.time.get_ticks() + self.UNREACHABLE_MS
 
     def _step_toward(self, npc, target, collisions):
         dx = target[0] - npc.feet.centerx
@@ -520,13 +673,15 @@ class CombatSystem:
         resolve_movement_collisions(npc, collisions, solid_bodies(self._fighters, npc))
 
     def _npc_in_attack_range(self, npc):
+        """Whether npc's punch reaches its target (the player if none)."""
+        foe = npc.target or self.player
         origin = npc.feet.center
-        target = self.player.feet.center
+        target = foe.feet.center
         forward, lateral = self._forward_lateral(npc.facing, origin, target)
         tolerance = (
-            self.player.feet.width + npc.feet.width
+            foe.feet.width + npc.feet.width
         ) / 2 + self.NPC_ATTACK_LATERAL_TOLERANCE
-        return 0 <= forward <= self._reach(npc, self.player, self.NPC_ATTACK_RANGE) and abs(lateral) <= tolerance
+        return 0 <= forward <= self._reach(npc, foe, self.NPC_ATTACK_RANGE) and abs(lateral) <= tolerance
 
     @staticmethod
     def _forward_lateral(direction, origin, target):
@@ -587,7 +742,7 @@ class CombatSystem:
         dx = target[0] - center[0]
         dy = target[1] - center[1]
         lateral_tolerance = self.NPC_ATTACK_LATERAL_TOLERANCE
-        reach = self._reach(npc, self.player, self.NPC_ATTACK_RANGE)
+        reach = self._reach(npc, npc.target or self.player, self.NPC_ATTACK_RANGE)
         return (
             math.hypot(dx, dy) <= reach
             and abs(dx) <= reach + lateral_tolerance
@@ -665,6 +820,7 @@ class CombatSystem:
     # Health bars (the player's and the enemies')
     HP_COLOR = (70, 200, 90)
     FRAME_COLOR = (235, 235, 235)
+    ALLY_COLOR = (120, 195, 255)
 
     def _label(self, text, font, color=(255, 255, 255)):
         key = (text, font, color)
@@ -693,11 +849,12 @@ class CombatSystem:
                 self.HP_COLOR,
                 (bar.x, bar.y, round(bar.width * fraction), bar.height),
             )
-            # Gold frame while the NPC is a Super Saiyan
-            frame_color = self.SUPER_COLOR if npc.powered_up else self.FRAME_COLOR
+            # Gold frame while the NPC is a Super Saiyan; allies in blue
+            ally = getattr(npc, "team", None) == HEROES
+            frame_color = self.SUPER_COLOR if npc.powered_up else (self.ALLY_COLOR if ally else self.FRAME_COLOR)
             pygame.draw.rect(screen, frame_color, bar, 2)
             label = getattr(npc, "bar_label", None) or npc.character_name.capitalize()
-            name = self._label(label, self.name_font)
+            name = self._label(label, self.name_font, self.ALLY_COLOR if ally else (255, 255, 255))
             screen.blit(name, name.get_rect(midbottom=(bar.centerx, bar.top - 2)))
 
     def _draw_bar(self, screen, label, value, maximum, color, y):

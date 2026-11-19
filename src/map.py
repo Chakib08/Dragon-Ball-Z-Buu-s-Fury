@@ -9,16 +9,25 @@ from combat import CombatSystem
 from effects import EFFECT_LAYER
 from movement import resolve_movement_collisions, solid_bodies
 from difficulty import enemy_profile
-from npc import NPC, SaiyanNPC
+from npc import HEROES, NPC, SaiyanNPC
 from pathmanager import PathManager
 
 
 class CharacterGroup(pyscroll.PyscrollGroup):
-    """PyscrollGroup that lets a sprite shift its image (see image_offset).
+    """PyscrollGroup that lets a sprite shift its image (see image_offset),
+    and draws the characters in depth order.
 
     Animation frames have different sizes; drawing them all from the top-left
     of the rect would make the character jump around.
     """
+
+    def depth_layer(self, sprite):
+        """The sprite's layer, plus a tiny fraction growing with how low it
+        stands: pyscroll sorts by layer first (then by x), so within a
+        layer the one lower on the screen, nearer to the viewer, is drawn
+        last, in front. The fraction stays far below 1, so the order with the
+        map's own tile layers does not change."""
+        return self.get_layer_of_sprite(sprite) + max(0, sprite.rect.bottom) / 1_000_000
 
     def draw(self, surface):
         ox, oy = self._map_layer.get_center_offset()
@@ -29,7 +38,7 @@ class CharacterGroup(pyscroll.PyscrollGroup):
                 continue
             dx, dy = sprite.image_offset() if hasattr(sprite, "image_offset") else (0, 0)
             new_rect = sprite.rect.move(ox + dx, oy + dy)
-            new_surfaces.append((sprite.image, new_rect, self.get_layer_of_sprite(sprite)))
+            new_surfaces.append((sprite.image, new_rect, self.depth_layer(sprite)))
             self.spritedict[sprite] = new_rect
         self.lostsprites = []
         return self._map_layer.draw(surface, surface.get_rect(), new_surfaces)
@@ -77,22 +86,35 @@ WORLD_MUSIC = "legacy-of-goku-II/The Legacy Of Goku 2 OST - The Imperfect Cell"
 
 
 DEFAULT_ENEMY = "gohan"
+# Most enemies and allies a fight can have
+MAX_ENEMIES = 3
+MAX_ALLIES = 2
+ALLY_LINES = ["I've got your back!", "Let's beat them together!"]
 
 
-def _world_npcs(enemy=DEFAULT_ENEMY):
-    """The enemy of the world map, with the strength and lines Config/enemies.json
-    gives it. It walks the route the map calls "vegeta_path"."""
-    profile = enemy_profile(enemy)
-    dialog = profile.dialog or ["Let's fight!"]
-    return [SaiyanNPC(99, 345, False, enemy, 4, dialog, path_name="vegeta", difficulty=profile.difficulty)]
+def _world_npcs(enemies=(DEFAULT_ENEMY,), allies=()):
+    """The fighters of the world map: the enemies, with the strength and
+    lines Config/enemies.json gives them, walking the route the map calls
+    "vegeta_path" (each from another of its points), and the player's allies
+    (MapManager places them next to the player)."""
+    npcs = []
+    for index, name in enumerate(enemies[:MAX_ENEMIES]):
+        profile = enemy_profile(name)
+        dialog = profile.dialog or ["Let's fight!"]
+        enemy = SaiyanNPC(99, 345, False, name, 4, dialog, path_name="vegeta", difficulty=profile.difficulty)
+        enemy.current_point = index % 4
+        npcs.append(enemy)
+    for name in allies[:MAX_ALLIES]:
+        npcs.append(SaiyanNPC(0, 0, False, name, 0, ALLY_LINES, team=HEROES))
+    return npcs
 
 
-def map_definitions(enemy=DEFAULT_ENEMY):
+def map_definitions(enemies=(DEFAULT_ENEMY,), allies=()):
     world = PathManager.soundtrack(WORLD_MUSIC)
     home = PathManager.soundtrack(HOME_MUSIC)
     return [
         MapDefinition("map", world, [Portal("map", "enter_house", "house", "spawn_house")],
-                      lambda: _world_npcs(enemy)),
+                      lambda: _world_npcs(enemies, allies)),
         MapDefinition("house", home, [
             Portal("house", "exit_house", "map", "spawn_world"),
             Portal("house", "enter_hall", "hall", "spawn_from_house_to_hall"),
@@ -122,17 +144,20 @@ class MapManager:
     FADE_SPEED = 10
 
     def __init__(self, screen, character, default_map="map", versus=False, opponents=(),
-                 enemy=DEFAULT_ENEMY) -> None:
+                 enemies=(DEFAULT_ENEMY,), allies=()) -> None:
         """versus: an online match on this map, without NPCs or doors, the
-        opponents (remote players) drawn alongside the player. enemy: the
-        character the player fights on the world map."""
+        opponents (remote players) drawn alongside the player. enemies: the
+        characters the player fights on the world map; allies: the ones who
+        fight on his side."""
         self.screen = screen
         self.character = character
         self.versus = versus
         self.opponents = list(opponents)
         self.combat = CombatSystem(character, screen.get_size())
-        self.enemy = enemy
-        self.definitions = {definition.name: definition for definition in map_definitions(enemy)}
+        self.enemies = tuple(enemies)
+        self.allies = tuple(allies)
+        self.definitions = {definition.name: definition
+                            for definition in map_definitions(self.enemies, self.allies)}
         self.maps = {}
 
         # Fade to black between two maps
@@ -200,8 +225,27 @@ class MapManager:
         for npc in npcs:
             npc.load_points(game_map)
             npc.teleport_spawn()
+        self._place_allies([npc for npc in npcs if npc.team == HEROES], collisions)
         self.maps[name] = game_map
         return game_map
+
+    # Where allies appear, around the player's feet
+    ALLY_SPOTS = ((-26, 8), (26, 8), (0, 22), (-26, -12), (26, -12), (0, -24))
+
+    def _place_allies(self, allies, collisions):
+        """Next to the player, on free ground (no wall, nobody else)."""
+        self.character.update()  # its rect follows its position from now on
+        taken = [self.character.body]
+        for ally in allies:
+            for dx, dy in self.ALLY_SPOTS:
+                feet_x = self.character.feet.centerx + dx
+                feet_bottom = self.character.feet.bottom + dy
+                ally.position = [feet_x - ally.rect.width / 2, feet_bottom - ally.rect.height]
+                ally.update()
+                if ally.feet.collidelist(collisions) == -1 and ally.body.collidelist(taken) == -1:
+                    break
+            ally.save_location()
+            taken.append(ally.body)
 
     # ---- Accessors --------------------------------------------------------------
     def get_map(self):

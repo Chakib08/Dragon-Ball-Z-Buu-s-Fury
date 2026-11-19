@@ -137,7 +137,7 @@ class OnlineMatchTests(unittest.TestCase):
         self.assertTrue(beam.hits_player)
         hp = self.b.player.hp
         for _ in range(40):
-            combat_b._update_effects([])
+            combat_b._update_effects()
         self.assertTrue(beam.hit)  # stopped on B's fighter
         # Only A's "hit" message does damage
         self.assertEqual(self.b.player.hp, hp)
