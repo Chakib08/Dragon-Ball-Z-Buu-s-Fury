@@ -5,6 +5,7 @@ from constants import C_FAINT_ANIMATION_COUNT
 from movement import resolve_movement_collisions
 from techniques import load_techniques
 from utils.config import Config
+from stats import character_stats
 
 DIRECTION_VECTORS = {
     AnimationDirection.RIGHT.value: (1, 0),
@@ -73,11 +74,16 @@ class Character(Animation):
         self.body_depth = max(self.BODY_DEPTH, round(self.body_width * self.BODY_DEPTH_SHARE))
         self.facing = AnimationDirection.DOWN.value
 
-        self.max_hp = self.MAX_HP
+        # The character's own strength (Config/stats.json)
+        self.stats = character_stats(self.character_name)
+        self.power = self.stats.power
+        self.WALK_SPEED = self.WALK_SPEED * self.stats.speed
+        self.RUN_SPEED = self.RUN_SPEED * self.stats.speed
+        self.max_hp = round(self.MAX_HP * self.stats.hp)
         self.hp = self.max_hp
         self.max_ki = self.MAX_KI
         self.ki = self.max_ki
-        self.damage_taken = self.DAMAGE_TAKEN
+        self.damage_taken = self.DAMAGE_TAKEN / self.stats.defense
         self.last_flinch_ms = None
         self._powered_up = False
         self.blocking = False

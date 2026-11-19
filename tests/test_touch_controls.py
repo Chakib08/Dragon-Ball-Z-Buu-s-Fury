@@ -301,13 +301,16 @@ class TouchControlsTests(unittest.TestCase):
         self.assertEqual(menu.selected_allies, ["gohan"])
         key(pygame.K_RETURN)
 
-        # Opponents: Gohan by default; Space on two more, a fourth replaces the first
+        # Opponents: Gohan by default; up to 4, a fifth replaces the first
         self.assertEqual(menu.state, State.ENEMY_SELECT)
         self.assertEqual(menu.selected_enemies, ["gohan"])
         for name in ("trunks", "broly", "goku"):
             menu.focus = menu.character_names.index(name)
             key(pygame.K_SPACE)
-        self.assertEqual(menu.selected_enemies, ["trunks", "broly", "goku"])
+        self.assertEqual(menu.selected_enemies, ["gohan", "trunks", "broly", "goku"])
+        menu.focus = menu.character_names.index("vegeta")
+        key(pygame.K_SPACE)
+        self.assertEqual(menu.selected_enemies, ["trunks", "broly", "goku", "vegeta"])
         # With none picked, Enter picks the card under the cursor and starts
         menu.selected_enemies.clear()
         menu.focus = menu.character_names.index("broly")
@@ -362,6 +365,44 @@ class TouchControlsTests(unittest.TestCase):
         self.assertEqual(tap_position(click, (100, 100)), (10, 20))
         copy = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(10, 20), touch=True)
         self.assertIsNone(tap_position(copy, (100, 100)))
+
+    def test_back_button_on_every_selection_screen(self):
+        """Touch screens have no Esc: a Back button goes one screen back."""
+        resolution = (1200, 540)
+        screen = pygame.Surface(resolution)
+        menu = Menu(resolution)
+
+        def tap_back():
+            menu.launch_menu(screen, resolution, [])  # lays the screen out
+            x, y = menu.back_rect.center
+            menu.launch_menu(screen, resolution, [
+                pygame.event.Event(pygame.FINGERDOWN, finger_id=1, x=x / resolution[0], y=y / resolution[1])])
+
+        menu.state = State.ENEMY_SELECT
+        tap_back()
+        self.assertEqual(menu.state, State.ALLY_SELECT)
+        tap_back()
+        self.assertEqual(menu.state, State.CHARACTER_SELECT)
+        tap_back()
+        self.assertEqual(menu.state, State.START)
+        self.assertFalse(menu.isPlaying)
+        # From an online choice too, which it cancels
+        menu.open_online()
+        tap_back()
+        self.assertEqual(menu.state, State.START)
+        self.assertFalse(menu.online)
+
+    def test_the_back_button_does_not_cover_the_cards(self):
+        for resolution in ((1200, 540), (800, 480), (2400, 1080)):
+            menu = Menu(resolution)
+            for state in (State.CHARACTER_SELECT, State.ALLY_SELECT, State.ENEMY_SELECT):
+                menu.state = state
+                menu.launch_menu(pygame.Surface(resolution), resolution, [])
+                with self.subTest(resolution=resolution, state=state):
+                    self.assertTrue(pygame.Rect((0, 0), resolution).contains(menu.back_rect))
+                    self.assertEqual(menu.back_rect.collidelist(list(menu.character_rects.values())), -1)
+                    if menu.continue_rect is not None:
+                        self.assertFalse(menu.back_rect.colliderect(menu.continue_rect))
 
     def test_main_menu_shows_the_version_the_android_app_gets(self):
         import configparser

@@ -86,9 +86,10 @@ WORLD_MUSIC = "legacy-of-goku-II/The Legacy Of Goku 2 OST - The Imperfect Cell"
 
 
 DEFAULT_ENEMY = "gohan"
-# Most enemies and allies a fight can have
-MAX_ENEMIES = 3
-MAX_ALLIES = 2
+# Most fighters a side can have: up to 4 against 4 (the player and 3
+# allies against 4 enemies), 8 on the field
+MAX_ENEMIES = 4
+MAX_ALLIES = 3
 ALLY_LINES = ["I've got your back!", "Let's beat them together!"]
 
 
@@ -225,17 +226,41 @@ class MapManager:
         for npc in npcs:
             npc.load_points(game_map)
             npc.teleport_spawn()
-        self._place_allies([npc for npc in npcs if npc.team == HEROES], collisions)
+        enemies = [npc for npc in npcs if npc.team != HEROES]
+        self._free_spawns(enemies, collisions)
+        self._place_allies([npc for npc in npcs if npc.team == HEROES], collisions, enemies)
         self.maps[name] = game_map
         return game_map
+
+    # Nudges tried, nearest first, when a spawn point is not free ground
+    SPAWN_NUDGES = sorted(((dx, dy) for dx in range(-32, 33, 4) for dy in range(-32, 33, 4)),
+                          key=lambda offset: offset[0] ** 2 + offset[1] ** 2)
+
+    def _free_spawns(self, fighters, collisions):
+        """Fighters standing in a wall (some of the map's patrol points are on
+        the cliff edge) or in someone else move to the nearest free ground."""
+        taken = [self.character.body]
+        for fighter in fighters:
+            start = list(fighter.position)
+            for dx, dy in self.SPAWN_NUDGES:
+                fighter.position = [start[0] + dx, start[1] + dy]
+                fighter.update()
+                if fighter.feet.collidelist(collisions) == -1 and fighter.body.collidelist(taken) == -1:
+                    break
+            else:
+                fighter.position = start
+                fighter.update()
+            fighter.save_location()
+            taken.append(fighter.body)
 
     # Where allies appear, around the player's feet
     ALLY_SPOTS = ((-26, 8), (26, 8), (0, 22), (-26, -12), (26, -12), (0, -24))
 
-    def _place_allies(self, allies, collisions):
-        """Next to the player, on free ground (no wall, nobody else)."""
+    def _place_allies(self, allies, collisions, others=()):
+        """Next to the player, on free ground (no wall, nobody else: the
+        player, the other allies and others, the enemies already placed)."""
         self.character.update()  # its rect follows its position from now on
-        taken = [self.character.body]
+        taken = [self.character.body, *(other.body for other in others)]
         for ally in allies:
             for dx, dy in self.ALLY_SPOTS:
                 feet_x = self.character.feet.centerx + dx

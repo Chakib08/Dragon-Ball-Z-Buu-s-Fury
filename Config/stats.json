@@ -1,0 +1,9 @@
+{
+  "characters": {
+    "broly": {"power": 1.3, "hp": 1.3, "defense": 1.15, "speed": 0.9},
+    "goku": {"power": 1.15, "hp": 1.1, "defense": 1.05, "speed": 1.05},
+    "vegeta": {"power": 1.12, "hp": 1.05, "defense": 1.05, "speed": 1.05},
+    "gohan": {"power": 1.0, "hp": 1.0, "defense": 1.0, "speed": 1.0},
+    "trunks": {"power": 0.95, "hp": 0.95, "defense": 1.0, "speed": 1.1}
+  }
+}

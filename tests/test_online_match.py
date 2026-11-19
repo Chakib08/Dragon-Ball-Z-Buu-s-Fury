@@ -12,6 +12,7 @@ import online
 from online import OnlineMatch, RemoteFighter
 from saiyan import Saiyan
 from utils.config import Config
+from average_stats import use_average_stats
 
 
 class FakeNet:
@@ -49,6 +50,7 @@ class OnlineMatchTests(unittest.TestCase):
         pygame.display.set_mode((1200, 540))
 
     def setUp(self):
+        use_average_stats(self)
         self.net_a, self.net_b = FakeNet(), FakeNet()
         self.net_a.peer, self.net_b.peer = self.net_b, self.net_a
         self.game_a, self.game_b = fake_game("goku"), fake_game("vegeta")

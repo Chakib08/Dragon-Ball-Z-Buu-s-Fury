@@ -20,6 +20,7 @@ from npc import ENEMIES, HEROES, NPC, SaiyanNPC
 from quit_prompt import QuitPrompt
 from saiyan import Saiyan
 from utils.config import Config
+from average_stats import use_average_stats
 
 
 def key_down(code):
@@ -44,6 +45,7 @@ class TeamFightTests(unittest.TestCase):
         pygame.display.set_mode((1200, 540))
 
     def setUp(self):
+        use_average_stats(self)
         self.clock = Clock(self)
         self.player = Saiyan(100, 100, False, "goku")
         self.player.update()
@@ -98,11 +100,14 @@ class TeamFightTests(unittest.TestCase):
         self.assertEqual(ally.hp, ally.max_hp)
         self.assertNotIn(ally, self.combat._targets)
 
-    def test_allies_are_stronger_than_a_normal_enemys_punch(self):
+    def test_allies_are_as_strong_as_a_normal_enemy(self):
         ally = SaiyanNPC(0, 0, False, "gohan", 0, [], team=HEROES)
-        enemy = SaiyanNPC(0, 0, False, "gohan", 0, [])
+        enemy = SaiyanNPC(0, 0, False, "gohan", 0, [], difficulty="normal")
         self.assertEqual(ally.difficulty.name, "ally")
-        self.assertGreater(ally.attack_damage, enemy.attack_damage)
+        for stat in ("max_hp", "attack_damage", "damage_taken", "REACTION_MS", "attack_cooldown_ms",
+                     "WALK_SPEED", "technique_damage", "technique_every_ms", "TRANSFORM_AT_HP"):
+            with self.subTest(stat=stat):
+                self.assertEqual(getattr(ally, stat), getattr(enemy, stat))
 
     # ---- Several enemies --------------------------------------------------------------
     def test_several_enemies_all_fight_and_all_can_be_hit(self):
@@ -315,6 +320,73 @@ class WorldTeamsTests(unittest.TestCase):
             self.assertEqual(ally.feet.collidelist(manager.get_collisions()), -1)
             self.assertFalse(ally.body.colliderect(player.body))
         self.assertFalse(allies[0].body.colliderect(allies[1].body))
+
+    def test_four_against_four_fits_on_the_map(self):
+        player = Saiyan(159, 289, False, "vegeta")
+        manager = MapManager(self.screen, player, enemies=("goku", "gohan", "trunks", "broly"),
+                             allies=("goku", "gohan", "trunks"))
+        npcs = manager.get_map().npcs
+        enemies = [npc for npc in npcs if npc.team == ENEMIES]
+        allies = [npc for npc in npcs if npc.team == HEROES]
+        self.assertEqual((len(allies) + 1, len(enemies)), (4, 4))
+        everyone = [player, *npcs]
+        # Nobody starts inside a wall or inside someone else
+        for fighter in everyone:
+            self.assertEqual(fighter.feet.collidelist(manager.get_collisions()), -1, fighter.character_name)
+        for index, fighter in enumerate(everyone):
+            for other in everyone[index + 1:]:
+                self.assertFalse(fighter.body.colliderect(other.body),
+                                 (fighter.character_name, fighter.team, other.character_name, other.team))
+
+    def test_crowded_health_bars_do_not_cover_each_other(self):
+        player = Saiyan(159, 289, False, "goku")
+        manager = MapManager(self.screen, player, enemies=("goku", "gohan", "trunks", "broly"),
+                             allies=("vegeta", "gohan", "trunks"))
+        npcs = manager.get_map().npcs
+        for index, npc in enumerate(npcs):  # all in one spot
+            npc.position = [200 + index * 3, 300]
+            npc.update()
+        bars = manager.combat.draw_npc_bars(self.screen, npcs, lambda rect: rect)
+        self.assertEqual(len(bars), len(npcs))
+        for index, bar in enumerate(bars):
+            self.assertEqual(bar.collidelist(bars[index + 1:]), -1)
+
+    def test_team_panels_list_allies_left_and_enemies_right(self):
+        player = Saiyan(159, 289, False, "goku")
+        manager = MapManager(self.screen, player, enemies=("goku", "gohan", "trunks", "broly"),
+                             allies=("vegeta", "gohan", "trunks"))
+        combat = manager.combat
+        combat.update(manager.get_map().npcs, manager.get_collisions())
+        self.assertEqual([a.character_name for a in combat.allies], ["vegeta", "gohan", "trunks"])
+        self.assertEqual([e.character_name for e in combat.enemies], ["goku", "gohan", "trunks", "broly"])
+        rows = combat.draw_team_panels(self.screen)
+        width = self.screen.get_width()
+        ally_rows, enemy_rows = rows[:3], rows[3:]
+        self.assertTrue(all(row.right < width / 3 for row in ally_rows))
+        self.assertTrue(all(row.left > width * 2 / 3 for row in enemy_rows))
+        # Under the player's bars and the quit button, above the touch controls
+        quit_bottom = QuitPrompt(self.screen.get_size()).button_center[1] + 22
+        self.assertTrue(all(row.top > quit_bottom for row in enemy_rows))
+        self.assertTrue(all(row.top >= combat.ALLY_PANEL_TOP for row in ally_rows))
+        self.assertTrue(all(row.bottom < self.screen.get_height() / 2 for row in rows))
+        for index, row in enumerate(rows):
+            self.assertEqual(row.collidelist(rows[index + 1:]), -1)
+
+    def test_a_knocked_out_fighter_stays_listed_greyed_out(self):
+        player = Saiyan(159, 289, False, "goku")
+        manager = MapManager(self.screen, player, enemies=("broly",), allies=("gohan",))
+        combat = manager.combat
+        combat.update(manager.get_map().npcs, manager.get_collisions())
+        broly = combat.enemies[0]
+        rendered = []
+        real = combat._label
+        combat._label = lambda text, font, color=(255, 255, 255): rendered.append((text, color)) or real(text, font, color)
+        combat.draw_team_panels(self.screen)
+        self.assertIn(("Broly", (235, 80, 70)), rendered)  # Hard: red
+        broly.hp = 0
+        rendered.clear()
+        combat.draw_team_panels(self.screen)
+        self.assertIn(("Broly KO", combat.KO_COLOR), rendered)
 
     def test_team_sizes_are_capped(self):
         player = Saiyan(159, 289, False, "goku")

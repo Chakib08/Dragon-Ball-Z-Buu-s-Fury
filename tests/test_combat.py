@@ -13,6 +13,7 @@ from saiyan import Saiyan
 from npc import NPC, SaiyanNPC
 from movement import resolve_movement_collisions, solid_bodies
 from utils.config import Config
+from average_stats import use_average_stats
 
 
 class CombatTests(unittest.TestCase):
@@ -28,6 +29,7 @@ class CombatTests(unittest.TestCase):
         pygame.quit()
 
     def setUp(self):
+        use_average_stats(self)
         self.player = Saiyan(100, 100, False, "goku")
         self.player.update()
         self.player.facing = "Right"
@@ -827,24 +829,41 @@ class CombatTests(unittest.TestCase):
         screen = pygame.Surface((200, 200))
         self.enemy.position = [100, 100]
         self.enemy.update()
-        bar_y = self.enemy.rect.top - self.combat.NPC_BAR_GAP - self.combat.NPC_BAR_HEIGHT // 2
-        left = (self.enemy.rect.centerx - 20, bar_y)
-        right = (self.enemy.rect.centerx + 20, bar_y)
-        green, empty = self.combat.HP_COLOR, (35, 35, 42)
+        combat = self.combat
+        bar_y = self.enemy.rect.top - combat.OVERHEAD_BAR_GAP - combat.OVERHEAD_BAR_HEIGHT // 2 - 1
+        half = combat.OVERHEAD_BAR_MIN_WIDTH // 2 - 3
+        left = (self.enemy.rect.centerx - half, bar_y)
+        right = (self.enemy.rect.centerx + half, bar_y)
+        red, empty = combat.ENEMY_COLOR, (25, 25, 32)
 
-        self.combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
-        self.assertEqual(screen.get_at(left)[:3], green)
-        self.assertEqual(screen.get_at(right)[:3], green)
+        combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
+        self.assertEqual(screen.get_at(left)[:3], red)
+        self.assertEqual(screen.get_at(right)[:3], red)
 
         self.enemy.hp = self.enemy.max_hp / 2
-        self.combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
-        self.assertEqual(screen.get_at(left)[:3], green)
+        combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
+        self.assertEqual(screen.get_at(left)[:3], red)
         self.assertEqual(screen.get_at(right)[:3], empty)
 
         screen.fill((0, 0, 0))
         self.enemy.faint_finished = True
-        self.combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
+        combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
         self.assertEqual(screen.get_at(left)[:3], (0, 0, 0))
+
+    def test_overhead_bars_are_thin_and_coloured_by_side(self):
+        from npc import HEROES
+        ally = SaiyanNPC(0, 0, False, "trunks", 0, [], team=HEROES)
+        self.combat.update([ally, self.enemy], [])
+        screen = pygame.Surface((400, 300))
+        for fighter, colour in ((ally, self.combat.ALLY_COLOR), (self.enemy, self.combat.ENEMY_COLOR)):
+            fighter.position = [150, 150]
+            fighter.update()
+            screen.fill((0, 0, 0))
+            bars = self.combat.draw_npc_bars(screen, [fighter], lambda rect: rect)
+            self.assertEqual(len(bars), 1)
+            self.assertLessEqual(bars[0].height, 6)
+            self.assertLessEqual(bars[0].width, self.combat.OVERHEAD_BAR_MAX_WIDTH)
+            self.assertEqual(screen.get_at(bars[0].center)[:3], colour)
 
     def test_each_strike_is_one_move_of_the_combo_and_they_cycle(self):
         for name, expected_moves in (("goku", 3), ("gohan", 4), ("vegeta", 4)):

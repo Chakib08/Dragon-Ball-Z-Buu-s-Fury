@@ -87,12 +87,16 @@ class NPC(Character):
             self.face_idle()
 
     def apply_difficulty(self, difficulty):
-        """Scale this enemy's strength (see difficulty.py)."""
+        """Scale this enemy's strength (see difficulty.py); speed is already
+        the character's own (Character), the power applies to every hit
+        (CombatSystem)."""
         self.difficulty = difficulty
-        self.max_hp = round(self.MAX_HP * difficulty.hp)
+        # On top of the character's own stats (see stats.py)
+        stats = self.stats
+        self.max_hp = round(self.MAX_HP * stats.hp * difficulty.hp)
         self.hp = self.max_hp
         self.attack_damage = self.ATTACK_DAMAGE * difficulty.damage
-        self.damage_taken = self.DAMAGE_TAKEN * difficulty.damage_taken
+        self.damage_taken = self.DAMAGE_TAKEN * difficulty.damage_taken / stats.defense
         self.REACTION_MS = difficulty.reaction_ms
         self.attack_cooldown_ms = self.ATTACK_COOLDOWN_MS * difficulty.attack_cooldown
         self.GUARD_AFTER_HITS = difficulty.guard_after_hits

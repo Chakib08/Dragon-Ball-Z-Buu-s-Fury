@@ -67,6 +67,7 @@ class Menu:
         # Card the keyboard is on, in the ally and enemy screens
         self.focus = 0
         self.continue_rect = None
+        self.back_rect = None
         self.button_font = pygame.font.Font(None, 40)
         self._version_label = None
         self.enemy_difficulties = {name: enemy_profile(name).difficulty for name in self.character_names}
@@ -119,10 +120,13 @@ class Menu:
                     elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
                         chosen = self.selected_character
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = State.START
-                        self.online = False
+                        self.go_back()
                 elif self._is_tap(event, resolution):
-                    chosen = self._card_at(self._event_position(event, resolution))
+                    position = self._event_position(event, resolution)
+                    if self.back_rect is not None and self.back_rect.collidepoint(position):
+                        self.go_back()
+                        break
+                    chosen = self._card_at(position)
                 if chosen is not None:
                     self._choose_character(chosen)
                     break
@@ -145,17 +149,20 @@ class Menu:
                             self._toggle(self.character_names[self.focus], True)
                         self._continue(choosing_enemies)
                     elif event.key == pygame.K_ESCAPE:
-                        self.state = State.ALLY_SELECT if choosing_enemies else State.CHARACTER_SELECT
+                        self.go_back()
                 elif self._is_tap(event, resolution):
                     position = self._event_position(event, resolution)
-                    if self.continue_rect is not None and self.continue_rect.collidepoint(position):
+                    if self.back_rect is not None and self.back_rect.collidepoint(position):
+                        self.go_back()
+                    elif self.continue_rect is not None and self.continue_rect.collidepoint(position):
                         self._continue(choosing_enemies)
                     else:
                         name = self._card_at(position)
                         if name is not None:
                             self.focus = self.character_names.index(name)
                             self._toggle(name, choosing_enemies)
-                if self.isPlaying or self.state not in (State.ALLY_SELECT, State.ENEMY_SELECT):
+                # The screen changed (Back, Next, Fight!): the rest is not for it
+                if self.isPlaying or self.state != (State.ENEMY_SELECT if choosing_enemies else State.ALLY_SELECT):
                     break
             return
 
@@ -236,6 +243,30 @@ class Menu:
         pygame.draw.rect(screen, (255, 220, 90), box, 2, border_radius=6)
         screen.blit(text, rect)
         return box
+
+    def go_back(self):
+        """One screen back (Esc or the Back button): opponents -> allies ->
+        character -> main menu."""
+        if self.state == State.ENEMY_SELECT:
+            self.state = State.ALLY_SELECT
+        elif self.state == State.ALLY_SELECT:
+            self.state = State.CHARACTER_SELECT
+        else:
+            self.state = State.START
+            self.online = False
+
+    def _draw_back_button(self, screen, resolution):
+        """Top-left: the way back on a touch screen (there is no Esc key)."""
+        text = self.button_font.render("< Back", True, (255, 255, 255))
+        margin = max(10, int(resolution[1] * 0.025))
+        rect = text.get_rect(topleft=(margin + 14, margin + 8)).inflate(28, 16)
+        rect.topleft = (margin, margin)
+        shade = pygame.Surface(rect.size, pygame.SRCALPHA)
+        shade.fill((15, 18, 30, 200))
+        screen.blit(shade, rect.topleft)
+        pygame.draw.rect(screen, (245, 245, 245), rect, 2, border_radius=10)
+        screen.blit(text, text.get_rect(center=rect.center))
+        self.back_rect = rect
 
     @property
     def selected_enemy(self):
@@ -386,6 +417,7 @@ class Menu:
                              self.continue_rect, border_radius=10)
             pygame.draw.rect(screen, (245, 245, 245), self.continue_rect, 2, border_radius=10)
             screen.blit(text, text.get_rect(center=self.continue_rect.center))
+        self._draw_back_button(screen, resolution)
         instructions = self.character_font.render(hint, True, (255, 255, 255))
         hint_y = resolution[1] * (0.85 if picking is None else 0.93)
         screen.blit(instructions, instructions.get_rect(center=(resolution[0] / 2, hint_y)))

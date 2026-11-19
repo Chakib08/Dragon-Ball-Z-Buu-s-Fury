@@ -333,6 +333,10 @@ class CombatSystem:
         )
 
     def _damage_multiplier(self, attacker):
+        """The attacker's power (Config/stats.json), times its Super Saiyan bonus."""
+        return getattr(attacker, "power", 1.0) * self._super_multiplier(attacker)
+
+    def _super_multiplier(self, attacker):
         if not attacker.powered_up:
             return 1
         if attacker is self.player:
@@ -818,10 +822,97 @@ class CombatSystem:
             color = (255, 230, 120) if self.player.ki >= technique.cost else (150, 150, 160)
             label = self._label(f"{technique.name} ({technique.cost} KI)", self.name_font, color)
             screen.blit(label, (62, 88))
+        self.draw_team_panels(screen)
 
-    NPC_BAR_MIN_WIDTH = 120
-    NPC_BAR_HEIGHT = 14
-    NPC_BAR_GAP = 8
+    # ---- Team panels (top corners) ------------------------------------------------
+    # One compact row per fighter: the allies under the player's bars (left),
+    # the enemies (or the online opponent) on the right, under the quit button.
+    # The bottom corners stay free for the thumbs (stick and buttons).
+    PANEL_ROW_WIDTH = 180
+    PANEL_NAME_WIDTH = 66
+    PANEL_BAR_HEIGHT = 9
+    PANEL_ROW_GAP = 4
+    PANEL_MARGIN = 20
+    ALLY_PANEL_TOP = 112
+    KO_COLOR = (125, 125, 135)
+    PANEL_PADDING = 4
+
+    def _plate(self, width, height):
+        key = ("plate", width, height)
+        plate = self._labels.get(key)
+        if plate is None:
+            plate = pygame.Surface((width, height), pygame.SRCALPHA)
+            pygame.draw.rect(plate, (12, 14, 24, 165), plate.get_rect(), border_radius=6)
+            self._labels[key] = plate
+        return plate
+
+    @property
+    def allies(self):
+        return self._heroes[1:]
+
+    @property
+    def enemies(self):
+        return list(self._targets)
+
+    def _right_panel_top(self):
+        """Just under the quit button (see quit_prompt.QuitPrompt)."""
+        radius = max(22, int(min(self.screen_size) * 0.034))
+        return radius // 2 + radius * 2 + 12
+
+    def draw_team_panels(self, screen):
+        """The allies' rows (left) and the enemies' (right); returns the
+        rectangles of the rows drawn, allies first."""
+        rows = []
+        y = self.ALLY_PANEL_TOP
+        for ally in self.allies:
+            rows.append(self._draw_panel_row(screen, ally, 62, y, ally=True))
+            y = rows[-1].bottom + self.PANEL_ROW_GAP + 2 * self.PANEL_PADDING
+        x = self.screen_size[0] - self.PANEL_MARGIN - self.PANEL_ROW_WIDTH
+        y = self._right_panel_top()
+        for enemy in self.enemies:
+            rows.append(self._draw_panel_row(screen, enemy, x, y, ally=False))
+            y = rows[-1].bottom + self.PANEL_ROW_GAP + 2 * self.PANEL_PADDING
+        return rows
+
+    def _draw_panel_row(self, screen, fighter, x, y, ally):
+        """One line: the name, then a small HP bar (gold frame while Super
+        Saiyan; greyed out with "KO" once knocked out)."""
+        knocked_out = fighter.hp <= 0
+        height = max(self.name_font.get_height(), self.PANEL_BAR_HEIGHT)
+        # A dark plate behind the row, so it reads over grass, water or sky
+        plate = self._plate(self.PANEL_ROW_WIDTH + 2 * self.PANEL_PADDING, height + 2 * self.PANEL_PADDING)
+        screen.blit(plate, (x - self.PANEL_PADDING, y - self.PANEL_PADDING))
+        name = getattr(fighter, "bar_label", None) or fighter.character_name.capitalize()
+        if knocked_out:
+            color = self.KO_COLOR
+            name += " KO"
+        elif ally:
+            color = self.ALLY_COLOR
+        else:
+            # An enemy's name in the colour of its difficulty (Hard: red)
+            difficulty = getattr(fighter, "difficulty", None)
+            color = tuple(difficulty.color) if difficulty is not None else (255, 255, 255)
+        label = self._label(name, self.name_font, color)
+        screen.blit(label, (x, y + (height - label.get_height()) // 2))
+        bar_left = x + max(self.PANEL_NAME_WIDTH, label.get_width() + 6)
+        bar = pygame.Rect(bar_left, y + (height - self.PANEL_BAR_HEIGHT) // 2,
+                          max(20, x + self.PANEL_ROW_WIDTH - bar_left), self.PANEL_BAR_HEIGHT)
+        pygame.draw.rect(screen, (35, 35, 42), bar)
+        fraction = max(0, min(1, fighter.hp / fighter.max_hp)) if fighter.max_hp else 0
+        if fraction > 0:
+            pygame.draw.rect(screen, self.HP_COLOR, (bar.x, bar.y, round(bar.width * fraction), bar.height))
+        frame = self.SUPER_COLOR if fighter.powered_up and not knocked_out else self.FRAME_COLOR
+        pygame.draw.rect(screen, frame, bar, 1)
+        return pygame.Rect(x, y, self.PANEL_ROW_WIDTH, height)
+
+    # ---- Bars over the fighters ---------------------------------------------------
+    # Thin and without names (the panels have them): who is who in a crowd,
+    # and how hurt
+    OVERHEAD_BAR_HEIGHT = 5
+    OVERHEAD_BAR_GAP = 4
+    OVERHEAD_BAR_MIN_WIDTH = 28
+    OVERHEAD_BAR_MAX_WIDTH = 60
+    ENEMY_COLOR = (225, 70, 60)
     SUPER_COLOR = (245, 205, 60)
     # Health bars (the player's and the enemies')
     HP_COLOR = (70, 200, 90)
@@ -836,32 +927,38 @@ class CombatSystem:
         return label
 
     def draw_npc_bars(self, screen, npcs, to_screen_rect):
-        """Draw a health bar above each NPC.
+        """A thin bar over each NPC (and online opponent): blue for allies,
+        red for enemies, gold-framed while Super Saiyan. Returns the bars.
 
         to_screen_rect converts a rect in map coordinates to screen coordinates.
         The bar stays (empty) during the knock-out animation, then disappears.
         """
-        for npc in npcs:
-            if npc.faint_finished:
-                continue
-            on_screen = pygame.Rect(to_screen_rect(npc.rect))
-            width = max(self.NPC_BAR_MIN_WIDTH, on_screen.width)
-            bar = pygame.Rect(0, 0, width, self.NPC_BAR_HEIGHT)
-            bar.midbottom = (on_screen.centerx, on_screen.top - self.NPC_BAR_GAP)
+        placed = []
+        shown = [(npc, pygame.Rect(to_screen_rect(npc.rect))) for npc in npcs if not npc.faint_finished]
+        # The lowest on screen first: theirs stay right above them, and with
+        # several fighters close together the others move aside or up
+        # instead of covering each other
+        shown.sort(key=lambda item: item[1].top, reverse=True)
+        for npc, on_screen in shown:
+            width = max(self.OVERHEAD_BAR_MIN_WIDTH, min(self.OVERHEAD_BAR_MAX_WIDTH, int(on_screen.width * 0.6)))
+            start = pygame.Rect(0, 0, width, self.OVERHEAD_BAR_HEIGHT)
+            start.midbottom = (on_screen.centerx, on_screen.top - self.OVERHEAD_BAR_GAP)
+            spots = ((column * (width + 3), -row * (self.OVERHEAD_BAR_HEIGHT + 2))
+                     for row in range(len(shown) + 1) for column in (0, -1, 1))
+            for dx, dy in spots:
+                bar = start.move(dx, dy)
+                if bar.collidelist(placed) == -1:
+                    break
+            placed.append(bar)
+            ally = npc in self._heroes
             fraction = max(0, min(1, npc.hp / npc.max_hp)) if npc.max_hp else 0
-            pygame.draw.rect(screen, (35, 35, 42), bar)
-            pygame.draw.rect(
-                screen,
-                self.HP_COLOR,
-                (bar.x, bar.y, round(bar.width * fraction), bar.height),
-            )
-            # Gold frame while the NPC is a Super Saiyan; allies in blue
-            ally = getattr(npc, "team", None) == HEROES
-            frame_color = self.SUPER_COLOR if npc.powered_up else (self.ALLY_COLOR if ally else self.FRAME_COLOR)
-            pygame.draw.rect(screen, frame_color, bar, 2)
-            label = getattr(npc, "bar_label", None) or npc.character_name.capitalize()
-            name = self._label(label, self.name_font, self.ALLY_COLOR if ally else (255, 255, 255))
-            screen.blit(name, name.get_rect(midbottom=(bar.centerx, bar.top - 2)))
+            pygame.draw.rect(screen, (25, 25, 32), bar)
+            if fraction > 0:
+                pygame.draw.rect(screen, self.ALLY_COLOR if ally else self.ENEMY_COLOR,
+                                 (bar.x, bar.y, max(1, round(bar.width * fraction)), bar.height))
+            if npc.powered_up:
+                pygame.draw.rect(screen, self.SUPER_COLOR, bar.inflate(2, 2), 1)
+        return placed
 
     def _draw_bar(self, screen, label, value, maximum, color, y):
         x = 20

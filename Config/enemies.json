@@ -63,15 +63,15 @@
         255
       ],
       "hp": 1.0,
-      "damage": 4.0,
+      "damage": 1.0,
       "damage_taken": 1.0,
-      "reaction_ms": 150,
+      "reaction_ms": 200,
       "attack_cooldown": 1.0,
       "guard_after_hits": 2,
-      "speed": 1.1,
+      "speed": 1.0,
       "power_up_at": 0.5,
-      "technique_every_ms": 4500,
-      "technique_damage": 0.4
+      "technique_every_ms": 5000,
+      "technique_damage": 0.2
     }
   },
   "enemies": {

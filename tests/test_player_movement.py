@@ -10,9 +10,13 @@ import pygame
 from character import Character
 from map import MapManager
 from utils.config import Config
+from average_stats import use_average_stats
 
 
 class PlayerMovementTests(unittest.TestCase):
+    def setUp(self):
+        use_average_stats(self)
+
     @classmethod
     def setUpClass(cls):
         pygame.init()

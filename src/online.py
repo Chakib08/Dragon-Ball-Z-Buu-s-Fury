@@ -141,7 +141,7 @@ class OnlineMatch:
 
         x, y, facing = self.SPAWNS[slot]
         self.player = Saiyan(x, y, False, game.menu.selected_character)
-        self.player.damage_taken = self.DAMAGE_TAKEN
+        self.player.damage_taken = self.DAMAGE_TAKEN / self.player.stats.defense
         self.player.facing = facing
         self.player.face_idle()
         character = opponent.get("character", "goku")
