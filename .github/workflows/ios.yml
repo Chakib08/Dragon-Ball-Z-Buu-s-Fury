@@ -91,9 +91,17 @@ jobs:
           python -m pip install --upgrade pip
           # kivy-ios checks that Cython is there (the version its recipes use)
           python -m pip install "kivy-ios==${KIVY_IOS_VERSION}" "Cython==3.0.11"
+          # Our pygame recipe goes among kivy-ios's own: `toolchain create`
+          # only links the libraries of those (not of --add-custom-recipe ones)
+          recipes=$(python -c "import kivy_ios, os; print(os.path.join(os.path.dirname(kivy_ios.__file__), 'recipes'))")
+          rm -rf "$recipes/pygame"
+          cp -R ios/recipes/pygame "$recipes/pygame"
 
-      - name: Cache the iOS builds of Python, SDL2 and pygame
-        uses: actions/cache@v4
+      # Restored and saved separately: a later step failing must not throw
+      # away an hour of building Python and SDL2
+      - name: Restore the iOS builds of Python, SDL2 and pygame
+        id: cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ios-build/build
@@ -105,10 +113,19 @@ jobs:
         run: |
           # On failure, the end of the output as an annotation (run summary page)
           report() { tail -150 "$1"; python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail "$1" "$2"; exit 1; }
-          toolchain build python3 pygame --add-custom-recipe "$GITHUB_WORKSPACE/ios/recipes/pygame" \
-            > toolchain.log 2>&1 || report toolchain.log "kivy-ios build of Python, SDL2 or pygame failed"
+          toolchain build python3 pygame > toolchain.log 2>&1 || report toolchain.log "kivy-ios build of Python, SDL2 or pygame failed"
           grep -E "^\[INFO\].*(Build|Install|Biglink)" toolchain.log | tail -20 || true
+          ls dist/xcframework
           toolchain pip install --no-deps pytmx==3.32 pyscroll==2.31 > pip.log 2>&1 || report pip.log "toolchain pip failed"
+
+      - name: Save the iOS builds of Python, SDL2 and pygame
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ios-build/build
+            ios-build/dist
+          key: kivy-ios-${{ env.KIVY_IOS_VERSION }}-${{ hashFiles('ios/recipes/**') }}
 
       - name: Create the Xcode project
         working-directory: ios-build
@@ -116,6 +133,10 @@ jobs:
           python "$GITHUB_WORKSPACE/ios/stage_app.py" app
           toolchain create "$APP_NAME" app > create.log 2>&1 \
             || { cat create.log; python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail create.log "toolchain create failed"; exit 1; }
+          # pygame must be linked into the app, or nothing imports it
+          grep -q "libpygame.xcframework" "$PROJECT-ios/$PROJECT.xcodeproj/project.pbxproj" \
+            || { grep -i "xcframework" create.log | tail -30 > create-frameworks.log;
+                 python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail create-frameworks.log "pygame is not in the Xcode project"; exit 1; }
           plist="$PROJECT-ios/$PROJECT-Info.plist"
           # Landscape only, named "Trunks Hope" on the home screen
           for key in UISupportedInterfaceOrientations "UISupportedInterfaceOrientations~ipad"; do
@@ -135,6 +156,7 @@ jobs:
         run: |
           xcodebuild -project "$PROJECT-ios/$PROJECT.xcodeproj" -scheme "$PROJECT" \
             -sdk iphonesimulator -configuration Release -derivedDataPath derived-simulator \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO IPHONEOS_DEPLOYMENT_TARGET=12.0 \
             CODE_SIGNING_ALLOWED=NO build > xcode-simulator.log 2>&1 \
             || { grep -E "error:|Error|failed" xcode-simulator.log | tail -60 > xcode-errors.log; tail -40 xcode-simulator.log >> xcode-errors.log;
                  python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail xcode-errors.log "Xcode build (simulator) failed"; exit 1; }
@@ -146,6 +168,7 @@ jobs:
         run: |
           xcodebuild -project "$PROJECT-ios/$PROJECT.xcodeproj" -scheme "$PROJECT" \
             -sdk iphoneos -configuration Release -derivedDataPath derived-device \
+            ARCHS=arm64 IPHONEOS_DEPLOYMENT_TARGET=12.0 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build > xcode-device.log 2>&1 \
             || { grep -E "error:|Error|failed" xcode-device.log | tail -60 > xcode-errors.log; tail -40 xcode-device.log >> xcode-errors.log;
                  python "$GITHUB_WORKSPACE/tools/ci_annotate.py" tail xcode-errors.log "Xcode build (device) failed"; exit 1; }

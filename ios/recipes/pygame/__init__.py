@@ -1,6 +1,10 @@
 """kivy-ios recipe for pygame (kivy-ios has none).
 
-    toolchain build pygame --add-custom-recipe <this folder>
+    copied into kivy-ios's recipes folder (kivy_ios/recipes/pygame), then
+    toolchain build python3 pygame
+
+(As a kivy-ios recipe of its own: `toolchain create` only links the
+libraries of those, not of recipes given with --add-custom-recipe.)
 
 Built like kivy-ios builds Pillow: pygame's own setup.py compiles its C
 modules (one per file, as on Android), kivy-ios's liblink turns each into
