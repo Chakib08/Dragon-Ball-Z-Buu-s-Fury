@@ -5,6 +5,7 @@ from enum import Enum
 from pathmanager import PathManager
 from animation import Animation
 from difficulty import enemy_profile
+from taps import tap_position
 from version import __version__
 from map import MAX_ALLIES, MAX_ENEMIES
 
@@ -426,9 +427,8 @@ class Menu:
 
     @staticmethod
     def _is_tap(event, resolution):
-        return (
-            event.type == pygame.MOUSEBUTTONDOWN and event.button == 1
-        ) or event.type == pygame.FINGERDOWN
+        # A touch counts once, not again as its mouse copy (see taps.py)
+        return tap_position(event, resolution) is not None
 
     @staticmethod
     def _event_position(event, resolution):

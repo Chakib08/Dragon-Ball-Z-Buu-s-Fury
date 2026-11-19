@@ -317,6 +317,52 @@ class TouchControlsTests(unittest.TestCase):
         self.assertEqual(menu.selected_character, "vegeta")
         self.assertEqual(menu.selected_allies, ["gohan"])
 
+    def android_tap(self, menu, screen, resolution, rect, copy_next_frame=False):
+        """A touch as Android reports it: FINGERDOWN, plus a MOUSEBUTTONDOWN
+        copy (touch=True) in the same frame, or in the next one."""
+        x, y = rect.center
+        finger = pygame.event.Event(pygame.FINGERDOWN, finger_id=1, x=x / resolution[0], y=y / resolution[1])
+        copy = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(int(x), int(y)), touch=True)
+        menu.launch_menu(screen, resolution, [])  # lays the screen out
+        if copy_next_frame:
+            menu.launch_menu(screen, resolution, [finger])
+            menu.launch_menu(screen, resolution, [copy])
+        else:
+            menu.launch_menu(screen, resolution, [finger, copy])
+
+    def test_android_touches_pick_allies_and_opponents_once(self):
+        for copy_next_frame in (False, True):
+            with self.subTest(copy_next_frame=copy_next_frame):
+                resolution = (1200, 540)
+                screen = pygame.Surface(resolution)
+                menu = Menu(resolution)
+                menu.state = State.CHARACTER_SELECT
+                tap = lambda rect: self.android_tap(menu, screen, resolution, rect, copy_next_frame)
+                menu.launch_menu(screen, resolution, [])
+                tap(menu.character_rects["goku"])
+                self.assertEqual(menu.state, State.ALLY_SELECT)
+                self.assertEqual(menu.selected_allies, [])  # the copy did not land on a card
+                tap(menu.character_rects["vegeta"])
+                tap(menu.character_rects["trunks"])
+                self.assertEqual(menu.selected_allies, ["vegeta", "trunks"])  # picked, not undone
+                tap(menu.continue_rect)
+                # The copy did not press "Fight!" on the next screen
+                self.assertEqual(menu.state, State.ENEMY_SELECT)
+                self.assertFalse(menu.isPlaying)
+                tap(menu.character_rects["broly"])
+                self.assertEqual(menu.selected_enemies, ["gohan", "broly"])
+                tap(menu.character_rects["gohan"])
+                self.assertEqual(menu.selected_enemies, ["broly"])
+                tap(menu.continue_rect)
+                self.assertTrue(menu.isPlaying)
+
+    def test_a_plain_mouse_click_still_works(self):
+        from taps import tap_position
+        click = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(10, 20))
+        self.assertEqual(tap_position(click, (100, 100)), (10, 20))
+        copy = pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(10, 20), touch=True)
+        self.assertIsNone(tap_position(copy, (100, 100)))
+
     def test_main_menu_shows_the_version_the_android_app_gets(self):
         import configparser
         import re

@@ -1,5 +1,7 @@
 import pygame
 
+from taps import tap_position
+
 
 class ResultScreen:
     """End of a story fight: lost (the player is knocked out) or won (every
@@ -50,11 +52,7 @@ class ResultScreen:
                     return "retry"
                 if event.key in self.MENU_KEYS:
                     return "menu"
-            position = None
-            if event.type == pygame.FINGERDOWN:
-                position = (event.x * self.screen_size[0], event.y * self.screen_size[1])
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                position = event.pos
+            position = tap_position(event, self.screen_size)
             if position is not None:
                 if self.retry_rect.collidepoint(position):
                     return "retry"

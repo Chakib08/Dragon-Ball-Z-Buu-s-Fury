@@ -1,5 +1,7 @@
 import pygame
 
+from taps import tap_position
+
 
 class QuitPrompt:
     """Quit button (top-right corner) and its "Quit game?" confirmation.
@@ -73,11 +75,7 @@ class QuitPrompt:
         return surface
 
     def _tap_position(self, event):
-        if event.type == pygame.FINGERDOWN:
-            return event.x * self.screen_size[0], event.y * self.screen_size[1]
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            return event.pos
-        return None
+        return tap_position(event, self.screen_size)
 
     def _on_button(self, position):
         dx = position[0] - self.button_center[0]

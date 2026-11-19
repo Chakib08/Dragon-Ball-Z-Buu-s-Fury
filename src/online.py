@@ -15,16 +15,12 @@ from character import Character
 from map import MapManager
 from saiyan import Saiyan
 import settings as user_settings
+from taps import tap_position
 
 
 def _tap_position(event, screen_size):
-    """Where a tap or click happened, or None. Touches also produce mouse
-    clicks on Android: those are skipped so a tap counts once."""
-    if event.type == pygame.FINGERDOWN:
-        return event.x * screen_size[0], event.y * screen_size[1]
-    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1 and not getattr(event, "touch", False):
-        return event.pos
-    return None
+    """Where a tap or click happened, or None (a touch counts once, see taps.py)."""
+    return tap_position(event, screen_size)
 
 
 class RemoteFighter(Character):
