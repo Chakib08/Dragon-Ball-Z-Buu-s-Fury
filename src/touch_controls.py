@@ -138,6 +138,9 @@ class TouchControls:
     def blocking(self):
         return "block" in self.pointers.values()
 
+    # Set by the game while a controller is used (touching shows them again)
+    hidden = False
+
     def clear(self):
         self.pointers.clear()
         self.pressed_actions.clear()
@@ -364,7 +367,11 @@ class TouchControls:
     def draw(self, screen, technique_name=None, level_name=None):
         """technique_name: shown between the arrows on top of the ki button;
         level_name: between those on the transform button (None: no arrows,
-        e.g. a character with a single Super Saiyan level)."""
+        e.g. a character with a single Super Saiyan level). Nothing is drawn
+        while hidden (a game controller is in use)."""
+        if self.hidden:
+            self._hidden_arrows = ()
+            return
         base = self.stick_base
         screen.blit(base, (self.stick_center[0] - base.get_width() / 2,
                            self.stick_center[1] - base.get_height() / 2))

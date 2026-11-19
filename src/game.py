@@ -9,6 +9,7 @@ from constants import (
     C_WALK_ANIMATION_COUNT,
 )
 from dialog.dialogbox import DialogBox
+from gamepad import Gamepad
 from map import DEFAULT_ENEMY, MapManager
 from npc import HEROES
 from result_screen import ResultScreen
@@ -111,6 +112,8 @@ class Game:
         self.select_character(DEFAULT_CHARACTER)
 
         self.dialogBox = DialogBox(self.resolution)
+        # A game controller (the ROG Ally's controls, or any gamepad)
+        self.gamepad = Gamepad()
         self.touch_controls = TouchControls(self.resolution)
         self.quit_prompt = QuitPrompt(self.resolution)
         # When the attack button was last pressed (None once it was used)
@@ -187,8 +190,12 @@ class Game:
         keys = pygame.key.get_pressed()
         pressed_keys = {event.key for event in events if event.type == pygame.KEYDOWN}
 
-        # The analog stick wins over the arrow keys while it is held
+        # The analog stick wins over the controller, the controller over the
+        # arrow keys
+        gamepad = self.gamepad
         dx, dy = touch.stick_vector
+        if not (dx or dy):
+            dx, dy = gamepad.move_vector
         if not (dx or dy):
             dx = int(keys[pygame.K_RIGHT]) - int(keys[pygame.K_LEFT])
             dy = int(keys[pygame.K_DOWN]) - int(keys[pygame.K_UP])
@@ -218,9 +225,9 @@ class Game:
             self.map_manager.check_npc_collisions(self.dialogBox)
 
         character = self.character
-        guard_held = keys[pygame.K_f] or touch.blocking
+        guard_held = keys[pygame.K_f] or touch.blocking or "b" in gamepad.held
         # A charging technique goes off when its button is released
-        if combat.charging and not (keys[pygame.K_d] or touch.special_held):
+        if combat.charging and not (keys[pygame.K_d] or touch.special_held or "x" in gamepad.held):
             combat.release_charge()
         # Every hit plays the hurt animation, but acting cancels it: the
         # player is never stuck in a flinch
@@ -247,7 +254,7 @@ class Game:
         character.stop_block()
 
         if dx or dy:
-            running = keys[pygame.K_SPACE] or touch.running
+            running = keys[pygame.K_SPACE] or touch.running or gamepad.running
             animation = AnimationType.RUN.value if running else AnimationType.WALK.value
             count = C_RUN_ANIMATION_COUNT if running else C_WALK_ANIMATION_COUNT
             if abs(dx) > abs(dy):
@@ -258,6 +265,36 @@ class Game:
         else:
             character.save_location()
             character.face_idle()
+
+    # The controller's presses as the keys the game already understands
+    # (see gamepad.py): what a button does depends on what is on screen
+    GAMEPAD_FIGHT_KEYS = {"a": pygame.K_a, "y": pygame.K_s, "x": pygame.K_d, "lb": pygame.K_q,
+                          "rb": pygame.K_e, "rt": pygame.K_x, "view": pygame.K_t, "menu": pygame.K_ESCAPE}
+    GAMEPAD_MENU_KEYS = {"up": pygame.K_UP, "down": pygame.K_DOWN, "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
+                         "a": pygame.K_RETURN, "menu": pygame.K_RETURN, "b": pygame.K_ESCAPE, "x": pygame.K_SPACE}
+    GAMEPAD_LOBBY_KEYS = {"a": pygame.K_1, "b": pygame.K_ESCAPE, "x": pygame.K_c, "y": pygame.K_r}
+    GAMEPAD_RESULT_KEYS = {"a": pygame.K_RETURN, "b": pygame.K_ESCAPE, "menu": pygame.K_RETURN}
+    # Pause (Quit / Main menu / No): no button quits by accident
+    GAMEPAD_PAUSE_KEYS = {"x": pygame.K_RETURN, "y": pygame.K_m, "b": pygame.K_ESCAPE, "menu": pygame.K_ESCAPE}
+
+    def gamepad_key_events(self):
+        """KEYDOWN events for the controller buttons pressed this frame."""
+        gamepad = self.gamepad
+        if not gamepad.connected:
+            return []
+        if self.quit_prompt.is_open:
+            mapping, presses = self.GAMEPAD_PAUSE_KEYS, gamepad.pressed
+        elif self.scene in ("story", "online") and self.result is not None:
+            mapping, presses = self.GAMEPAD_RESULT_KEYS, gamepad.pressed
+        elif self.scene in ("story", "online"):
+            mapping, presses = self.GAMEPAD_FIGHT_KEYS, gamepad.pressed
+        elif self.scene == "lobby":
+            mapping, presses = {**self.GAMEPAD_MENU_KEYS, **self.GAMEPAD_LOBBY_KEYS}, gamepad.menu_presses()
+        else:
+            mapping, presses = self.GAMEPAD_MENU_KEYS, gamepad.menu_presses()
+        return [pygame.event.Event(pygame.KEYDOWN, key=mapping[button], mod=0, unicode="", scancode=0,
+                                   gamepad=True)
+                for button in sorted(presses) if button in mapping]
 
     def release_input(self):
         """Drop every held button (transitions, knock-out, pause)."""
@@ -399,6 +436,56 @@ class Game:
             if self.match.finished:
                 self.end_match()
 
+    def show_gamepad_hints(self):
+        """While the controller is used: its buttons in the on-screen hints,
+        and no touch buttons over the game."""
+        active = self.gamepad.active
+        self.touch_controls.hidden = active
+        self.quit_prompt.gamepad_hints = active
+        if self.menu is not None:
+            self.menu.gamepad_hints = active
+        if self.result is not None:
+            self.result.gamepad_hints = active
+
+    def loop_once(self, events):
+        """One turn of the main loop: input (keyboard, touch, controller),
+        the quit prompt, then the scene's frame."""
+        for event in events:
+            self.gamepad.handle_event(event)
+        self.gamepad.update()
+        events = list(events) + self.gamepad_key_events()
+        self.show_gamepad_hints()
+        # Quit button / Escape. Escape means "back" inside the menu's
+        # sub-screens and the lobby, so it only asks to quit from the main
+        # menu or while playing
+        was_asking = self.quit_prompt.is_open
+        playing = self.scene in ("story", "online")
+        events = self.quit_prompt.process(
+            events,
+            # On the result screen Esc means "main menu"
+            escape_opens=(playing and self.result is None)
+            or (self.scene == "menu" and self.menu.state == State.START),
+            menu_available=playing,
+        )
+        if self.quit_prompt.confirmed:
+            self.isRunning = False
+        if self.quit_prompt.to_menu:
+            self.quit_prompt.to_menu = False
+            if self.scene == "online":
+                self.net.send({"t": "leave"})
+            self.back_to_menu()
+            events = []
+        paused = was_asking or self.quit_prompt.is_open
+
+        self.frame(events, paused)
+        self.quit_prompt.draw(self.screen)
+
+        for event in events:
+            if event.type == pygame.QUIT:
+                self.isRunning = False
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11 and not is_mobile():
+                self.toggle_fullscreen()
+
     def run(self):
         clock = pygame.time.Clock()
         self.menu = Menu(self.resolution)
@@ -408,38 +495,7 @@ class Game:
             self.menu.isPlaying = True
 
         while self.isRunning:
-            events = pygame.event.get()
-            # Quit button / Escape. Escape means "back" inside the menu's
-            # sub-screens and the lobby, so it only asks to quit from the main
-            # menu or while playing
-            was_asking = self.quit_prompt.is_open
-            playing = self.scene in ("story", "online")
-            events = self.quit_prompt.process(
-                events,
-                # On the result screen Esc means "main menu"
-                escape_opens=(playing and self.result is None)
-                or (self.scene == "menu" and self.menu.state == State.START),
-                menu_available=playing,
-            )
-            if self.quit_prompt.confirmed:
-                self.isRunning = False
-            if self.quit_prompt.to_menu:
-                self.quit_prompt.to_menu = False
-                if self.scene == "online":
-                    self.net.send({"t": "leave"})
-                self.back_to_menu()
-                events = []
-            paused = was_asking or self.quit_prompt.is_open
-
-            self.frame(events, paused)
-            self.quit_prompt.draw(self.screen)
-
-            for event in events:
-                if event.type == pygame.QUIT:
-                    self.isRunning = False
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11 and not is_mobile():
-                    self.toggle_fullscreen()
-
+            self.loop_once(pygame.event.get())
             pygame.display.flip()
             clock.tick(Config.FPS)
 

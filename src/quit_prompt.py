@@ -15,6 +15,8 @@ class QuitPrompt:
     YES_KEYS = (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_y)
     NO_KEYS = (pygame.K_ESCAPE, pygame.K_AC_BACK, pygame.K_n)
     MENU_KEYS = (pygame.K_m,)
+    # Show the controller's buttons on the choices (set by the game)
+    gamepad_hints = False
 
     def __init__(self, screen_size):
         self.screen_size = screen_size
@@ -31,7 +33,8 @@ class QuitPrompt:
         margin = self.radius // 2
         self.button_center = (screen_size[0] - margin - self.radius, margin + self.radius)
 
-        panel_width = min(screen_size[0] - 40, max(360, int(shortest * 0.6)))
+        # Wide enough for three buttons with their controller badges
+        panel_width = min(screen_size[0] - 40, max(520, int(shortest * 0.95)))
         panel_height = max(190, int(shortest * 0.26))
         self.panel = pygame.Rect(0, 0, panel_width, panel_height)
         self.panel.center = (screen_size[0] // 2, screen_size[1] // 2)
@@ -43,13 +46,13 @@ class QuitPrompt:
         self.yes_rect.centerx = self.panel.left + panel_width * 0.27
         self.no_rect.centerx = self.panel.left + panel_width * 0.73
         # With a "Main menu" button: three narrower buttons
-        third = int(panel_width * 0.28)
+        third = int(panel_width * 0.30)
         self.menu_rect = pygame.Rect(0, button_y, third, button_height)
         self.menu_rect.centerx = self.panel.left + panel_width * 0.5
         self._wide = (self.yes_rect.copy(), self.no_rect.copy())
         self._narrow = (pygame.Rect(0, button_y, third, button_height), pygame.Rect(0, button_y, third, button_height))
-        self._narrow[0].centerx = self.panel.left + panel_width * 0.18
-        self._narrow[1].centerx = self.panel.left + panel_width * 0.82
+        self._narrow[0].centerx = self.panel.left + panel_width * 0.17
+        self._narrow[1].centerx = self.panel.left + panel_width * 0.83
 
         self.title_font = pygame.font.Font(None, max(36, int(panel_height * 0.24)))
         self.button_font = pygame.font.Font(None, max(30, int(button_height * 0.55)))
@@ -141,12 +144,44 @@ class QuitPrompt:
         pygame.draw.rect(screen, (245, 245, 245), self.panel, 3, border_radius=14)
         title = self.title_font.render("Quit game?", True, (255, 230, 120))
         screen.blit(title, title.get_rect(center=(self.panel.centerx, self.panel.top + self.panel.height * 0.27)))
-        buttons = [(self.yes_rect, "Quit" if self.menu_available else "Yes", (200, 60, 60)),
-                   (self.no_rect, "No", (60, 110, 190))]
+        buttons = [(self.yes_rect, "Quit" if self.menu_available else "Yes", (200, 60, 60), "X"),
+                   (self.no_rect, "No", (60, 110, 190), "B")]
         if self.menu_available:
-            buttons.insert(1, (self.menu_rect, "Main menu", (50, 130, 70)))
-        for rect, label, color in buttons:
+            buttons.insert(1, (self.menu_rect, "Main menu", (50, 130, 70), "Y"))
+        for rect, label, color, pad_button in buttons:
             pygame.draw.rect(screen, color, rect, border_radius=10)
             pygame.draw.rect(screen, (245, 245, 245), rect, 2, border_radius=10)
-            text = self.button_font.render(label, True, (255, 255, 255))
-            screen.blit(text, text.get_rect(center=rect.center))
+            area = rect.inflate(-12, 0)
+            text = self._fitted(label, area.width)
+            screen.blit(text, text.get_rect(center=area.center))
+            if self.gamepad_hints:
+                # With a controller: the button to press, as a badge on the
+                # corner (the label keeps its room)
+                draw_pad_badge(screen, pad_button, (rect.left + 4, rect.top + 2), int(rect.height * 0.3))
+
+    def _fitted(self, label, width):
+        """The label, in a smaller font if it would not fit."""
+        text = self.button_font.render(label, True, (255, 255, 255))
+        size = self.button_font.get_height()
+        while text.get_width() > width and size > 14:
+            size -= 2
+            text = pygame.font.Font(None, size).render(label, True, (255, 255, 255))
+        return text
+
+
+# The colours of the face buttons on an Xbox pad (and the ROG Ally)
+PAD_COLORS = {"A": (90, 180, 70), "B": (210, 60, 55), "X": (60, 120, 220), "Y": (230, 180, 40)}
+_badge_fonts = {}
+
+
+def draw_pad_badge(screen, button, center, radius):
+    """A controller button as a round coloured badge with its letter."""
+    font = _badge_fonts.get(radius)
+    if font is None:
+        font = _badge_fonts[radius] = pygame.font.Font(None, max(14, int(radius * 1.6)))
+    center = (int(center[0]), int(center[1]))
+    pygame.draw.circle(screen, (20, 22, 30), center, radius + 2)
+    pygame.draw.circle(screen, PAD_COLORS.get(button, (200, 200, 200)), center, radius)
+    letter = font.render(button, True, (255, 255, 255))
+    screen.blit(letter, letter.get_rect(center=(center[0], center[1] + 1)))
+    return pygame.Rect(center[0] - radius, center[1] - radius, radius * 2, radius * 2)

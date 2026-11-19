@@ -52,7 +52,7 @@ The workflow downloads the sheets with the `DBZ_ASSETS_TOKEN` repository secret 
 
 ## Windows
 
-The **Build Windows game** GitHub Actions workflow builds the game for Windows on the same events as the Android one (and by hand: Actions > Build Windows game > Run workflow). It runs the tests on Windows, builds the game with PyInstaller, starts it once to check it (a short fight in smoke-test mode, then it quits by itself), and uploads `DragonBallZTrunksHope-v<version>-windows.zip` as the `windows-game` artifact; a version tag also attaches it to the GitHub Release. Unzip it and run `DragonBallZTrunksHope.exe`.
+The **Build Windows game** GitHub Actions workflow builds the game for Windows on the same events as the Android one (and by hand: Actions > Build Windows game > Run workflow). It runs the tests on Windows, builds the game with PyInstaller, starts it once to check it (a short fight in smoke-test mode, then it quits by itself), and uploads `DragonBallZTrunksHope-v<version>-windows.zip` as the `windows-game` artifact; a version tag also attaches it to the GitHub Release. Unzip it and run `DragonBallZTrunksHope.exe`. On a ROG Ally the built-in controls work (see the controller table below), as does the touch screen.
 
 To build it on your own Windows PC (or Linux, macOS):
 
@@ -94,6 +94,22 @@ The match takes place in front of Goku's house with all the usual moves. The fir
 - **Character stats**: Every character has its own strength, whoever plays it (you, an ally, an enemy, or the other player online), in `Config/stats.json`: **power** (damage of punches and techniques), **hp**, **defense** (damage taken is divided by it) and **speed**, relative to an average fighter (Gohan, 1.0). Broly 1.3 power and HP, 1.15 defense but slower (0.9); Goku 1.15 / 1.1 / 1.05 / 1.05; Vegeta 1.12 / 1.05 / 1.05 / 1.05; Gohan 1.0; Trunks 0.95 power and HP but the fastest (1.1). An enemy's difficulty applies on top of its stats.
 - **Enemy difficulty**: Each enemy has a difficulty, set in `Config/enemies.json` with its lines. A difficulty scales the enemy's HP, damage, toughness, reaction time, attack pace, guard, speed and when it powers up. **Easy** is weaker and slower; **Normal** is the usual enemy; **Hard** has 1.8x HP, hits 2.5x harder, takes 40% less damage, reacts and strikes faster, walks faster and powers up sooner. Broly is Hard: punches alone won't beat him, so transform, use techniques and guard. Change an enemy's `"difficulty"` there, or tune the numbers of a difficulty.
 - **Movement**: Use the arrow keys, or drag the on-screen analog stick (bottom left) on a touch device. The stick moves in any direction, not just eight.
+- **Controller (ROG Ally, Xbox, PlayStation, Switch...)**: The ROG Ally's built-in controls, or any game controller, work in the whole game:
+
+  | In a fight | | In menus | |
+  |---|---|---|---|
+  | Left stick / D-pad | Move (stick to the edge: run) | Stick / D-pad | Move the selection |
+  | LT (hold) | Run | A or Menu | Confirm |
+  | A | Attack | B | Back |
+  | B (hold) | Guard | X | Pick a card (allies, opponents) |
+  | X | Special technique (hold to charge) | | |
+  | Y | Transform (Super Saiyan) | **Pause** | |
+  | LB / RB | Previous / next technique | X | Quit |
+  | RT | Next Super Saiyan level | Y | Main menu |
+  | View | Talk | B or Menu | Back to the fight |
+  | Menu | Pause | | |
+
+  In the online lobby: A joins the first room, X creates one, Y refreshes, B goes back. While the controller is used, the touch buttons are hidden and the hints show its buttons; touching the screen brings the touch buttons back.
 - **Running**: Hold Space while moving, or push the stick past its inner ring.
 - **Attacking**: Press **A** or the on-screen **AUTO** button. Each press is one move of the combo: a punch, another punch, a kick, another kick, then round again (holding does not repeat). You and the enemies strike at the same pace, at most once every 0.4 seconds, so mash the button to keep the combo going.
 - **Guard**: Hold **F** or the on-screen **DEFENSE** button. Your character takes the guard pose: you take 70% less damage and still get pushed back a little, but you aren't interrupted; you can't move or attack while guarding.

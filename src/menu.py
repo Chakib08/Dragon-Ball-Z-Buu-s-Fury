@@ -32,6 +32,8 @@ class Menu:
     )
     GOLD = (255, 205, 60)
     NOTICE_MS = 2600
+    # Show the controller's buttons in the hints (set by the game)
+    gamepad_hints = False
 
     def __init__(self, resolution) -> None:
         artwork = pygame.image.load(PathManager.menu_image_path(BACKGROUND_IMAGE))
@@ -496,11 +498,13 @@ class Menu:
                 screen.blit(you, you.get_rect(center=rect.center))
 
         if picking is None:
-            hint = "Tap a character, or use Left/Right and Enter"
+            hint = ("A: choose   B: back" if self.gamepad_hints
+                    else "Tap a character, or use Left/Right and Enter")
             self.continue_rect = None
         else:
             limit = MAX_ALLIES if picking == "allies" else MAX_ENEMIES
-            hint = f"Tap or Space to pick (up to {limit}), Enter to go on, Esc: back"
+            hint = (f"X: pick (up to {limit})   A: go on   B: back" if self.gamepad_hints
+                    else f"Tap or Space to pick (up to {limit}), Enter to go on, Esc: back")
             if picking == "allies":
                 label = "Next" if chosen else "Fight alone"
             else:
@@ -533,6 +537,8 @@ class Menu:
             "Talk: T key",
             "Quit or main menu: Esc key or the X button (top right)",
             "Online 1v1: O key or Online Mode in the main menu",
+            "Controller (ROG Ally, Xbox...): stick move, LT run, A attack, B guard,",
+            "X special, Y transform, LB/RB technique, RT level, Menu pause",
             "Press Esc or tap to return",
         ]
         line_height = int(self.options_font_size * 1.25)

@@ -1,5 +1,6 @@
 import pygame
 
+from quit_prompt import draw_pad_badge
 from taps import tap_position
 
 
@@ -13,6 +14,8 @@ class ResultScreen:
     """
 
     RETRY_KEYS = (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_r, pygame.K_SPACE)
+    # Show the controller's buttons instead of the keyboard's (set by the game)
+    gamepad_hints = False
     MENU_KEYS = (pygame.K_ESCAPE, pygame.K_AC_BACK, pygame.K_m)
 
     def __init__(self, screen_size, victory):
@@ -67,13 +70,17 @@ class ResultScreen:
         color = (255, 220, 90) if self.victory else (235, 90, 80)
         title = self.title_font.render(self.title, True, color)
         screen.blit(title, title.get_rect(center=(self.panel.centerx, self.panel.top + self.panel.height * 0.22)))
-        hint = self.text_font.render("Enter: " + self.retry_label + "   Esc: Main menu", True, (210, 210, 220))
+        hint_text = (f"A: {self.retry_label}   B: Main menu" if self.gamepad_hints
+                     else f"Enter: {self.retry_label}   Esc: Main menu")
+        hint = self.text_font.render(hint_text, True, (210, 210, 220))
         screen.blit(hint, hint.get_rect(center=(self.panel.centerx, self.panel.top + self.panel.height * 0.45)))
-        for rect, label, fill in (
-            (self.retry_rect, self.retry_label, (50, 130, 70)),
-            (self.menu_rect, "Main menu", (60, 110, 190)),
+        for rect, label, fill, pad_button in (
+            (self.retry_rect, self.retry_label, (50, 130, 70), "A"),
+            (self.menu_rect, "Main menu", (60, 110, 190), "B"),
         ):
             pygame.draw.rect(screen, fill, rect, border_radius=10)
             pygame.draw.rect(screen, (245, 245, 245), rect, 2, border_radius=10)
             text = self.button_font.render(label, True, (255, 255, 255))
             screen.blit(text, text.get_rect(center=rect.center))
+            if self.gamepad_hints:
+                draw_pad_badge(screen, pad_button, (rect.left + 4, rect.top + 2), int(rect.height * 0.3))
