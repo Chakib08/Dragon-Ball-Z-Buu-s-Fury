@@ -161,12 +161,12 @@ class CombatTests(unittest.TestCase):
         for frame in range(300):
             with patch("combat.pygame.time.get_ticks", return_value=frame * 17):
                 self.combat.update([self.enemy], [wall])
-            if self.combat._npc_in_attack_range(self.enemy):
+            if self.combat.ai.in_attack_range(self.enemy):
                 break
 
         self.assertNotEqual(self.enemy.feet.center, start)
         self.assertFalse(self.enemy.feet.colliderect(wall))
-        self.assertTrue(self.combat._npc_in_attack_range(self.enemy))
+        self.assertTrue(self.combat.ai.in_attack_range(self.enemy))
 
     def test_attacking_works_with_empty_ki_and_hud_draws(self):
         self.player.ki = 0
@@ -405,7 +405,7 @@ class CombatTests(unittest.TestCase):
                 self.player.facing = "Right"
                 self.assertEqual(self.combat._is_in_attack_range(enemy), lands)
                 enemy.facing = "Left"
-                self.assertEqual(self.combat._npc_in_attack_range(enemy), lands)
+                self.assertEqual(self.combat.ai.in_attack_range(enemy), lands)
 
     def test_player_and_npc_attack_at_the_same_pace(self):
         self.assertEqual(self.player.ATTACK_COOLDOWN_MS, self.enemy.attack_cooldown_ms)
@@ -662,7 +662,7 @@ class CombatTests(unittest.TestCase):
         broly.facing = "Left"
         self.player.facing = "Right"
         self.assertTrue(self.combat._is_in_attack_range(broly))
-        self.assertTrue(self.combat._npc_in_attack_range(broly))
+        self.assertTrue(self.combat.ai.in_attack_range(broly))
         # The same gap is out of reach between two ordinary fighters
         self.place(self.enemy, gap)
         self.assertFalse(self.combat._is_in_attack_range(self.enemy))
@@ -830,11 +830,11 @@ class CombatTests(unittest.TestCase):
         self.enemy.position = [100, 100]
         self.enemy.update()
         combat = self.combat
-        bar_y = self.enemy.rect.top - combat.OVERHEAD_BAR_GAP - combat.OVERHEAD_BAR_HEIGHT // 2 - 1
-        half = combat.OVERHEAD_BAR_MIN_WIDTH // 2 - 3
+        bar_y = self.enemy.rect.top - combat.hud.OVERHEAD_BAR_GAP - combat.hud.OVERHEAD_BAR_HEIGHT // 2 - 1
+        half = combat.hud.OVERHEAD_BAR_MIN_WIDTH // 2 - 3
         left = (self.enemy.rect.centerx - half, bar_y)
         right = (self.enemy.rect.centerx + half, bar_y)
-        red, empty = combat.ENEMY_COLOR, (25, 25, 32)
+        red, empty = combat.hud.ENEMY_COLOR, (25, 25, 32)
 
         combat.draw_npc_bars(screen, [self.enemy], lambda rect: rect)
         self.assertEqual(screen.get_at(left)[:3], red)
@@ -855,14 +855,14 @@ class CombatTests(unittest.TestCase):
         ally = SaiyanNPC(0, 0, False, "trunks", 0, [], team=HEROES)
         self.combat.update([ally, self.enemy], [])
         screen = pygame.Surface((400, 300))
-        for fighter, colour in ((ally, self.combat.ALLY_COLOR), (self.enemy, self.combat.ENEMY_COLOR)):
+        for fighter, colour in ((ally, self.combat.hud.ALLY_COLOR), (self.enemy, self.combat.hud.ENEMY_COLOR)):
             fighter.position = [150, 150]
             fighter.update()
             screen.fill((0, 0, 0))
             bars = self.combat.draw_npc_bars(screen, [fighter], lambda rect: rect)
             self.assertEqual(len(bars), 1)
             self.assertLessEqual(bars[0].height, 6)
-            self.assertLessEqual(bars[0].width, self.combat.OVERHEAD_BAR_MAX_WIDTH)
+            self.assertLessEqual(bars[0].width, self.combat.hud.OVERHEAD_BAR_MAX_WIDTH)
             self.assertEqual(screen.get_at(bars[0].center)[:3], colour)
 
     def test_each_strike_is_one_move_of_the_combo_and_they_cycle(self):

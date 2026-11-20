@@ -244,7 +244,7 @@ class PathSearchSpeedTests(unittest.TestCase):
             enemy.target = player
             start = time.perf_counter()
             # Across the river: a big search
-            manager.combat._find_path(enemy, (430, 300), manager.get_collisions())
+            manager.combat.ai.find_path(enemy, (430, 300), manager.get_collisions())
         self.assertLess(time.perf_counter() - start, 0.05)
 
 

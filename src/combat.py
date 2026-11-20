@@ -1,36 +1,38 @@
+"""The rules of a fight: who can hit whom, how hard, the player's punches
+and special techniques (with charging), the effects flying around, ki.
+
+Each frame, update() runs the fight: the player's attack, then every NPC's
+turn, decided by its brain (npc_ai.py). What is drawn on top of the map
+(bars, team panels) is the HUD's (hud.py).
+"""
+
 import math
-import heapq
-import random
 
 import pygame
 
-from animation import AnimationDirection
 from character import DIRECTION_VECTORS
 from effects import ChargeGlow, build_effect, effect_origin
-from movement import resolve_movement_collisions, solid_bodies
+from hud import CombatHud
+from movement import solid_bodies
 from npc import HEROES
-from utils import timing
+from npc_ai import NpcBrain, direction_to, forward_lateral
 
 
 class CombatSystem:
-    AGGRO_RANGE = 180
     # Melee reach in map pixels between the two characters' feet, the same
     # for the player and the NPCs: bodies (15-25 px wide) nearly touch
     ATTACK_RANGE = 22
     ATTACK_LATERAL_TOLERANCE = 8
-    NPC_ATTACK_RANGE = ATTACK_RANGE
-    NPC_ATTACK_LATERAL_TOLERANCE = ATTACK_LATERAL_TOLERANCE
     # Sprites up to this wide count as ordinary bodies; a bigger one (Broly)
     # adds this share of the extra width to the reach, for hitting him and
     # for his own hits, so fighters touching him can hit and be hit
     STANDARD_BODY_WIDTH = 32
     BIG_BODY_REACH = 0.4
-    PATH_GRID_SIZE = 8
     # One punch or kick per button press, at most one every
     # Character.ATTACK_COOLDOWN_MS (the pace NPCs strike at too)
     PLAYER_ATTACK_DAMAGE = 15
     KI_REGEN_PER_SECOND = 12
-    # Super Saiyan: hits harder, but burns ki instead of regenerating it
+    NPC_KI_REGEN_PER_SECOND = 6
     # Super Saiyan punches, kicks and techniques do twice the damage (SSJ3
     # even more); a powered-up NPC gets a smaller boost, so story fights
     # stay winnable
@@ -59,223 +61,128 @@ class CombatSystem:
         self.on_technique = None
         # A technique being charged (button held), see start_special
         self.charge = None
-        # Who can be hit and the walls, as of the last update
-        self._targets = []
-        self._collisions = []
-        self._fighters = [player]
-        self._heroes = [player]
-        self.font = pygame.font.Font(None, 30)
-        self.name_font = pygame.font.Font(None, 22)
-        # Text is rendered once and reused every frame
-        self._labels = {}
+        # As of the last update: who the player's side can hit (targets),
+        # the player's side (heroes), everyone on the field and the walls
+        self.targets = []
+        self.heroes = [player]
+        self.fighters = [player]
+        self.collisions = []
+        self.ai = NpcBrain(self)
+        self.hud = CombatHud(self)
 
     def update(self, npcs, collisions, player_attacking=False, opponents=()):
-        """One frame of combat. npcs are fought by the AI below: enemies
-        fight the player and his allies, allies (team HEROES) fight the
-        enemies. opponents (online players) are only targets for the
+        """One frame of combat. npcs are fought by their brains (npc_ai.py):
+        enemies fight the player and his allies, allies (team HEROES) fight
+        the enemies. opponents (online players) are only targets for the
         player's hits."""
         now = pygame.time.get_ticks()
         elapsed_seconds = max(0, now - self.last_update_ms) / 1000
         self.last_update_ms = now
-        if self.player.can_revert:
-            self.player.ki = max(
-                0, self.player.ki - self.SUPER_KI_DRAIN_PER_SECOND.get(self.player.form, 1) * elapsed_seconds
-            )
-            if self.player.ki <= 0:
-                self.player.revert()
-        else:
-            self.player.ki = min(
-                self.player.max_ki,
-                self.player.ki + self.KI_REGEN_PER_SECOND * elapsed_seconds,
-            )
+        self._update_ki(npcs, elapsed_seconds)
         enemies = [npc for npc in npcs if npc.team != HEROES]
         allies = [npc for npc in npcs if npc.team == HEROES]
         # What the player, and his allies' and his techniques, can hit
-        targets = [*enemies, *opponents]
-        self._targets, self._collisions = targets, collisions
-        self._heroes = [self.player, *allies]
+        self.targets = [*enemies, *opponents]
+        self.collisions = collisions
+        self.heroes = [self.player, *allies]
         # Everyone on the field: their bodies block each other
-        self._fighters = [self.player, *npcs, *opponents]
-        for npc in npcs:
-            npc.ki = min(npc.max_ki, npc.ki + self.NPC_KI_REGEN_PER_SECOND * elapsed_seconds)
+        self.fighters = [self.player, *npcs, *opponents]
         self._update_charge()
         self._update_effects()
 
         self.player_swung = False
-        self.player.update_knockback(collisions, solid_bodies(self._fighters, self.player))
+        self.player.update_knockback(collisions, solid_bodies(self.fighters, self.player))
         if self.player.hp <= 0:
             self.player.faint()
         elif player_attacking:
-            self._player_attack(targets, now)
+            self._player_attack(self.targets, now)
 
         for npc in tuple(npcs):
-            self._update_npc(npc, now, collisions)
+            self.ai.update(npc, now, collisions)
 
-    # An ally walks back to the player when he is farther than this
-    FOLLOW_DISTANCE = 40
-    NPC_KI_REGEN_PER_SECOND = 6
-    # Time an NPC leaves a target it found no path to
-    UNREACHABLE_MS = 3000
-
-    def foes_of(self, npc):
-        """The fighters npc's side fights."""
-        return self._targets if npc.team == HEROES else self._heroes
-
-    def _choose_target(self, npc, now):
-        """The closest foe still standing within reach of the fight (for an
-        ally: near itself or near the player), or None."""
-        if now < npc.unreachable_until:
-            return None
-        near = [npc.feet.center]
-        if npc.team == HEROES:
-            near.append(self.player.feet.center)  # protects the player too
-        candidates = [
-            foe for foe in self.foes_of(npc)
-            if foe.hp > 0 and min(self._distance(point, foe.feet.center) for point in near) <= self.AGGRO_RANGE
-        ]
-        return min(candidates, key=lambda foe: self._distance(npc.feet.center, foe.feet.center), default=None)
-
-    def _update_npc(self, npc, now, collisions):
-        if npc.hp <= 0:
-            npc.is_defeated = True
-            npc.combat_engaged = True
-            npc.faint()
-            return
-
-        # Pushed back, flinching or transforming: no chasing or attacking.
-        # An NPC flinches on every hit, but strikes back out of the flinch
-        # as soon as its next strike is due (it cannot be stun-locked)
-        pushed = npc.update_knockback(collisions, solid_bodies(self._fighters, npc))
-        busy = npc.update_action()
-        if busy and npc.action["name"] == "hurt" and npc.target is None:
-            npc.target = self._choose_target(npc, now)  # hit before it picked one
-        if busy and npc.action["name"] == "hurt" and npc.target is not None and self._npc_strike_due(npc, now):
-            npc.cancel_hurt()
-            busy = False
-        if pushed or busy:
-            return
-
-        target = self._choose_target(npc, now)
-        was_engaged = npc.combat_engaged
-        npc.combat_engaged = target is not None
-        npc.target = target
-        if target is None:
-            npc.chase_path = []
-            npc.chase_target = None
-            npc.chase_stuck_frames = 0
-            if npc.blocking:
-                npc.stop_block()
-            if npc.team == HEROES:
-                self._follow_player(npc, collisions)
-            elif was_engaged:
-                # Everyone got away: go back to the patrol path
-                npc.resume_patrol()
-            return
-
-        npc.update_ai()
-        if npc.action is not None:
-            return
-
-        distance = self._distance(target.feet.center, npc.feet.center)
-        # Up close, the NPC always turns to face its target
-        if distance <= self._reach(npc, target, self.ATTACK_RANGE) + self.ATTACK_LATERAL_TOLERANCE:
-            npc.face_toward(target.feet.center)
-        # Guard after a flurry of hits, then riposte
-        if npc.wants_guard:
-            npc.start_guard(now)
-        if npc.update_guard(now):
-            return
-
-        if not was_engaged:
-            npc.last_attack_ms = now
-            npc.chase_stuck_frames = 0
-            npc.chase_path = []
-            npc.chase_target = None
-            npc.next_technique_ms = now + self._technique_delay(npc)
-
-        # Now and then a special technique instead of a punch
-        if self._try_npc_technique(npc, target, now):
-            return
-
-        if self._npc_in_attack_range(npc):
-            npc.chase_stuck_frames = 0
-            npc.chase_path = []
-            # One punch or kick at a time, at the same pace as the player,
-            # after a short reaction time
-            if self._npc_strike_due(npc, now):
-                npc.last_attack_ms = now
-                npc.strike()
-                target.take_damage(npc.attack_damage * self._damage_multiplier(npc), npc.feet.center)
-            else:
-                npc.face_idle()
+    def _update_ki(self, npcs, elapsed_seconds):
+        """Ki comes back over time; a Super Saiyan burns it instead."""
+        player = self.player
+        if player.can_revert:
+            drain = self.SUPER_KI_DRAIN_PER_SECOND.get(player.form, 1)
+            player.ki = max(0, player.ki - drain * elapsed_seconds)
+            if player.ki <= 0:
+                player.revert()
         else:
-            if npc.out_of_reach_since is None:
-                npc.out_of_reach_since = now
-            # A short trip out of reach (a hit's push) keeps the reaction
-            if now - npc.out_of_reach_since > npc.REACH_GRACE_MS:
-                npc.in_reach_since = None
-            self._move_toward(npc, target.feet.center, collisions)
+            player.ki = min(player.max_ki, player.ki + self.KI_REGEN_PER_SECOND * elapsed_seconds)
+        for npc in npcs:
+            npc.ki = min(npc.max_ki, npc.ki + self.NPC_KI_REGEN_PER_SECOND * elapsed_seconds)
 
-    def _follow_player(self, npc, collisions):
-        """An ally with nobody to fight stays close to the player."""
-        if self.player.hp <= 0 or \
-                self._distance(npc.feet.center, self.player.feet.center) <= self.FOLLOW_DISTANCE:
-            if npc.action is None:
-                npc.face_idle()
+    @property
+    def allies(self):
+        return self.heroes[1:]
+
+    @property
+    def enemies(self):
+        return list(self.targets)
+
+    # ---- Reach --------------------------------------------------------------------
+    @classmethod
+    def body_reach(cls, character):
+        """Extra melee reach for a body bigger than the ordinary ones."""
+        return max(0, character.rect.width - cls.STANDARD_BODY_WIDTH) * cls.BIG_BODY_REACH
+
+    def reach(self, a, b, base=None):
+        """How far apart a's and b's feet can be for a punch to land."""
+        return (self.ATTACK_RANGE if base is None else base) + self.body_reach(a) + self.body_reach(b)
+
+    def _is_in_attack_range(self, npc):
+        """Whether the player's punch reaches npc (in front of him)."""
+        player = self.player
+        forward, lateral = forward_lateral(player.facing, player.feet.center, npc.feet.center)
+        lateral_tolerance = (player.feet.width + npc.feet.width) / 2 + self.ATTACK_LATERAL_TOLERANCE
+        return 0 <= forward <= self.reach(player, npc) and abs(lateral) <= lateral_tolerance
+
+    # ---- Punches and kicks --------------------------------------------------------
+    def _player_attack(self, npcs, now):
+        """Strike once, if the player is free to: plays one punch or kick
+        and hits the closest enemy in front, if there is one."""
+        player = self.player
+        if (
+            now - self.last_player_attack_ms < player.ATTACK_COOLDOWN_MS
+            or player.action is not None
+        ):
             return
-        npc.target = self.player  # for the path search's reach
-        self._move_toward(npc, self.player.feet.center, collisions)
-        npc.target = None
 
-    # ---- NPC special techniques -------------------------------------------------
-    def _technique_delay(self, npc):
-        """Some randomness, so the NPCs do not all fire at once."""
-        return random.uniform(0.6, 1.4) * npc.technique_every_ms
+        self.last_player_attack_ms = now
+        self.player_swung = True
+        player.strike()
 
-    def _technique_fits(self, npc, technique, target):
-        """Whether the technique can reach the target from where npc stands."""
-        dx = target.feet.centerx - npc.feet.centerx
-        dy = target.feet.centery - npc.feet.centery
-        distance = math.hypot(dx, dy)
-        stats = technique.stats
-        if technique.kind in ("projectile", "beam", "ball"):
-            # They fly straight: the target must be roughly in line
-            in_line = min(abs(dx), abs(dy)) <= self.NPC_AIM_TOLERANCE
-            return in_line and self.ATTACK_RANGE < distance <= stats["range"] * 0.9
-        if technique.kind == "burst":
-            return distance <= stats["radius"] * 0.8
-        if technique.kind == "teleport":
-            return 60 <= distance <= stats["reach"]
-        return False
+        targets = [npc for npc in npcs if npc.hp > 0 and self._is_in_attack_range(npc)]
+        if not targets:
+            return
+        target = min(targets, key=lambda npc: math.dist(player.rect.center, npc.rect.center))
+        target.take_damage(
+            self.PLAYER_ATTACK_DAMAGE * self.damage_multiplier(player), player.feet.center
+        )
 
-    NPC_AIM_TOLERANCE = 12
+    def damage_multiplier(self, attacker):
+        """The attacker's power (Config/stats.json), times its Super Saiyan bonus."""
+        return getattr(attacker, "power", 1.0) * self._super_multiplier(attacker)
 
-    def _try_npc_technique(self, npc, target, now):
-        """When its next try is due, the NPC uses one of the techniques that
-        fit (randomly chosen) if it has the ki. Returns True if it did."""
-        if not npc.techniques or now < npc.next_technique_ms:
-            return False
-        options = [t for t in npc.techniques
-                   if npc.ki >= t.cost and t.form_for(npc) is not None and self._technique_fits(npc, t, target)]
-        if not options:
-            return False  # tried again as soon as one fits
-        npc.next_technique_ms = now + self._technique_delay(npc)
-        return self.use_technique(npc, random.choice(options), target)
+    def _super_multiplier(self, attacker):
+        if not attacker.powered_up:
+            return 1
+        if attacker is self.player:
+            if attacker.form == attacker.SUPER_3_FORM:
+                return self.SUPER_3_DAMAGE_MULTIPLIER
+            return self.SUPER_DAMAGE_MULTIPLIER
+        return self.NPC_SUPER_DAMAGE_MULTIPLIER
 
+
+    # ---- Techniques of anyone but the player (the NPCs' brains use them) --------
     def use_technique(self, user, technique, target=None):
         """An NPC (or any character but the player, who uses start_special)
         uses a technique towards target: its pose, then the effect. Charged
         techniques go off at three quarters of their power."""
         if user.hp <= 0 or user.action is not None:
             return False
-        direction = user.facing
-        if target is not None:
-            dx = target.feet.centerx - user.feet.centerx
-            dy = target.feet.centery - user.feet.centery
-            if abs(dx) >= abs(dy):
-                direction = AnimationDirection.RIGHT.value if dx >= 0 else AnimationDirection.LEFT.value
-            else:
-                direction = AnimationDirection.DOWN.value if dy >= 0 else AnimationDirection.UP.value
+        direction = user.facing if target is None else direction_to(user.feet.center, target.feet.center)
         user.facing = direction
         sprites = technique.form_for(user)
         frames = user.frames(technique.pose_macro(direction))
@@ -294,57 +201,6 @@ class CombatSystem:
             )
         user.ki -= technique.cost
         return True
-
-    def _npc_strike_due(self, npc, now):
-        """In reach of the player and either riposting after a guard, or past
-        its reaction time and its cooldown."""
-        if not self._npc_in_attack_range(npc):
-            return False
-        npc.out_of_reach_since = None
-        if npc.in_reach_since is None:
-            npc.in_reach_since = now
-        if npc.riposte_ready:
-            npc.riposte_ready = False
-            return True
-        return (
-            now - npc.in_reach_since >= npc.REACTION_MS
-            and now - npc.last_attack_ms >= npc.attack_cooldown_ms
-        )
-
-    def _player_attack(self, npcs, now):
-        """Strike once, if the player is free to: plays one punch or kick
-        and hits the closest enemy in front, if there is one."""
-        player = self.player
-        if (
-            now - self.last_player_attack_ms < player.ATTACK_COOLDOWN_MS
-            or player.action is not None
-        ):
-            return
-
-        self.last_player_attack_ms = now
-        self.player_swung = True
-        player.strike()
-
-        targets = [npc for npc in npcs if npc.hp > 0 and self._is_in_attack_range(npc)]
-        if not targets:
-            return
-        target = min(targets, key=lambda npc: self._distance(player.rect.center, npc.rect.center))
-        target.take_damage(
-            self.PLAYER_ATTACK_DAMAGE * self._damage_multiplier(player), player.feet.center
-        )
-
-    def _damage_multiplier(self, attacker):
-        """The attacker's power (Config/stats.json), times its Super Saiyan bonus."""
-        return getattr(attacker, "power", 1.0) * self._super_multiplier(attacker)
-
-    def _super_multiplier(self, attacker):
-        if not attacker.powered_up:
-            return 1
-        if attacker is self.player:
-            if attacker.form == attacker.SUPER_3_FORM:
-                return self.SUPER_3_DAMAGE_MULTIPLIER
-            return self.SUPER_DAMAGE_MULTIPLIER
-        return self.NPC_SUPER_DAMAGE_MULTIPLIER
 
     # ---- Special techniques (ki) ---------------------------------------------
     @property
@@ -470,19 +326,9 @@ class CombatSystem:
         if level >= 1:
             self.release_charge()  # fully charged: it goes by itself
 
+
     def draw_charge(self, screen, to_screen_rect):
-        """A small bar above the player while a technique charges."""
-        if self.charge is None:
-            return
-        on_screen = pygame.Rect(to_screen_rect(self.player.rect))
-        width = max(48, on_screen.width)
-        bar = pygame.Rect(0, 0, width, 8)
-        bar.midbottom = (on_screen.centerx, on_screen.top - 6)
-        level = self.charge_level
-        pygame.draw.rect(screen, (35, 35, 42), bar)
-        color = (255, 230, 120) if level >= 1 else (120, 210, 255)
-        pygame.draw.rect(screen, color, (bar.x, bar.y, round(bar.width * level), bar.height))
-        pygame.draw.rect(screen, self.FRAME_COLOR, bar, 1)
+        self.hud.draw_charge(screen, to_screen_rect)
 
     def _hit_target(self, target, damage, source, push):
         target.take_damage(damage, source, push)
@@ -500,7 +346,7 @@ class CombatSystem:
         difficulty.py)."""
         if user.hp <= 0:
             return None
-        damage = technique.damage * self._damage_multiplier(user)
+        damage = technique.damage * self.damage_multiplier(user)
         if user is not self.player:
             damage *= getattr(user, "technique_damage", 1.0)
         if power is not None:
@@ -541,9 +387,9 @@ class CombatSystem:
             if getattr(effect, "hits_player", False):
                 victims = [self.player]  # drawn for the online opponent
             elif getattr(effect, "team", HEROES) == HEROES:
-                victims = self._targets
+                victims = self.targets
             else:
-                victims = self._heroes
+                victims = self.heroes
             effect.update_effect(victims)
             if effect.done:
                 self.effects.remove(effect)
@@ -563,10 +409,10 @@ class CombatSystem:
         player = user or self.player
         reach = technique.stats["reach"]
         if target is None or target.hp <= 0:
-            foes = self._targets if player is self.player else self.foes_of(player)
+            foes = self.targets if player is self.player else self.ai.foes_of(player)
             candidates = [t for t in foes if t.hp > 0
-                          and self._distance(player.feet.center, t.feet.center) <= reach]
-            target = min(candidates, key=lambda t: self._distance(player.feet.center, t.feet.center),
+                          and math.dist(player.feet.center, t.feet.center) <= reach]
+            target = min(candidates, key=lambda t: math.dist(player.feet.center, t.feet.center),
                          default=None)
         old_position = list(player.position)
         if target is not None:
@@ -575,404 +421,45 @@ class CombatSystem:
             spots = [(-fx, -fy), (fy, fx), (-fy, -fx), (fx, fy)]
             # Far enough not to land in the target's body (Broly's is wide)
             side_gap = max(16, (target.body_width + player.body_width) / 2 + 2)
-            others = solid_bodies(self._fighters, player)
+            others = solid_bodies(self.fighters, player)
             for sx, sy in spots:
                 feet = (target.feet.centerx + sx * side_gap, target.feet.centery + sy * 12)
                 self._place_feet(player, feet)
-                if not any(player.feet.colliderect(wall) for wall in self._collisions) and \
+                if not any(player.feet.colliderect(wall) for wall in self.collisions) and \
                         player.body.collidelist(others) == -1:
                     break
             else:
                 player.position = list(old_position)
             # Face the target
-            dx = target.feet.centerx - player.feet.centerx
-            dy = target.feet.centery - player.feet.centery
-            if abs(dx) >= abs(dy):
-                player.facing = AnimationDirection.RIGHT.value if dx >= 0 else AnimationDirection.LEFT.value
-            else:
-                player.facing = AnimationDirection.DOWN.value if dy >= 0 else AnimationDirection.UP.value
+            player.facing = direction_to(player.feet.center, target.feet.center)
         else:
             dx, dy = DIRECTION_VECTORS[player.facing]
             player.position = [old_position[0] + dx * 60, old_position[1] + dy * 60]
         player.update()
-        if any(player.feet.colliderect(wall) for wall in self._collisions):
+        if any(player.feet.colliderect(wall) for wall in self.collisions):
             player.position = old_position  # would land in a wall: stay
             player.update()
         player.save_location()
         frames = player.frames(technique.pose_macro(player.facing))[::-1]
-        damage = technique.damage * self._damage_multiplier(player)
+        damage = technique.damage * self.damage_multiplier(player)
         if player is not self.player:
             damage *= getattr(player, "technique_damage", 1.0)
 
         def strike():
             player.strike()
             if target is not None and target.hp > 0 and \
-                    self._distance(player.feet.center, target.feet.center) <= \
-                    self._reach(player, target, self.ATTACK_RANGE) + 12:
+                    math.dist(player.feet.center, target.feet.center) <= \
+                    self.reach(player, target) + 12:
                 target.take_damage(damage, player.feet.center, 2.0)
 
         player._play("teleport", frames, player.SPECIAL_CLOCK_SPEED, on_done=strike)
 
-    def _player_attack_area(self):
-        return self.player.feet.center, self.player.facing
-
-    @classmethod
-    def body_reach(cls, character):
-        """Extra melee reach for a body bigger than the ordinary ones."""
-        return max(0, character.rect.width - cls.STANDARD_BODY_WIDTH) * cls.BIG_BODY_REACH
-
-    def _reach(self, a, b, base):
-        return base + self.body_reach(a) + self.body_reach(b)
-
-    def _is_in_attack_range(self, npc):
-        origin, direction = self._player_attack_area()
-        target = npc.feet.center
-        forward, lateral = self._forward_lateral(direction, origin, target)
-        lateral_tolerance = (
-            self.player.feet.width + npc.feet.width
-        ) / 2 + self.ATTACK_LATERAL_TOLERANCE
-        return 0 <= forward <= self._reach(self.player, npc, self.ATTACK_RANGE) and abs(lateral) <= lateral_tolerance
-
-    def _move_toward(self, npc, target, collisions):
-        if npc.chase_path:
-            target_cell = self._grid_cell(target)
-            if self._distance(
-                self._cell_to_feet_center(npc, npc.chase_target),
-                self._cell_to_feet_center(npc, target_cell),
-            ) > self.PATH_GRID_SIZE * 3:
-                npc.chase_path = []
-                npc.chase_target = None
-
-        if npc.chase_path:
-            waypoint = self._cell_to_feet_center(npc, npc.chase_path[0])
-            if self._distance(npc.feet.center, waypoint) <= self.PATH_GRID_SIZE:
-                npc.chase_path.pop(0)
-            if npc.chase_path:
-                waypoint = self._cell_to_feet_center(npc, npc.chase_path[0])
-                self._step_toward(npc, waypoint, collisions)
-                return
-
-        starting_position = tuple(npc.position)
-        self._step_toward(npc, target, collisions)
-        if self._distance(starting_position, npc.position) < 0.01:
-            npc.chase_stuck_frames += timing.ticks()
-        else:
-            npc.chase_stuck_frames = 0
-
-        if npc.chase_stuck_frames >= 4:
-            npc.chase_path = self._find_path(npc, target, collisions)
-            npc.chase_target = self._grid_cell(target)
-            npc.chase_stuck_frames = 0
-            if npc.chase_path:
-                waypoint = self._cell_to_feet_center(npc, npc.chase_path[0])
-                self._step_toward(npc, waypoint, collisions)
-            elif hasattr(npc, "unreachable_until"):
-                # No way there (across water, behind a wall): instead of
-                # pushing against the obstacle forever, leave it for a while
-                npc.unreachable_until = pygame.time.get_ticks() + self.UNREACHABLE_MS
-
-    def _step_toward(self, npc, target, collisions):
-        dx = target[0] - npc.feet.centerx
-        dy = target[1] - npc.feet.centery
-        if abs(dx) < 0.01 and abs(dy) < 0.01:
-            return
-        direction = (
-            AnimationDirection.RIGHT.value if dx >= 0 else AnimationDirection.LEFT.value
-        ) if abs(dx) >= abs(dy) else (
-            AnimationDirection.DOWN.value if dy >= 0 else AnimationDirection.UP.value
-        )
-        npc.move(f"Walk {direction}", 4, (dx, dy))
-        npc.update()
-        resolve_movement_collisions(npc, collisions, solid_bodies(self._fighters, npc))
-
-    def _npc_in_attack_range(self, npc):
-        """Whether npc's punch reaches its target (the player if none)."""
-        foe = npc.target or self.player
-        origin = npc.feet.center
-        target = foe.feet.center
-        forward, lateral = self._forward_lateral(npc.facing, origin, target)
-        tolerance = (
-            foe.feet.width + npc.feet.width
-        ) / 2 + self.NPC_ATTACK_LATERAL_TOLERANCE
-        return 0 <= forward <= self._reach(npc, foe, self.NPC_ATTACK_RANGE) and abs(lateral) <= tolerance
-
-    @staticmethod
-    def _forward_lateral(direction, origin, target):
-        """Offset of target from origin, split along and across the facing direction."""
-        dx = target[0] - origin[0]
-        dy = target[1] - origin[1]
-        if direction == AnimationDirection.UP.value:
-            return -dy, dx
-        if direction == AnimationDirection.DOWN.value:
-            return dy, dx
-        if direction == AnimationDirection.LEFT.value:
-            return -dx, dy
-        return dx, dy
-
-    def _find_path(self, npc, target, collisions):
-        start = self._grid_cell(npc.feet.center)
-        target_cell = self._grid_cell(target)
-        bounds = self._path_bounds(npc, target, collisions)
-        frontier = [(0, start)]
-        came_from = {start: None}
-        cost_so_far = {start: 0}
-        goal = None
-
-        while frontier:
-            _, current = heapq.heappop(frontier)
-            if self._cell_within_attack_range(npc, current, target):
-                goal = current
-                break
-
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                neighbor = (current[0] + dx, current[1] + dy)
-                if not self._cell_in_bounds(neighbor, bounds):
-                    continue
-                if not self._cell_is_walkable(npc, neighbor, collisions):
-                    continue
-
-                new_cost = cost_so_far[current] + 1
-                if neighbor in cost_so_far and new_cost >= cost_so_far[neighbor]:
-                    continue
-                cost_so_far[neighbor] = new_cost
-                heuristic = abs(neighbor[0] - target_cell[0]) + abs(neighbor[1] - target_cell[1])
-                heapq.heappush(frontier, (new_cost + heuristic, neighbor))
-                came_from[neighbor] = current
-
-        if goal is None:
-            return []
-
-        path = []
-        current = goal
-        while current != start:
-            path.append(current)
-            current = came_from[current]
-        path.reverse()
-        return path
-
-    def _cell_within_attack_range(self, npc, cell, target):
-        center = self._cell_to_feet_center(npc, cell)
-        dx = target[0] - center[0]
-        dy = target[1] - center[1]
-        lateral_tolerance = self.NPC_ATTACK_LATERAL_TOLERANCE
-        reach = self._reach(npc, npc.target or self.player, self.NPC_ATTACK_RANGE)
-        return (
-            math.hypot(dx, dy) <= reach
-            and abs(dx) <= reach + lateral_tolerance
-            and abs(dy) <= reach + lateral_tolerance
-        )
-
-    def _cell_is_walkable(self, npc, cell, collisions):
-        # collidelist tests every wall in C: a search visits thousands of cells
-        return self._feet_at_position(npc, self._cell_to_position(npc, cell)).collidelist(collisions) == -1
-
-    def _path_bounds(self, npc, target, collisions):
-        points_x = [npc.feet.centerx, target[0]]
-        points_y = [npc.feet.centery, target[1]]
-        for obstacle in collisions:
-            points_x.extend((obstacle.left, obstacle.right))
-            points_y.extend((obstacle.top, obstacle.bottom))
-        grid = self.PATH_GRID_SIZE
-        return (
-            math.floor(min(points_x) / grid) - 2,
-            math.floor(max(points_x) / grid) + 2,
-            math.floor(min(points_y) / grid) - 2,
-            math.floor(max(points_y) / grid) + 2,
-        )
-
-    @staticmethod
-    def _grid_cell(point):
-        grid = CombatSystem.PATH_GRID_SIZE
-        return round(point[0] / grid), round(point[1] / grid)
-
-    def _cell_to_feet_center(self, npc, cell):
-        return cell[0] * self.PATH_GRID_SIZE, cell[1] * self.PATH_GRID_SIZE
-
-    def _cell_to_position(self, npc, cell):
-        center_x, center_y = self._cell_to_feet_center(npc, cell)
-        return (
-            center_x - npc.rect.width / 2,
-            center_y - npc.rect.height + npc.feet.height / 2,
-        )
-
-    def _feet_at_position(self, npc, position):
-        x, y = position
-        return pygame.Rect(
-            x + (npc.rect.width - npc.feet.width) / 2,
-            y + npc.rect.height - npc.feet.height,
-            npc.feet.width,
-            npc.feet.height,
-        )
-
-    @staticmethod
-    def _cell_in_bounds(cell, bounds):
-        min_x, max_x, min_y, max_y = bounds
-        return min_x <= cell[0] <= max_x and min_y <= cell[1] <= max_y
-
-    @staticmethod
-    def _distance(first, second):
-        return math.hypot(first[0] - second[0], first[1] - second[1])
-
+    # ---- Drawing (see hud.py) -------------------------------------------------------
     def draw(self, screen):
-        self._draw_bar(screen, "HP", self.player.hp, self.player.max_hp, self.HP_COLOR, 20)
-        ki_color = self.SUPER_COLOR if self.player.powered_up else (65, 145, 245)
-        self._draw_bar(screen, "KI", self.player.ki, self.player.max_ki, ki_color, 58)
-        technique = self.technique
-        if technique is not None:
-            # Selected technique and its cost, dimmed while there is not enough ki
-            color = (255, 230, 120) if self.player.ki >= technique.cost else (150, 150, 160)
-            label = self._label(f"{technique.name} ({technique.cost} KI)", self.name_font, color)
-            screen.blit(label, (62, 88))
-        self.draw_team_panels(screen)
-
-    # ---- Team panels (top corners) ------------------------------------------------
-    # One compact row per fighter: the allies under the player's bars (left),
-    # the enemies (or the online opponent) on the right, under the quit button.
-    # The bottom corners stay free for the thumbs (stick and buttons).
-    PANEL_ROW_WIDTH = 180
-    PANEL_NAME_WIDTH = 66
-    PANEL_BAR_HEIGHT = 9
-    PANEL_ROW_GAP = 4
-    PANEL_MARGIN = 20
-    ALLY_PANEL_TOP = 112
-    KO_COLOR = (125, 125, 135)
-    PANEL_PADDING = 4
-
-    def _plate(self, width, height):
-        key = ("plate", width, height)
-        plate = self._labels.get(key)
-        if plate is None:
-            plate = pygame.Surface((width, height), pygame.SRCALPHA)
-            pygame.draw.rect(plate, (12, 14, 24, 165), plate.get_rect(), border_radius=6)
-            self._labels[key] = plate
-        return plate
-
-    @property
-    def allies(self):
-        return self._heroes[1:]
-
-    @property
-    def enemies(self):
-        return list(self._targets)
-
-    def _right_panel_top(self):
-        """Just under the quit button (see quit_prompt.QuitPrompt)."""
-        radius = max(22, int(min(self.screen_size) * 0.034))
-        return radius // 2 + radius * 2 + 12
+        self.hud.draw(screen)
 
     def draw_team_panels(self, screen):
-        """The allies' rows (left) and the enemies' (right); returns the
-        rectangles of the rows drawn, allies first."""
-        rows = []
-        y = self.ALLY_PANEL_TOP
-        for ally in self.allies:
-            rows.append(self._draw_panel_row(screen, ally, 62, y, ally=True))
-            y = rows[-1].bottom + self.PANEL_ROW_GAP + 2 * self.PANEL_PADDING
-        x = self.screen_size[0] - self.PANEL_MARGIN - self.PANEL_ROW_WIDTH
-        y = self._right_panel_top()
-        for enemy in self.enemies:
-            rows.append(self._draw_panel_row(screen, enemy, x, y, ally=False))
-            y = rows[-1].bottom + self.PANEL_ROW_GAP + 2 * self.PANEL_PADDING
-        return rows
-
-    def _draw_panel_row(self, screen, fighter, x, y, ally):
-        """One line: the name, then a small HP bar (gold frame while Super
-        Saiyan; greyed out with "KO" once knocked out)."""
-        knocked_out = fighter.hp <= 0
-        height = max(self.name_font.get_height(), self.PANEL_BAR_HEIGHT)
-        # A dark plate behind the row, so it reads over grass, water or sky
-        plate = self._plate(self.PANEL_ROW_WIDTH + 2 * self.PANEL_PADDING, height + 2 * self.PANEL_PADDING)
-        screen.blit(plate, (x - self.PANEL_PADDING, y - self.PANEL_PADDING))
-        name = getattr(fighter, "bar_label", None) or fighter.character_name.capitalize()
-        if knocked_out:
-            color = self.KO_COLOR
-            name += " KO"
-        elif ally:
-            color = self.ALLY_COLOR
-        else:
-            # An enemy's name in the colour of its difficulty (Hard: red)
-            difficulty = getattr(fighter, "difficulty", None)
-            color = tuple(difficulty.color) if difficulty is not None else (255, 255, 255)
-        label = self._label(name, self.name_font, color)
-        screen.blit(label, (x, y + (height - label.get_height()) // 2))
-        bar_left = x + max(self.PANEL_NAME_WIDTH, label.get_width() + 6)
-        bar = pygame.Rect(bar_left, y + (height - self.PANEL_BAR_HEIGHT) // 2,
-                          max(20, x + self.PANEL_ROW_WIDTH - bar_left), self.PANEL_BAR_HEIGHT)
-        pygame.draw.rect(screen, (35, 35, 42), bar)
-        fraction = max(0, min(1, fighter.hp / fighter.max_hp)) if fighter.max_hp else 0
-        if fraction > 0:
-            pygame.draw.rect(screen, self.HP_COLOR, (bar.x, bar.y, round(bar.width * fraction), bar.height))
-        frame = self.SUPER_COLOR if fighter.powered_up and not knocked_out else self.FRAME_COLOR
-        pygame.draw.rect(screen, frame, bar, 1)
-        return pygame.Rect(x, y, self.PANEL_ROW_WIDTH, height)
-
-    # ---- Bars over the fighters ---------------------------------------------------
-    # Thin and without names (the panels have them): who is who in a crowd,
-    # and how hurt
-    OVERHEAD_BAR_HEIGHT = 5
-    OVERHEAD_BAR_GAP = 4
-    OVERHEAD_BAR_MIN_WIDTH = 28
-    OVERHEAD_BAR_MAX_WIDTH = 60
-    ENEMY_COLOR = (225, 70, 60)
-    SUPER_COLOR = (245, 205, 60)
-    # Health bars (the player's and the enemies')
-    HP_COLOR = (70, 200, 90)
-    FRAME_COLOR = (235, 235, 235)
-    ALLY_COLOR = (120, 195, 255)
-
-    def _label(self, text, font, color=(255, 255, 255)):
-        key = (text, font, color)
-        label = self._labels.get(key)
-        if label is None:
-            label = self._labels[key] = font.render(text, True, color)
-        return label
+        return self.hud.draw_team_panels(screen)
 
     def draw_npc_bars(self, screen, npcs, to_screen_rect):
-        """A thin bar over each NPC (and online opponent): blue for allies,
-        red for enemies, gold-framed while Super Saiyan. Returns the bars.
-
-        to_screen_rect converts a rect in map coordinates to screen coordinates.
-        The bar stays (empty) during the knock-out animation, then disappears.
-        """
-        placed = []
-        shown = [(npc, pygame.Rect(to_screen_rect(npc.rect))) for npc in npcs if not npc.faint_finished]
-        # The lowest on screen first: theirs stay right above them, and with
-        # several fighters close together the others move aside or up
-        # instead of covering each other
-        shown.sort(key=lambda item: item[1].top, reverse=True)
-        for npc, on_screen in shown:
-            width = max(self.OVERHEAD_BAR_MIN_WIDTH, min(self.OVERHEAD_BAR_MAX_WIDTH, int(on_screen.width * 0.6)))
-            start = pygame.Rect(0, 0, width, self.OVERHEAD_BAR_HEIGHT)
-            start.midbottom = (on_screen.centerx, on_screen.top - self.OVERHEAD_BAR_GAP)
-            spots = ((column * (width + 3), -row * (self.OVERHEAD_BAR_HEIGHT + 2))
-                     for row in range(len(shown) + 1) for column in (0, -1, 1))
-            for dx, dy in spots:
-                bar = start.move(dx, dy)
-                if bar.collidelist(placed) == -1:
-                    break
-            placed.append(bar)
-            ally = npc in self._heroes
-            fraction = max(0, min(1, npc.hp / npc.max_hp)) if npc.max_hp else 0
-            pygame.draw.rect(screen, (25, 25, 32), bar)
-            if fraction > 0:
-                pygame.draw.rect(screen, self.ALLY_COLOR if ally else self.ENEMY_COLOR,
-                                 (bar.x, bar.y, max(1, round(bar.width * fraction)), bar.height))
-            if npc.powered_up:
-                pygame.draw.rect(screen, self.SUPER_COLOR, bar.inflate(2, 2), 1)
-        return placed
-
-    def _draw_bar(self, screen, label, value, maximum, color, y):
-        x = 20
-        bar_width = min(260, self.screen_size[0] // 3)
-        bar_height = 22
-        screen.blit(self._label(label, self.font), (x, y))
-        bar_x = x + 42
-        bar_y = y + 3
-        pygame.draw.rect(screen, (35, 35, 42), (bar_x, bar_y, bar_width, bar_height))
-        fraction = max(0, min(1, value / maximum)) if maximum else 0
-        pygame.draw.rect(
-            screen,
-            color,
-            (bar_x, bar_y, round(bar_width * fraction), bar_height),
-        )
-        pygame.draw.rect(screen, self.FRAME_COLOR, (bar_x, bar_y, bar_width, bar_height), 2)
+        return self.hud.draw_npc_bars(screen, npcs, to_screen_rect)

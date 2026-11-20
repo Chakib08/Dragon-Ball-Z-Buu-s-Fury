@@ -11,6 +11,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 
 from combat import CombatSystem
+from npc_ai import NpcBrain
 from effects import Projectile
 from game import Game
 from map import MAX_ALLIES, MAX_ENEMIES, CharacterGroup, MapManager
@@ -89,7 +90,7 @@ class TeamFightTests(unittest.TestCase):
         ally = self.fighter("trunks", HEROES, 150)
         self.run_frames([ally], 300)
         distance = abs(ally.feet.centerx - self.player.feet.centerx)
-        self.assertLessEqual(distance, CombatSystem.FOLLOW_DISTANCE + 2)
+        self.assertLessEqual(distance, NpcBrain.FOLLOW_DISTANCE + 2)
         self.assertIsNone(ally.target)
 
     def test_the_players_punches_and_techniques_skip_allies(self):
@@ -98,7 +99,7 @@ class TeamFightTests(unittest.TestCase):
         self.run_frames([ally], 1, attacking=True)
         self.assertTrue(self.combat.player_swung)
         self.assertEqual(ally.hp, ally.max_hp)
-        self.assertNotIn(ally, self.combat._targets)
+        self.assertNotIn(ally, self.combat.targets)
 
     def test_allies_are_as_strong_as_a_normal_enemy(self):
         ally = SaiyanNPC(0, 0, False, "gohan", 0, [], team=HEROES)
@@ -123,7 +124,7 @@ class TeamFightTests(unittest.TestCase):
             self.player.facing = facing
             self.combat.last_player_attack_ms = -10 ** 6
             self.player.action = None
-            self.combat._player_attack(self.combat._targets, self.clock.now)
+            self.combat._player_attack(self.combat.targets, self.clock.now)
             self.assertLess(enemy.hp, enemy.max_hp)
 
     # ---- NPC techniques ------------------------------------------------------------------
@@ -133,7 +134,7 @@ class TeamFightTests(unittest.TestCase):
         enemy.combat_engaged = True  # already fighting: its next try is due
         enemy.next_technique_ms = 0
         ki = enemy.ki
-        with patch("combat.random.choice", side_effect=lambda options: options[0]):
+        with patch("npc_ai.random.choice", side_effect=lambda options: options[0]):
             self.run_frames([enemy], 1)
         self.assertIsNotNone(enemy.action)
         self.assertEqual(enemy.action["name"], "special")
@@ -169,14 +170,14 @@ class TeamFightTests(unittest.TestCase):
     def test_techniques_are_only_tried_when_they_can_reach(self):
         enemy = self.fighter("vegeta", ENEMIES, 90, dy=40)  # not in line
         blast = next(t for t in enemy.techniques if t.kind == "projectile")
-        self.assertFalse(self.combat._technique_fits(enemy, blast, self.player))
+        self.assertFalse(self.combat.ai.technique_fits(enemy, blast, self.player))
         enemy = self.fighter("vegeta", ENEMIES, 90)
-        self.assertTrue(self.combat._technique_fits(enemy, blast, self.player))
+        self.assertTrue(self.combat.ai.technique_fits(enemy, blast, self.player))
         gohan = self.fighter("gohan", ENEMIES, 25)
         burst = next(t for t in gohan.techniques if t.kind == "burst")
-        self.assertTrue(self.combat._technique_fits(gohan, burst, self.player))
+        self.assertTrue(self.combat.ai.technique_fits(gohan, burst, self.player))
         far = self.fighter("gohan", ENEMIES, 150)
-        self.assertFalse(self.combat._technique_fits(far, burst, self.player))
+        self.assertFalse(self.combat.ai.technique_fits(far, burst, self.player))
 
     def test_an_enemy_can_use_instant_transmission(self):
         goku = self.fighter("goku", ENEMIES, 130, dy=30)
@@ -367,7 +368,7 @@ class WorldTeamsTests(unittest.TestCase):
         # Under the player's bars and the quit button, above the touch controls
         quit_bottom = QuitPrompt(self.screen.get_size()).button_center[1] + 22
         self.assertTrue(all(row.top > quit_bottom for row in enemy_rows))
-        self.assertTrue(all(row.top >= combat.ALLY_PANEL_TOP for row in ally_rows))
+        self.assertTrue(all(row.top >= combat.hud.ALLY_PANEL_TOP for row in ally_rows))
         self.assertTrue(all(row.bottom < self.screen.get_height() / 2 for row in rows))
         for index, row in enumerate(rows):
             self.assertEqual(row.collidelist(rows[index + 1:]), -1)
@@ -379,14 +380,14 @@ class WorldTeamsTests(unittest.TestCase):
         combat.update(manager.get_map().npcs, manager.get_collisions())
         broly = combat.enemies[0]
         rendered = []
-        real = combat._label
-        combat._label = lambda text, font, color=(255, 255, 255): rendered.append((text, color)) or real(text, font, color)
+        real = combat.hud._label
+        combat.hud._label = lambda text, font, color=(255, 255, 255): rendered.append((text, color)) or real(text, font, color)
         combat.draw_team_panels(self.screen)
         self.assertIn(("Broly", (235, 80, 70)), rendered)  # Hard: red
         broly.hp = 0
         rendered.clear()
         combat.draw_team_panels(self.screen)
-        self.assertIn(("Broly KO", combat.KO_COLOR), rendered)
+        self.assertIn(("Broly KO", combat.hud.KO_COLOR), rendered)
 
     def test_team_sizes_are_capped(self):
         player = Saiyan(159, 289, False, "goku")

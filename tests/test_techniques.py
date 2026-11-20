@@ -228,7 +228,7 @@ class TechniqueTests(unittest.TestCase):
             beam = build_effect(kamehameha, kamehameha.form_for(player), player, "Right", 0,
                                 None, lambda effect: None, power=1.0)
             heads[player.form] = beam.pieces["heads"][0].get_height()
-            damage[player.form] = combat._damage_multiplier(player)
+            damage[player.form] = combat.damage_multiplier(player)
         self.assertGreater(heads["ssj3"], heads["ssj"])
         self.assertGreater(damage["ssj3"], damage["ssj"])
 
