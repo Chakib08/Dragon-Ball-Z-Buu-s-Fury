@@ -4,6 +4,7 @@ from animation import AnimationDirection, AnimationType, Animator
 from constants import C_FAINT_ANIMATION_COUNT
 from movement import resolve_movement_collisions
 from techniques import load_techniques
+from utils import timing
 from utils.config import Config
 from stats import character_stats
 
@@ -247,10 +248,11 @@ class Character(pygame.sprite.Sprite):
         if length == 0:
             return
 
+        step = self.speed * timing.ticks()
         self.old_position = self.position.copy()
-        self.position[0] += movement[0] / length * self.speed
-        self.position[1] += movement[1] / length * self.speed
-        self.animator.loop(animation_macro, animation_count, Config.CLOCK_SPEED)
+        self.position[0] += movement[0] / length * step
+        self.position[1] += movement[1] / length * step
+        self.animator.loop(animation_macro, animation_count, Config.CLOCK_SPEED, timing.ticks())
 
     def strike(self):
         """One attack move: a punch or a kick, the next one of the combo.
@@ -330,13 +332,20 @@ class Character(pygame.sprite.Sprite):
         if self.knockback is None:
             return False
         step_x, step_y, frames = self.knockback
-        scale = frames / self.KNOCKBACK_FRAMES
+        # The push moves frames/KNOCKBACK_FRAMES of a step each 60 FPS frame
+        # (slowing down as it goes). A slow device covers several frames at
+        # once, maybe fractions: the distance between "frames left" f0 and
+        # f1 is the sum of those shares, f(f+1)/2 / KNOCKBACK_FRAMES apart,
+        # so the whole push is the same at any frame rate
+        left = max(0.0, frames - timing.ticks())
+        share = (frames * (frames + 1) - left * (left + 1)) / 2 / self.KNOCKBACK_FRAMES
         self.old_position = self.position.copy()
-        self.position[0] += step_x * scale
-        self.position[1] += step_y * scale
+        self.position[0] += step_x * share
+        self.position[1] += step_y * share
         self.update()
         resolve_movement_collisions(self, collisions, bodies)
-        self.knockback = (step_x, step_y, frames - 1) if frames > 1 else None
+        frames = left
+        self.knockback = (step_x, step_y, frames) if frames > 1e-6 else None
         return True
 
     # ---- Blocking ---------------------------------------------------------------
@@ -440,8 +449,9 @@ class Character(pygame.sprite.Sprite):
         frames = action["frames"]
         last = len(frames) - 1
         self.image = frames[action["index"]]
+        ticks = timing.ticks()
         if action["index"] < last:
-            action["clock"] += action["clock_speed"]
+            action["clock"] += action["clock_speed"] * ticks
             if action["clock"] >= Config.CLOCK_LIMIT:
                 action["clock"] = 0
                 action["index"] += 1
@@ -452,9 +462,9 @@ class Character(pygame.sprite.Sprite):
             return True
 
         if action["hold_ticks"] > 0:
-            action["hold_ticks"] -= 1
+            action["hold_ticks"] -= ticks
             return True
-        action["clock"] += action["clock_speed"]
+        action["clock"] += action["clock_speed"] * ticks
         if action["clock"] < Config.CLOCK_LIMIT:
             return True
 
@@ -510,7 +520,7 @@ class Character(pygame.sprite.Sprite):
         if self.faint_index == len(self.faint_frames) - 1:
             self.faint_finished = True
             return
-        self.faint_clock += self.FAINT_CLOCK_SPEED
+        self.faint_clock += self.FAINT_CLOCK_SPEED * timing.ticks()
         if self.faint_clock >= Config.CLOCK_LIMIT:
             self.faint_clock = 0
             self.faint_index += 1

@@ -11,6 +11,7 @@ from movement import resolve_movement_collisions, solid_bodies
 from difficulty import enemy_profile
 from npc import HEROES, NPC, SaiyanNPC
 from pathmanager import PathManager
+from utils import timing
 
 
 class CharacterGroup(pyscroll.PyscrollGroup):
@@ -360,12 +361,12 @@ class MapManager:
         self.combat.draw_charge(self.screen, to_screen_rect)
         group.center(self.character.rect.center)
         if self.transitioning:
-            self.black_screen.set_alpha(self.transition_alpha)
+            self.black_screen.set_alpha(int(self.transition_alpha))
             self.screen.blit(self.black_screen, (0, 0))
 
     def black_transition(self):
         if self.transitioning_in:
-            self.transition_alpha += self.FADE_SPEED
+            self.transition_alpha += self.FADE_SPEED * timing.ticks()
             if self.transition_alpha >= 255:
                 self.transition_alpha = 255
                 self.transitioning_in = False
@@ -374,7 +375,7 @@ class MapManager:
                 self.current_map = self.new_map
                 self.position_character(self.new_position)
         else:
-            self.transition_alpha -= self.FADE_SPEED
+            self.transition_alpha -= self.FADE_SPEED * timing.ticks()
             if self.transition_alpha <= 0:
                 self.transition_alpha = 0
                 self.transitioning = False

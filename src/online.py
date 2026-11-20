@@ -17,6 +17,7 @@ from map import MapManager
 from saiyan import Saiyan
 import settings as user_settings
 from taps import tap_position
+from utils import timing
 
 
 def _number(value, default=None):
@@ -101,8 +102,9 @@ class RemoteFighter(Character):
         if abs(dx) > self.SNAP_DISTANCE or abs(dy) > self.SNAP_DISTANCE:
             self.position = list(self.target_position)
         else:
-            self.position[0] += dx * self.SMOOTHING
-            self.position[1] += dy * self.SMOOTHING
+            share = timing.smoothing(self.SMOOTHING)
+            self.position[0] += dx * share
+            self.position[1] += dy * share
         self.update()
 
     def take_damage(self, amount, source=None, push=1.0):

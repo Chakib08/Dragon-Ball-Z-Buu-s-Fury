@@ -9,6 +9,7 @@ from character import DIRECTION_VECTORS
 from effects import ChargeGlow, build_effect, effect_origin
 from movement import resolve_movement_collisions, solid_bodies
 from npc import HEROES
+from utils import timing
 
 
 class CombatSystem:
@@ -654,7 +655,7 @@ class CombatSystem:
         starting_position = tuple(npc.position)
         self._step_toward(npc, target, collisions)
         if self._distance(starting_position, npc.position) < 0.01:
-            npc.chase_stuck_frames += 1
+            npc.chase_stuck_frames += timing.ticks()
         else:
             npc.chase_stuck_frames = 0
 

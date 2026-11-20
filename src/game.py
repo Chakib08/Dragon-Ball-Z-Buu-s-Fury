@@ -21,6 +21,7 @@ from pathmanager import PathManager
 from quit_prompt import QuitPrompt
 from saiyan import Saiyan
 from touch_controls import TouchControls
+from utils import timing
 from utils.config import Config
 
 PLAYER_SPAWN = (159, 289)
@@ -499,7 +500,8 @@ class Game:
         while self.isRunning:
             self.loop_once(pygame.event.get())
             pygame.display.flip()
-            clock.tick(Config.FPS)
+            # Speeds and animations follow the time this frame really took
+            timing.advance(clock.tick(Config.FPS))
 
         self.net.close()
         pygame.quit()

@@ -12,6 +12,7 @@ import math
 import pygame
 
 from character import DIRECTION_VECTORS
+from utils import timing
 
 EFFECT_LAYER = 2
 
@@ -29,6 +30,13 @@ class Effect(pygame.sprite.Sprite):
     def update_effect(self, targets):
         """Advance one frame; set done when finished."""
 
+    def tick(self):
+        """Count this frame (in 60 FPS frames, see utils.timing)."""
+        self.ticks += timing.ticks()
+
+    def frame_number(self, ticks_per_frame=None):
+        return int(self.ticks // (ticks_per_frame or self.FRAME_TICKS))
+
     @staticmethod
     def _alive(targets):
         return [target for target in targets if target.hp > 0]
@@ -45,8 +53,8 @@ class Spark(Effect):
         self.rect = self.image.get_rect(center=center)
 
     def update_effect(self, targets):
-        self.ticks += 1
-        index = self.ticks // self.FRAME_TICKS
+        self.tick()
+        index = self.frame_number()
         if index >= len(self.frames):
             self.done = True
             return
@@ -90,10 +98,10 @@ class ChargeGlow(Effect):
         self.update_effect(())
 
     def update_effect(self, targets):
-        self.ticks += 1
+        self.tick()
         index = min(len(self.frames) - 1, int(self.level * len(self.frames)))
         # A slight pulse so the charge looks alive
-        pulse = 1 + 0.08 * ((self.ticks // 3) % 2)
+        pulse = 1 + 0.08 * (self.frame_number(3) % 2)
         self.image = scale_frame(self.frames[index], (0.8 + 0.4 * self.level) * pulse)
         self.rect = self.image.get_rect(center=chest_origin(self.caster, self.caster.facing))
 
@@ -122,16 +130,17 @@ class Projectile(Effect):
         self.rect = image.get_rect(center=(round(self.center[0]), round(self.center[1])))
 
     def update_effect(self, targets):
-        self.ticks += 1
-        growing = self.ticks // self.FRAME_TICKS
+        self.tick()
+        growing = self.frame_number()
         if growing < len(self.grow_frames):
             # A ki ball grows in the hands before it flies
             self._set_image(self.grow_frames[growing])
             return
-        self.center[0] += self.direction[0] * self.speed
-        self.center[1] += self.direction[1] * self.speed
-        self.travelled += self.speed
-        index = (self.ticks // self.FRAME_TICKS) % len(self.frames)
+        step = self.speed * timing.ticks()
+        self.center[0] += self.direction[0] * step
+        self.center[1] += self.direction[1] * step
+        self.travelled += step
+        index = self.frame_number() % len(self.frames)
         self._set_image(self.frames[index])
         for target in self._alive(targets):
             if self.rect.colliderect(target.rect):
@@ -173,7 +182,7 @@ class Beam(Effect):
         """Build the beam's picture; only when what it shows changed (it
         grows a few pixels a frame, and its head animates every few ticks):
         drawing, scaling and turning it is the costly part."""
-        frame = self.ticks // self.FRAME_TICKS
+        frame = self.frame_number()
         state = (int(self.length), self.hit, frame)
         if state == self._composed:
             return
@@ -209,9 +218,9 @@ class Beam(Effect):
             self.rect = self.image.get_rect(midbottom=(ox, oy))
 
     def update_effect(self, targets):
-        self.ticks += 1
+        self.tick()
         if not self.stopped:
-            self.length = min(self.max_range, self.length + self.speed)
+            self.length = min(self.max_range, self.length + self.speed * timing.ticks())
             self._compose()
             hits = [target for target in self._alive(targets) if self.rect.colliderect(target.rect)]
             if hits:
@@ -225,7 +234,7 @@ class Beam(Effect):
                 self.stopped = True
             self._compose()  # nothing to do unless it just hit
             return
-        self.hold_ticks -= 1
+        self.hold_ticks -= timing.ticks()
         self._compose()
         if self.hold_ticks <= 0:
             self.done = True
@@ -248,8 +257,8 @@ class Burst(Effect):
         self.rect = self.image.get_rect(center=center)
 
     def update_effect(self, targets):
-        self.ticks += 1
-        index = self.ticks // self.FRAME_TICKS
+        self.tick()
+        index = self.frame_number()
         if index >= len(self.frames):
             self.done = True
             return
