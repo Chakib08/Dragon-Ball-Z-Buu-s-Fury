@@ -555,7 +555,7 @@ class CombatTests(unittest.TestCase):
             self.assertEqual(enemy.action["name"], "transform")
             for _ in range(300):
                 self.combat.update([enemy], [])
-                if enemy.is_super:
+                if enemy.is_super and enemy.action is None:  # the transformation is over
                     break
         self.assertTrue(enemy.is_super)
 

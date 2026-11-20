@@ -7,6 +7,7 @@ from character import Character
 from constants import C_WALK_ANIMATION_COUNT
 from difficulty import ALLY_DIFFICULTY, Difficulty, difficulty as find_difficulty, enemy_profile
 from saiyan import SuperSaiyanMixin
+from stats import power_ups
 
 
 # The two sides of a fight: the player and his support characters, and the
@@ -77,6 +78,12 @@ class NPC(Character):
         self.wants_guard = False
         self.guard_until_ms = None
         self.riposte_ready = False
+        # The brain's notes (npc_ai.py): which incoming effects it decided
+        # to dodge, when it next considers blocking, since when it lines up
+        # a technique
+        self.dodge_rolls = {}
+        self.next_block_roll_ms = 0
+        self.lineup_since = None
         if difficulty is None:
             difficulty = find_difficulty(ALLY_DIFFICULTY) if team == HEROES else enemy_profile(name).difficulty
         elif not isinstance(difficulty, Difficulty):
@@ -107,6 +114,10 @@ class NPC(Character):
         self.transform_at_hp = difficulty.power_up_at
         self.technique_every_ms = difficulty.technique_every_ms
         self.technique_damage = difficulty.technique_damage
+        # How smart it fights (see npc_ai.py)
+        self.dodge_chance = difficulty.dodge
+        self.block_chance = difficulty.block_chance
+        self.tactics = difficulty.tactics
 
     def update_ai(self):
         """Decisions the NPC takes on its own during a fight."""
@@ -238,6 +249,10 @@ class SaiyanNPC(SuperSaiyanMixin, NPC):
     """
 
     def update_ai(self):
+        steps = power_ups(self.character_name)
+        if steps:
+            self._power_up_by_steps(steps)
+            return
         # Powers up when HP drops to transform_at_hp of the maximum
         if self.powered_up or not 0 < self.hp <= self.max_hp * self.transform_at_hp:
             return
@@ -245,3 +260,24 @@ class SaiyanNPC(SuperSaiyanMixin, NPC):
             self.transform()
         else:
             self.power_up()
+
+    def _power_up_by_steps(self, steps):
+        """Transform into the strongest level whose HP share is reached
+        (Config/stats.json "power_ups"), never back to a weaker one. It
+        waits for the ki a level needs (see SuperSaiyanMixin)."""
+        if self.hp <= 0 or self.action is not None:
+            return
+        share = self.hp / self.max_hp
+        order = [form for form, _ in steps]
+        reached = [form for form, at in steps if share <= at and self.has_form(form)]
+        if not reached:
+            return
+        wanted = reached[-1]
+        if self.form in order and order.index(self.form) >= order.index(wanted):
+            return  # already there (or stronger)
+        levels = self.super_levels
+        if wanted not in levels:
+            return
+        self.selected_level = levels.index(wanted)
+        self.stop_block()
+        self.transform()

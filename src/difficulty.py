@@ -15,6 +15,11 @@ ordinary enemy, "normal": 1.0) and every enemy its difficulty:
     technique_every_ms  about how often it tries a special technique
     technique_damage  share of a technique's damage it does (the player's
                       techniques do it all: an enemy's would be too strong)
+    dodge             chance it sidesteps a blast or beam coming at it
+    block_chance      chance it blocks a foe in its face while waiting to
+                      strike (then counters as the guard drops)
+    tactics           whether it lines up its techniques and, with others
+                      on the same foe, attacks from different sides
 
 "ally" is the strength of the support characters fighting on the player's
 side.
@@ -49,6 +54,9 @@ class Difficulty:
     power_up_at: float = 0.5
     technique_every_ms: int = 5000
     technique_damage: float = 0.2
+    dodge: float = 0.0
+    block_chance: float = 0.0
+    tactics: bool = False
 
 
 @dataclass(frozen=True)

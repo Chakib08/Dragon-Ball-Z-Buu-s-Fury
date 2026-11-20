@@ -16,7 +16,10 @@
       "speed": 0.9,
       "power_up_at": 0.35,
       "technique_every_ms": 8000,
-      "technique_damage": 0.12
+      "technique_damage": 0.12,
+      "dodge": 0.15,
+      "block_chance": 0.1,
+      "tactics": false
     },
     "normal": {
       "label": "Normal",
@@ -34,7 +37,10 @@
       "speed": 1.0,
       "power_up_at": 0.5,
       "technique_every_ms": 5000,
-      "technique_damage": 0.2
+      "technique_damage": 0.2,
+      "dodge": 0.45,
+      "block_chance": 0.3,
+      "tactics": true
     },
     "hard": {
       "label": "Hard",
@@ -53,7 +59,10 @@
       "speed": 1.25,
       "power_up_at": 0.6,
       "technique_every_ms": 3000,
-      "technique_damage": 0.3
+      "technique_damage": 0.3,
+      "dodge": 0.75,
+      "block_chance": 0.5,
+      "tactics": true
     },
     "ally": {
       "label": "Ally",
@@ -71,7 +80,10 @@
       "speed": 1.0,
       "power_up_at": 0.5,
       "technique_every_ms": 5000,
-      "technique_damage": 0.2
+      "technique_damage": 0.2,
+      "dodge": 0.5,
+      "block_chance": 0.3,
+      "tactics": true
     }
   },
   "enemies": {

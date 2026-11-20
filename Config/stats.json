@@ -5,5 +5,8 @@
     "vegeta": {"power": 1.12, "hp": 1.05, "defense": 1.05, "speed": 1.05},
     "gohan": {"power": 1.0, "hp": 1.0, "defense": 1.0, "speed": 1.0},
     "trunks": {"power": 0.95, "hp": 0.95, "defense": 1.0, "speed": 1.1}
+  },
+  "power_ups": {
+    "goku": [["ssj", 0.7], ["ssj3", 0.5]]
   }
 }

@@ -3,6 +3,13 @@ walls, see pathfinding.py), guard, punch, or now and then use a special
 technique. Allies (team HEROES) fight the enemies and otherwise follow the
 player; enemies fight the player and his allies.
 
+How smart they are depends on their difficulty (Config/enemies.json):
+they sidestep blasts and beams coming at them (dodge), block a foe in
+their face while waiting to strike and counter as the guard drops
+(block_chance), and with tactics: line up with their target to fire a
+technique, come at a foe from different sides when several fight it, go
+for weakened foes, and as allies first for whoever attacks the player.
+
 The rules of a fight (damage, techniques, effects) are CombatSystem's: the
 brain asks it to strike or to use a technique.
 """
@@ -14,6 +21,7 @@ import pygame
 
 import pathfinding
 from animation import AnimationDirection
+from constants import C_RUN_ANIMATION_COUNT
 from movement import resolve_movement_collisions, solid_bodies
 from npc import HEROES
 from utils import timing
@@ -53,6 +61,20 @@ class NpcBrain:
     PATH_STALE_CELLS = 3
     # Techniques that fly straight need the target roughly in line
     AIM_TOLERANCE = 12
+    # An effect closer than this (or than the distance it covers in
+    # DODGE_FRAMES frames, for a fast one) is coming: time to sidestep
+    DODGE_LOOKAHEAD = 140
+    DODGE_FRAMES = 12
+    # How often an NPC with a foe in its face considers blocking
+    BLOCK_ROLL_MS = 700
+    # Longest an NPC spends lining up a technique before it gives up
+    LINEUP_MS = 2500
+    # Sides several fighters on one foe come from
+    SIDES = ((-1, 0), (1, 0), (0, -1), (0, 1))
+    # Target choice (with tactics): a foe attacking the player counts as
+    # this much closer for an ally, a nearly beaten one up to this much
+    PROTECT_BONUS = 40
+    FINISH_BONUS = 30
 
     def __init__(self, combat):
         self.combat = combat
@@ -74,7 +96,18 @@ class NpcBrain:
             foe for foe in self.foes_of(npc)
             if foe.hp > 0 and min(math.dist(point, foe.feet.center) for point in near) <= self.AGGRO_RANGE
         ]
-        return min(candidates, key=lambda foe: math.dist(npc.feet.center, foe.feet.center), default=None)
+        return min(candidates, key=lambda foe: self._target_score(npc, foe), default=None)
+
+    def _target_score(self, npc, foe):
+        """Lower is better: the closest, or with tactics also the most
+        beaten (and for an ally whoever attacks the player)."""
+        score = math.dist(npc.feet.center, foe.feet.center)
+        if getattr(npc, "tactics", False):
+            if npc.team == HEROES and getattr(foe, "target", None) is self.combat.player:
+                score -= self.PROTECT_BONUS
+            if foe.max_hp:
+                score -= (1 - foe.hp / foe.max_hp) * self.FINISH_BONUS
+        return score
 
     # ---- One frame ------------------------------------------------------------
     def update(self, npc, now, collisions):
@@ -96,6 +129,9 @@ class NpcBrain:
             npc.cancel_hurt()
             busy = False
         if pushed or busy:
+            return
+        # A blast or beam coming: out of its way first (in a fight or not)
+        if self.dodge(npc, collisions):
             return
 
         target = self.choose_target(npc, now)
@@ -134,6 +170,7 @@ class NpcBrain:
 
         # Now and then a special technique instead of a punch
         if self.try_technique(npc, target, now):
+            npc.lineup_since = None
             return
 
         if self.in_attack_range(npc):
@@ -145,7 +182,7 @@ class NpcBrain:
                 npc.last_attack_ms = now
                 npc.strike()
                 target.take_damage(npc.attack_damage * combat.damage_multiplier(npc), npc.feet.center)
-            else:
+            elif not self.block(npc, target, now):
                 npc.face_idle()
         else:
             if npc.out_of_reach_since is None:
@@ -153,7 +190,9 @@ class NpcBrain:
             # A short trip out of reach (a hit's push) keeps the reaction
             if now - npc.out_of_reach_since > npc.REACH_GRACE_MS:
                 npc.in_reach_since = None
-            self.move_toward(npc, target.feet.center, collisions)
+            # From a distance, a smart one lines up a technique on the way
+            if not self.line_up(npc, target, now, collisions):
+                self.move_toward(npc, self.approach_point(npc, target), collisions)
 
     def follow_player(self, npc, collisions):
         """An ally with nobody to fight stays close to the player."""
@@ -190,6 +229,123 @@ class NpcBrain:
             now - npc.in_reach_since >= npc.reaction_ms
             and now - npc.last_attack_ms >= npc.attack_cooldown_ms
         )
+
+    # ---- Smarter moves ------------------------------------------------------------
+    def incoming(self, npc):
+        """(effect, its direction, npc's offset across its path) of a blast
+        or beam about to hit npc, or None."""
+        center = npc.rect.center
+        for effect in self.combat.effects:
+            direction = getattr(effect, "direction", None)
+            if effect.done or not isinstance(direction, tuple) or getattr(effect, "stopped", False):
+                continue
+            if getattr(effect, "from_opponent", False):
+                hostile = npc.team == HEROES
+            else:
+                hostile = getattr(effect, "team", HEROES) != npc.team
+            if not hostile:
+                continue
+            if hasattr(effect, "length"):  # a beam: its head
+                front = (effect.origin[0] + direction[0] * effect.length,
+                         effect.origin[1] + direction[1] * effect.length)
+            else:
+                front = effect.center
+            rel_x, rel_y = center[0] - front[0], center[1] - front[1]
+            along = rel_x * direction[0] + rel_y * direction[1]
+            across = rel_y * direction[0] - rel_x * direction[1]
+            thickness = effect.rect.height if direction[0] else effect.rect.width
+            body = npc.rect.height if direction[0] else npc.rect.width
+            lookahead = max(self.DODGE_LOOKAHEAD, getattr(effect, "speed", 0) * self.DODGE_FRAMES)
+            if -8 < along < lookahead and abs(across) < (thickness + body) / 2:
+                return effect, direction, across
+        return None
+
+    def dodge(self, npc, collisions):
+        """Sidestep a blast or beam coming at it, if it decides to (once
+        per effect: dodge_chance). Returns True while dodging."""
+        chance = getattr(npc, "dodge_chance", 0)
+        if chance <= 0:
+            return False
+        threat = self.incoming(npc)
+        if threat is None:
+            return False
+        effect, (dx, dy), across = threat
+        key = id(effect)
+        if key not in npc.dodge_rolls:
+            if len(npc.dodge_rolls) > 16:
+                npc.dodge_rolls.clear()  # forgets effects long gone
+            npc.dodge_rolls[key] = random.random() < chance
+        if not npc.dodge_rolls[key]:
+            return False
+        # Away from the line it flies along
+        side = 1 if across > 0 or (across == 0 and key % 2) else -1
+        step = (-dy * side, dx * side)
+        npc.stop_block()
+        npc.move(f"Run {direction_to((0, 0), step)}", C_RUN_ANIMATION_COUNT, step)
+        npc.update()
+        resolve_movement_collisions(npc, collisions, solid_bodies(self.combat.fighters, npc))
+        return True
+
+    def block(self, npc, foe, now):
+        """Waiting for its next strike with a foe facing it up close: now
+        and then it blocks (block_chance), and counters as the guard drops.
+        Returns True if it started guarding."""
+        chance = getattr(npc, "block_chance", 0)
+        if chance <= 0 or now < npc.next_block_roll_ms:
+            return False
+        npc.next_block_roll_ms = now + self.BLOCK_ROLL_MS
+        forward, _ = forward_lateral(foe.facing, foe.feet.center, npc.feet.center)
+        if forward <= 0 or random.random() >= chance:
+            return False
+        npc.start_guard(now)
+        return npc.blocking
+
+    def line_up(self, npc, target, now, collisions):
+        """With tactics, when a technique that flies straight is ready (ki,
+        time): move level with the target, at a good distance, to fire it.
+        Gives up after LINEUP_MS. Returns True while lining up."""
+        if not getattr(npc, "tactics", False) or not npc.techniques or now < npc.next_technique_ms:
+            return False
+        ready = [t for t in npc.techniques if t.kind in ("projectile", "beam", "ball")
+                 and npc.ki >= t.cost and t.form_for(npc) is not None]
+        if not ready:
+            return False
+        if npc.lineup_since is None:
+            npc.lineup_since = now
+        elif now - npc.lineup_since > self.LINEUP_MS:
+            npc.lineup_since = None
+            npc.next_technique_ms = now + self.technique_delay(npc)  # back to punching
+            return False
+        best = max(ready, key=lambda technique: technique.damage)
+        tx, ty = target.feet.center
+        dx, dy = npc.feet.centerx - tx, npc.feet.centery - ty
+        low = self.combat.ATTACK_RANGE * 2.5
+        want = max(low, min(best.stats["range"] * 0.6, max(abs(dx), abs(dy))))
+        if abs(dx) >= abs(dy):
+            spot = (tx + (1 if dx >= 0 else -1) * want, ty)
+        else:
+            spot = (tx, ty + (1 if dy >= 0 else -1) * want)
+        if math.dist(npc.feet.center, spot) < 2:
+            npc.face_toward(target.feet.center)
+            return True
+        self.move_toward(npc, spot, collisions)
+        return True
+
+    def approach_point(self, npc, target):
+        """Where to walk to reach target: straight at it, or, with tactics
+        and others of its side on the same foe, its own side of it."""
+        if not getattr(npc, "tactics", False):
+            return target.feet.center
+        crew = [fighter for fighter in self.combat.fighters
+                if getattr(fighter, "target", None) is target and fighter.team == npc.team and fighter.hp > 0]
+        if len(crew) < 2 or npc not in crew:
+            return target.feet.center
+        reach = self.combat.reach(npc, target)
+        if math.dist(npc.feet.center, target.feet.center) <= reach * 1.5:
+            return target.feet.center  # close enough: in it goes
+        side_x, side_y = self.SIDES[crew.index(npc) % len(self.SIDES)]
+        gap = reach * 0.8 + target.body_width / 2
+        return (target.feet.centerx + side_x * gap, target.feet.centery + side_y * gap * 0.6)
 
     # ---- Special techniques ---------------------------------------------------
     def technique_delay(self, npc):
