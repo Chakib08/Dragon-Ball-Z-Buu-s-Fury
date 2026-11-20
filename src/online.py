@@ -203,6 +203,13 @@ class OnlineMatch:
         ox, oy, ofacing = self.SPAWNS[1 - slot]
         self.opponent.place(ox, oy, ofacing)
         self.hit_check = HitCheck(self.opponent)
+        # The states go over UDP when the server offers it (see net.py);
+        # numbered, so one arriving late never moves the opponent back
+        udp = start.get("udp")
+        if isinstance(udp, dict) and udp.get("token"):
+            net.start_udp(udp["token"], udp.get("port"))
+        self.state_seq = 0
+        self.last_state_seq = -1
 
         game.character = self.player
         game.map_manager = MapManager(game.screen, self.player, versus=True, opponents=[self.opponent])
@@ -233,6 +240,11 @@ class OnlineMatch:
         for message in messages:
             kind = message.get("t")
             if kind == "state":
+                seq = message.get("seq")
+                if isinstance(seq, int):
+                    if seq <= self.last_state_seq:
+                        continue  # an older state, overtaken by a newer one
+                    self.last_state_seq = seq
                 self.opponent.apply_snapshot(message)
             elif kind == "hit" and self.result is None and self.player.hp > 0:
                 source = message.get("source")
@@ -270,7 +282,8 @@ class OnlineMatch:
         now = pygame.time.get_ticks()
         if now - self.last_sent_ms >= self.SEND_INTERVAL_MS:
             self.last_sent_ms = now
-            self.net.send({"t": "state", **self.player.snapshot()})
+            self.state_seq += 1
+            self.net.send_state({"t": "state", "seq": self.state_seq, **self.player.snapshot()})
         if self.player.hp <= 0 and self.result is None:
             self.net.send({"t": "ko"})
             self._finish("lose")

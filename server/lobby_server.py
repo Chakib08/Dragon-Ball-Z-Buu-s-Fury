@@ -5,13 +5,18 @@ Players connect over TCP and exchange JSON messages, one per line. In the
 lobby they see the rooms waiting for an opponent, create one or join one.
 When a room has two players the match starts, and from then on the server
 relays the match messages (fighter state, hits, beams, knock-out) from one
-player to the other. Each game is the authority on its own fighter, so the
+player to the other: the fighters' states over UDP (on the same port
+number: the game sends them there once its "udp_hello" got an answer, and
+over TCP before that, or if UDP is blocked), the rest over TCP, which never
+loses a hit or a knock-out. Each game is the authority on its own fighter, so the
 server does not simulate anything (each game checks that the hits it
 receives are possible, see src/online.py HitCheck). A client sending far
 more messages than a game does has the excess dropped.
 
 Usage:
     python3 server/lobby_server.py [--host 0.0.0.0] [--port 5050]
+
+Open the port for TCP and UDP (a box's port forwarding, a firewall).
 
 Client -> server
     {"t": "hello", "name": str, "character": str, "version": int}
@@ -23,12 +28,18 @@ Client -> server
     {"t": "leave"}                      leave the room (cancel or quit a match)
     {"t": "state" | "hit" | "tech" | "ko", ...}   relayed to the opponent
 
+Client -> server, UDP (the token of its "start" message in "tok")
+    {"t": "udp_hello", "tok": str}      answered by {"t": "udp_ok"}
+    {"t": "state", "tok": str, ...}     relayed to the opponent (over UDP if
+                                        it said udp_hello too, else TCP)
+
 Server -> client
     {"t": "welcome", "id": int, "version": int}
     {"t": "rooms", "rooms": [{"id", "host", "character"}]}
     {"t": "waiting", "room": int}       room created, waiting for an opponent
     {"t": "start", "room": int, "slot": 0 | 1,
-     "opponent": {"name", "character"}}
+     "opponent": {"name", "character"},
+     "udp": {"token": str, "port": int}}   (no "udp" if UDP is not open)
     {"t": "opponent_left"}
     {"t": "error", "message": str}
     relayed messages, unchanged
@@ -39,6 +50,7 @@ import asyncio
 import itertools
 import json
 import logging
+import secrets
 import time
 
 PROTOCOL_VERSION = 1
@@ -56,6 +68,8 @@ NAME_LENGTH = 24
 # (with room for bursts) is dropped
 MESSAGES_PER_SECOND = 90
 MESSAGE_BURST = 180
+# A state is about 200 bytes: anything much bigger is not from the game
+MAX_DATAGRAM = 2048
 
 log = logging.getLogger("lobby")
 
@@ -69,6 +83,10 @@ class Player:
         self.room = None
         # Games that speak another version may not play (see "hello")
         self.compatible = True
+        # In a match: the token its UDP packets carry, and where they come
+        # from once one arrived (its address as the internet box shows it)
+        self.udp_token = None
+        self.udp_address = None
         self.allowance = MESSAGE_BURST
         self.allowance_at = time.monotonic()
         self.dropped = 0
@@ -115,6 +133,11 @@ class LobbyServer:
         self.players = {}
         self.rooms = {}
         self._player_ids = itertools.count(1)
+        # UDP: the open socket (None: states stay on TCP), its port and the
+        # players of running matches by token
+        self.udp = None
+        self.udp_port = None
+        self.udp_tokens = {}
         self._room_ids = itertools.count(1)
 
     # ---- Connection --------------------------------------------------------------
@@ -171,9 +194,43 @@ class LobbyServer:
         elif kind == "leave":
             self.leave_room(player)
         elif kind in RELAYED and player.room is not None:
-            opponent = player.room.other(player)
-            if opponent is not None:
-                opponent.send(message)
+            self.relay(player, message)
+
+    def relay(self, player, message):
+        """To player's opponent; a state over UDP when it can take one."""
+        opponent = player.room.other(player) if player.room is not None else None
+        if opponent is None:
+            return
+        if message.get("t") == "state" and self.udp is not None and opponent.udp_address is not None:
+            data = json.dumps(message, separators=(",", ":")).encode()
+            self.udp.sendto(data, opponent.udp_address)
+        else:
+            opponent.send(message)
+
+    # ---- UDP ---------------------------------------------------------------------
+    def datagram(self, data, address):
+        """A UDP packet: a match's player saying hello, or its state."""
+        if len(data) > MAX_DATAGRAM:
+            return
+        try:
+            message = json.loads(data)
+        except (ValueError, UnicodeDecodeError):
+            return
+        if not isinstance(message, dict):
+            return
+        player = self.udp_tokens.get(message.pop("tok", None))
+        if player is None or not player.take_message():
+            return  # not from a running match (or too much of it)
+        player.udp_address = address
+        kind = message.get("t")
+        if kind == "udp_hello":
+            self.udp.sendto(b'{"t":"udp_ok"}', address)
+        elif kind == "state":
+            self.relay(player, message)
+
+    def _end_udp(self, player):
+        self.udp_tokens.pop(player.udp_token, None)
+        player.udp_token = player.udp_address = None
 
     def room_list(self):
         return {
@@ -213,12 +270,18 @@ class LobbyServer:
         player.room = room
         for slot, member in enumerate(room.players):
             opponent = room.other(member)
-            member.send({
+            start = {
                 "t": "start",
                 "room": room.id,
                 "slot": slot,
                 "opponent": {"name": opponent.name, "character": opponent.character},
-            })
+            }
+            if self.udp is not None:
+                self._end_udp(member)
+                member.udp_token = secrets.token_hex(8)
+                self.udp_tokens[member.udp_token] = member
+                start["udp"] = {"token": member.udp_token, "port": self.udp_port}
+            member.send(start)
         log.info("room %s: %s vs %s", room.id, host.name, player.name)
         self.broadcast_rooms()
 
@@ -228,17 +291,39 @@ class LobbyServer:
             return
         player.room = None
         room.players.remove(player)
+        self._end_udp(player)
         for member in room.players:
             member.room = None
+            self._end_udp(member)
             member.send({"t": "opponent_left"})
         self.rooms.pop(room.id, None)
         self.broadcast_rooms()
+
+
+class UdpRelay(asyncio.DatagramProtocol):
+    def __init__(self, lobby):
+        self.lobby = lobby
+
+    def datagram_received(self, data, address):
+        self.lobby.datagram(data, address)
+
+    def error_received(self, error):
+        pass  # a packet to a player who left (ICMP unreachable): ignored
 
 
 async def serve(host, port, ready=None):
     lobby = LobbyServer()
     server = await asyncio.start_server(lobby.handle, host, port, limit=MAX_LINE)
     log.info("lobby listening on %s", ", ".join(str(s.getsockname()) for s in server.sockets))
+    # The same port number for UDP (the one TCP got, when port is 0)
+    udp_port = server.sockets[0].getsockname()[1]
+    try:
+        transport, _ = await asyncio.get_running_loop().create_datagram_endpoint(
+            lambda: UdpRelay(lobby), local_addr=(host, udp_port))
+        lobby.udp, lobby.udp_port = transport, udp_port
+        log.info("fighters' states over UDP on port %s", udp_port)
+    except OSError as error:
+        log.warning("no UDP on port %s (%s): states go over TCP", udp_port, error)
     if ready is not None:
         ready(server)
     async with server:

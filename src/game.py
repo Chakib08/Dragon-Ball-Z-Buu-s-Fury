@@ -362,6 +362,7 @@ class Game:
         self.scene = "online"
 
     def end_match(self):
+        self.net.stop_udp()
         self.net.send({"t": "leave"})
         self.match = None
         self.release_input()

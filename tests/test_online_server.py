@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import sys
 import threading
@@ -142,6 +143,72 @@ class LobbyServerTests(unittest.TestCase):
             taken = sum(player.take_message() for _ in range(1000))
             self.assertEqual(taken, lobby_server.MESSAGES_PER_SECOND)
         self.assertEqual(player.dropped, 2000 - lobby_server.MESSAGE_BURST - lobby_server.MESSAGES_PER_SECOND)
+
+    def start_match(self):
+        host, guest = self.client("Alice", "goku"), self.client("Bob", "vegeta")
+        host.send({"t": "create"})
+        room = wait_for(host, "waiting")["room"]
+        guest.send({"t": "join", "room": room})
+        return host, wait_for(host, "start"), guest, wait_for(guest, "start")
+
+    def wait_udp(self, *clients):
+        end = time.time() + 3
+        while not all(client.udp_ready for client in clients) and time.time() < end:
+            for client in clients:
+                client.send_state({"t": "state", "seq": 0})  # keeps knocking
+            time.sleep(0.02)
+        self.assertTrue(all(client.udp_ready for client in clients))
+
+    def test_states_go_over_udp_and_the_rest_over_tcp(self):
+        host, host_start, guest, guest_start = self.start_match()
+        self.assertEqual(host_start["udp"]["port"], self.server.port)
+        self.assertNotEqual(host_start["udp"]["token"], guest_start["udp"]["token"])
+        host.start_udp(host_start["udp"]["token"], host_start["udp"]["port"])
+        guest.start_udp(guest_start["udp"]["token"], guest_start["udp"]["port"])
+        self.wait_udp(host, guest)
+
+        # Once UDP works, a state no longer goes over TCP
+        sent_over_tcp = []
+        real_send = host.send
+        host.send = lambda message: sent_over_tcp.append(message) or real_send(message)
+        host.send_state({"t": "state", "seq": 7, "x": 1.5, "y": 2})
+        state = wait_for(guest, "state", where=lambda message: message.get("seq") == 7)
+        self.assertEqual((state["x"], state["y"]), (1.5, 2))
+        self.assertNotIn("tok", state)  # the token stays between a player and the server
+        self.assertEqual(sent_over_tcp, [])
+        # Hits still go over TCP, which never loses one
+        host.send({"t": "hit", "damage": 3})
+        self.assertEqual(wait_for(guest, "hit")["damage"], 3)
+
+    def test_without_udp_the_states_still_arrive_over_tcp(self):
+        host, _, guest, _ = self.start_match()
+        self.assertFalse(host.udp_ready)  # UDP never started (blocked, say)
+        host.send_state({"t": "state", "seq": 3})
+        wait_for(guest, "state", where=lambda message: message.get("seq") == 3)
+
+    def test_udp_packets_of_strangers_are_ignored(self):
+        host, host_start, guest, guest_start = self.start_match()
+        guest.start_udp(guest_start["udp"]["token"], guest_start["udp"]["port"])
+        self.wait_udp(guest)
+        import socket as socket_module
+        stranger = socket_module.socket(socket_module.AF_INET, socket_module.SOCK_DGRAM)
+        self.addCleanup(stranger.close)
+        for token in ("not a token", None):
+            stranger.sendto(json.dumps({"t": "state", "tok": token, "seq": 99}).encode(),
+                            ("127.0.0.1", self.server.port))
+        stranger.sendto(b"not json", ("127.0.0.1", self.server.port))
+        host.send_state({"t": "state", "seq": 5})  # TCP: host has no UDP
+        state = wait_for(guest, "state", where=lambda message: message.get("seq") in (5, 99))
+        self.assertEqual(state["seq"], 5)
+
+    def test_leaving_ends_the_tokens(self):
+        host, host_start, guest, guest_start = self.start_match()
+        guest.send({"t": "leave"})
+        wait_for(host, "opponent_left")
+        guest.start_udp(guest_start["udp"]["token"], guest_start["udp"]["port"])
+        time.sleep(0.4)
+        guest.send_state({"t": "state", "seq": 1})
+        self.assertFalse(guest.udp_ready)
 
     def test_unreachable_server_reports_an_error(self):
         client = NetClient()

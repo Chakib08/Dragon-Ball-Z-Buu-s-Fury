@@ -34,6 +34,15 @@ class FakeNet:
         messages, self.inbox = self.inbox, []
         return messages
 
+    # No UDP between FakeNets: a state goes like any message
+    send_state = send
+
+    def start_udp(self, token, port=None):
+        self.udp_token = token
+
+    def stop_udp(self):
+        pass
+
 
 def fake_game(character):
     screen = pygame.display.get_surface()
@@ -174,6 +183,26 @@ class OnlineMatchTests(unittest.TestCase):
         self.net_b.status = "error"
         self.b.handle_messages([])
         self.assertEqual(self.b.result, "disconnected")
+
+    def test_a_state_arriving_late_never_moves_the_opponent_back(self):
+        remote = self.a.opponent
+        newer = {"t": "state", "seq": 10, "x": 300, "y": 200}
+        older = {"t": "state", "seq": 9, "x": 100, "y": 100}
+        self.a.handle_messages([newer, older])
+        self.assertEqual(remote.target_position, [300, 200])
+        # Every state the game sends is numbered, one more each time
+        self.a.last_sent_ms = -10_000
+        self.a.after_frame()
+        self.a.last_sent_ms = -10_000
+        self.a.after_frame()
+        seqs = [message["seq"] for message in self.net_a.sent if message["t"] == "state"]
+        self.assertEqual(seqs[-2:], [seqs[-2], seqs[-2] + 1])
+
+    def test_the_match_uses_udp_when_the_server_offers_it(self):
+        net = FakeNet()
+        OnlineMatch(fake_game("goku"), net, {"slot": 0, "opponent": {"character": "vegeta"},
+                                             "udp": {"token": "abc", "port": 5050}})
+        self.assertEqual(net.udp_token, "abc")
 
     def test_bad_messages_are_ignored(self):
         self.a.handle_messages([
