@@ -4,6 +4,7 @@ import sys
 import threading
 import time
 import unittest
+import unittest.mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "server"))
 
@@ -115,6 +116,32 @@ class LobbyServerTests(unittest.TestCase):
 
         guest.close()
         wait_for(host, "opponent_left")
+
+    def test_a_game_of_another_version_is_told_to_update_and_cannot_play(self):
+        old = NetClient()
+        old.connect("127.0.0.1", self.server.port)
+        self.clients.append(old)
+        self.assertEqual(wait_for(old, "welcome")["version"], lobby_server.PROTOCOL_VERSION)
+        old.send({"t": "hello", "name": "Old", "character": "goku", "version": lobby_server.PROTOCOL_VERSION + 1})
+        self.assertIn("update", wait_for(old, "error")["message"])
+        old.send({"t": "create"})
+        wait_for(old, "error")
+
+    def test_the_game_and_the_server_speak_the_same_version(self):
+        import net
+        self.assertEqual(net.PROTOCOL_VERSION, lobby_server.PROTOCOL_VERSION)
+
+    def test_a_flooding_client_gets_rate_limited(self):
+        player = lobby_server.Player(1, writer=None)
+        clock = [100.0]
+        with unittest.mock.patch("lobby_server.time.monotonic", lambda: clock[0]):
+            player.allowance_at = clock[0]
+            taken = sum(player.take_message() for _ in range(1000))
+            self.assertEqual(taken, lobby_server.MESSAGE_BURST)
+            clock[0] += 1.0  # a second later: one second's worth again
+            taken = sum(player.take_message() for _ in range(1000))
+            self.assertEqual(taken, lobby_server.MESSAGES_PER_SECOND)
+        self.assertEqual(player.dropped, 2000 - lobby_server.MESSAGE_BURST - lobby_server.MESSAGES_PER_SECOND)
 
     def test_unreachable_server_reports_an_error(self):
         client = NetClient()

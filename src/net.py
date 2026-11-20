@@ -11,6 +11,9 @@ import socket
 import threading
 
 CONNECT_TIMEOUT = 4
+# The online mode's message format; the server says its own in "welcome"
+# and refuses games that speak another (see server/lobby_server.py)
+PROTOCOL_VERSION = 1
 
 
 class NetClient:

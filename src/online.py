@@ -9,11 +9,14 @@ Super Saiyan), so both games agree on every health bar.
 
 import math
 import random
+from collections import deque
 
 import pygame
 
 from character import Character
+from combat import CombatSystem
 from map import MapManager
+from net import PROTOCOL_VERSION
 from saiyan import Saiyan
 import settings as user_settings
 from taps import tap_position
@@ -118,6 +121,53 @@ class RemoteFighter(Character):
         return amount
 
 
+class HitCheck:
+    """What a hit from the opponent can be. Its game decides its own hits
+    (see the module's docstring), so a modified game could send anything;
+    these limits keep it to what that character could really do: no more
+    damage than its strongest move fully powered (Super Saiyan 3, fully
+    charged), from no farther than its longest reach, no more often than
+    hits can land. A fair game never comes near them.
+
+    This stops absurd hits, not subtle cheating: for that the server would
+    have to run the fight itself.
+    """
+
+    # Room for rounding and for positions that arrive a little late
+    DAMAGE_SLACK = 1.25
+    REACH_MARGIN = 80
+    # Several effects can land in the same second (a punch, a ki blast...)
+    MAX_HITS_PER_SECOND = 8
+
+    def __init__(self, attacker):
+        strongest = max([CombatSystem.PLAYER_ATTACK_DAMAGE, *(t.damage for t in attacker.techniques)])
+        self.max_damage = (strongest * getattr(attacker, "power", 1.0)
+                           * CombatSystem.SUPER_3_DAMAGE_MULTIPLIER * self.DAMAGE_SLACK)
+        reaches = [CombatSystem.ATTACK_RANGE + CombatSystem.body_reach(attacker) * 2]
+        for technique in attacker.techniques:
+            stats = technique.stats
+            reaches.append(stats.get("range") or stats.get("reach") or stats.get("radius") or 0)
+        self.max_reach = max(reaches) + self.REACH_MARGIN
+        self.recent_ms = deque()
+        self.refused = 0
+
+    def allows(self, damage, source, target, now):
+        """Whether a hit of damage, coming from source (a point, or None),
+        can land on a fighter standing at target."""
+        while self.recent_ms and now - self.recent_ms[0] >= 1000:
+            self.recent_ms.popleft()
+        plausible = (
+            damage <= self.max_damage
+            and (source is None or math.dist(source, target) <= self.max_reach)
+            and len(self.recent_ms) < self.MAX_HITS_PER_SECOND
+        )
+        if plausible:
+            self.recent_ms.append(now)
+        else:
+            self.refused += 1
+        return plausible
+
+
 class OnlineMatch:
     """A 1v1 on the world map against a player from the lobby."""
 
@@ -152,6 +202,7 @@ class OnlineMatch:
         self.opponent = RemoteFighter(character, str(opponent.get("name", "Opponent")), net.send)
         ox, oy, ofacing = self.SPAWNS[1 - slot]
         self.opponent.place(ox, oy, ofacing)
+        self.hit_check = HitCheck(self.opponent)
 
         game.character = self.player
         game.map_manager = MapManager(game.screen, self.player, versus=True, opponents=[self.opponent])
@@ -193,7 +244,8 @@ class OnlineMatch:
                     continue
                 if source is not None and None in source:
                     source = None
-                self.player.take_damage(damage, source, push)
+                if self.hit_check.allows(damage, source, self.player.feet.center, pygame.time.get_ticks()):
+                    self.player.take_damage(damage, source, push)
             elif kind == "tech":
                 try:
                     origin = (_number(message["origin"][0]), _number(message["origin"][1]))
@@ -308,8 +360,16 @@ class LobbyScreen:
         for message in self.net.poll():
             kind = message.get("t")
             if kind == "welcome" and not self._said_hello:
+                version = message.get("version", PROTOCOL_VERSION)
+                if version != PROTOCOL_VERSION:
+                    # Another version of the game: matches could not work
+                    self.notice = (f"This server is for version {version} of the online mode "
+                                   f"(this game: {PROTOCOL_VERSION}): update the game or the server")
+                    self.net.close()
+                    continue
                 self._said_hello = True
-                self.net.send({"t": "hello", "name": self.name, "character": self.character})
+                self.net.send({"t": "hello", "name": self.name, "character": self.character,
+                               "version": PROTOCOL_VERSION})
             elif kind == "rooms":
                 self.rooms = [room for room in message.get("rooms", []) if isinstance(room, dict)]
             elif kind == "waiting":

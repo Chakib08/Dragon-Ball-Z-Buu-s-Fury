@@ -6,13 +6,17 @@ lobby they see the rooms waiting for an opponent, create one or join one.
 When a room has two players the match starts, and from then on the server
 relays the match messages (fighter state, hits, beams, knock-out) from one
 player to the other. Each game is the authority on its own fighter, so the
-server does not simulate anything.
+server does not simulate anything (each game checks that the hits it
+receives are possible, see src/online.py HitCheck). A client sending far
+more messages than a game does has the excess dropped.
 
 Usage:
     python3 server/lobby_server.py [--host 0.0.0.0] [--port 5050]
 
 Client -> server
-    {"t": "hello", "name": str, "character": str}
+    {"t": "hello", "name": str, "character": str, "version": int}
+                                        a game of another version gets an
+                                        error and may not create or join
     {"t": "list"}                       ask for the room list
     {"t": "create"}                     open a room and wait in it
     {"t": "join", "room": int}          join a waiting room
@@ -20,7 +24,7 @@ Client -> server
     {"t": "state" | "hit" | "tech" | "ko", ...}   relayed to the opponent
 
 Server -> client
-    {"t": "welcome", "id": int}
+    {"t": "welcome", "id": int, "version": int}
     {"t": "rooms", "rooms": [{"id", "host", "character"}]}
     {"t": "waiting", "room": int}       room created, waiting for an opponent
     {"t": "start", "room": int, "slot": 0 | 1,
@@ -35,6 +39,7 @@ import asyncio
 import itertools
 import json
 import logging
+import time
 
 PROTOCOL_VERSION = 1
 DEFAULT_PORT = 5050
@@ -46,6 +51,11 @@ MAX_LINE = 64 * 1024
 # instead of the server keeping its messages forever
 MAX_PENDING_BYTES = 256 * 1024
 NAME_LENGTH = 24
+# A game sends about 30 states a second plus a few hits and techniques: a
+# client sending far more is flooding, and what it sends over this pace
+# (with room for bursts) is dropped
+MESSAGES_PER_SECOND = 90
+MESSAGE_BURST = 180
 
 log = logging.getLogger("lobby")
 
@@ -57,6 +67,22 @@ class Player:
         self.name = f"Player {player_id}"
         self.character = "goku"
         self.room = None
+        # Games that speak another version may not play (see "hello")
+        self.compatible = True
+        self.allowance = MESSAGE_BURST
+        self.allowance_at = time.monotonic()
+        self.dropped = 0
+
+    def take_message(self):
+        """Whether one more message fits the rate limit (a token bucket)."""
+        now = time.monotonic()
+        self.allowance = min(MESSAGE_BURST, self.allowance + (now - self.allowance_at) * MESSAGES_PER_SECOND)
+        self.allowance_at = now
+        if self.allowance < 1:
+            self.dropped += 1
+            return False
+        self.allowance -= 1
+        return True
 
     def send(self, message):
         if self.writer.is_closing():
@@ -110,7 +136,7 @@ class LobbyServer:
                     message = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                if isinstance(message, dict):
+                if isinstance(message, dict) and player.take_message():
                     self.dispatch(player, message)
                 await writer.drain()
         except ConnectionError:
@@ -127,7 +153,15 @@ class LobbyServer:
         if kind == "hello":
             player.name = str(message.get("name") or player.name)[:NAME_LENGTH]
             player.character = str(message.get("character") or player.character)[:NAME_LENGTH]
+            # Games from before the handshake say nothing: they speak 1
+            version = message.get("version", 1)
+            player.compatible = version == PROTOCOL_VERSION
+            if not player.compatible:
+                player.send({"t": "error", "message": f"This server runs version {PROTOCOL_VERSION} of the "
+                                                      f"online mode, your game {version}: update it"})
             player.send(self.room_list())
+        elif kind in ("create", "join") and not player.compatible:
+            player.send({"t": "error", "message": "Update the game to play on this server"})
         elif kind == "list":
             player.send(self.room_list())
         elif kind == "create":

@@ -185,6 +185,68 @@ class OnlineMatchTests(unittest.TestCase):
         self.assertEqual(self.a.player.hp, self.a.player.max_hp)
 
 
+class HitCheckTests(unittest.TestCase):
+    """A modified opponent's game cannot send impossible hits."""
+
+    setUpClass = OnlineMatchTests.setUpClass
+    setUp = OnlineMatchTests.setUp
+
+    def hit(self, damage, source, now):
+        hp = self.b.player.hp
+        with patch("online.pygame.time.get_ticks", return_value=now):
+            self.b.handle_messages([{"t": "hit", "damage": damage, "source": list(source), "push": 1}])
+        landed = self.b.player.hp < hp
+        self.b.player.hp = self.b.player.max_hp
+        self.b.player.action = None
+        self.b.player.knockback = None
+        return landed
+
+    def test_hits_a_character_could_deal_land(self):
+        near = self.b.player.feet.center
+        self.assertTrue(self.hit(40, near, 1000))
+        # A fully charged ball as Super Saiyan 3 from across the beam's range
+        check = self.b.hit_check
+        self.assertTrue(self.hit(85 * 2.5, (near[0] + 220, near[1]), 2000))
+        self.assertGreaterEqual(check.max_reach, 230)
+
+    def test_impossible_damage_distance_or_pace_is_refused(self):
+        near = self.b.player.feet.center
+        self.assertFalse(self.hit(10_000, near, 1000))
+        self.assertFalse(self.hit(10, (near[0] + 2000, near[1]), 2000))
+        landed = [self.hit(5, near, 5000 + index) for index in range(20)]
+        self.assertEqual(landed.count(True), online.HitCheck.MAX_HITS_PER_SECOND)
+        # A second later, hits land again
+        self.assertTrue(self.hit(5, near, 6100))
+        self.assertGreaterEqual(self.b.hit_check.refused, 2 + 20 - online.HitCheck.MAX_HITS_PER_SECOND)
+
+
+class LobbyVersionTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        pygame.init()
+        Config.init()
+
+    def lobby(self):
+        net = FakeNet()
+        net.connect = lambda host, port: None
+        net.closed = False
+        net.close = lambda: setattr(net, "closed", True)
+        return net, online.LobbyScreen(net, (1200, 540), "goku")
+
+    def test_the_game_says_its_version_and_refuses_another_server(self):
+        net, lobby = self.lobby()
+        net.inbox.append({"t": "welcome", "id": 1, "version": online.PROTOCOL_VERSION})
+        lobby.update([])
+        self.assertEqual(net.sent[-1]["version"], online.PROTOCOL_VERSION)
+
+        net, lobby = self.lobby()
+        net.inbox.append({"t": "welcome", "id": 1, "version": online.PROTOCOL_VERSION + 1})
+        lobby.update([])
+        self.assertEqual(net.sent, [])
+        self.assertTrue(net.closed)
+        self.assertIn("update", lobby.notice)
+
+
 class AddressTests(unittest.TestCase):
     def test_server_addresses(self):
         parse = online.user_settings.parse_address
