@@ -100,6 +100,9 @@ class Game:
         # Size of the window when not full screen
         self.window_size = resolution
         self.screen = create_display(resolution, fullscreen)
+        # Kept here: the screen surface's own flags are not to be trusted once
+        # the window changed size
+        self.fullscreen = bool(self.screen.get_flags() & pygame.FULLSCREEN)
         # Everything is laid out from the size the display really has
         self.resolution = self.screen.get_size()
         self.menu = None
@@ -147,7 +150,7 @@ class Game:
 
     @property
     def is_fullscreen(self):
-        return bool(self.screen.get_flags() & pygame.FULLSCREEN)
+        return self.fullscreen
 
     def toggle_fullscreen(self):
         """Switch between full screen and a window.
@@ -162,6 +165,7 @@ class Game:
     def set_screen(self, screen):
         """Use a new display surface and lay everything out for its size."""
         self.screen = screen
+        self.fullscreen = bool(screen.get_flags() & pygame.FULLSCREEN)
         self.resolution = screen.get_size()
         self.map_manager.set_screen(screen)
         # Everything lays itself out again, keeping what it shows
@@ -389,9 +393,24 @@ class Game:
         if self.result is not None:
             self.result.gamepad_hints = active
 
+    def check_window_size(self, events):
+        """The window got another size (a window manager adjusting a full
+        screen window just after it opened, a phone turning): SDL replaced
+        its pixels, so the screen surface the game holds must be replaced
+        before anything is drawn (drawing into the old one crashes pygame).
+        Returns True if it was."""
+        if not any(event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE) for event in events):
+            return False
+        size = pygame.display.get_window_size()
+        if tuple(size) == tuple(self.resolution) and not is_mobile():
+            return False
+        self.set_screen(create_display(self.window_size, self.fullscreen))
+        return True
+
     def loop_once(self, events):
         """One turn of the main loop: input (keyboard, touch, controller),
         the quit prompt, then the scene's frame."""
+        self.check_window_size(events)
         for event in events:
             self.gamepad.handle_event(event)
         self.gamepad.update()

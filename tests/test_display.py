@@ -136,6 +136,23 @@ class DisplayTests(unittest.TestCase):
         self.assertGreater(touch.buttons["attack"][0], 1200)
         self.assertEqual(game_.scene, "story")
 
+    def test_a_window_resized_by_the_system_gets_a_new_screen_before_drawing(self):
+        """A window manager can resize a full screen window just after it
+        opened: the old screen surface must not be drawn into any more."""
+        game_ = game.Game((1200, 1000), "test")
+        game_.menu = game.Menu(game_.resolution)
+        new = pygame.display.set_mode((1280, 720))  # what SDL now has
+        resized = pygame.event.Event(pygame.WINDOWSIZECHANGED, x=1280, y=720)
+        with patch("game.create_display", return_value=new) as create:
+            game_.loop_once([resized])
+        create.assert_called_once_with((1200, 1000), game_.fullscreen)
+        self.assertIs(game_.screen, new)
+        self.assertEqual(game_.menu.resolution, (1280, 720))
+        # Same size: nothing to do
+        with patch("game.create_display") as create:
+            game_.loop_once([resized])
+        create.assert_not_called()
+
     def test_toggling_full_screen_asks_for_the_other_mode(self):
         game_ = game.Game((1200, 1000), "test")
         with patch("game.create_display", return_value=pygame.display.set_mode((1280, 720))) as create:
