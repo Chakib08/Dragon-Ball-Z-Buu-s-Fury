@@ -1,0 +1,25 @@
+{
+  "characters": [
+    {"id": "goku", "name": "Goku"},
+    {"id": "vegeta", "name": "Vegeta"},
+    {"id": "gohan", "name": "Gohan"},
+    {"id": "trunks", "name": "Trunks"},
+    {"id": "piccolo", "name": "Piccolo", "levels": {"ssj": "No weights"}},
+    {"id": "goten", "name": "Goten"},
+    {"id": "kid_trunks", "name": "Kid Trunks"},
+    {"id": "gotenks", "name": "Gotenks"},
+    {"id": "great_saiyaman", "name": "Great Saiyaman"},
+    {"id": "vegito", "name": "Vegito"},
+    {"id": "android17", "name": "Android 17"},
+    {"id": "android18", "name": "Android 18"},
+    {"id": "cell_imperfect", "name": "Imperfect Cell"},
+    {"id": "cell_semi_perfect", "name": "Semi-Perfect Cell"},
+    {"id": "cell_perfect", "name": "Perfect Cell"},
+    {"id": "buu", "name": "Majin Buu"},
+    {"id": "super_buu", "name": "Super Buu"},
+    {"id": "super_buu_gotenks", "name": "Super Buu (Gotenks)"},
+    {"id": "super_buu_gohan", "name": "Super Buu (Gohan)"},
+    {"id": "kid_buu", "name": "Kid Buu"},
+    {"id": "broly", "name": "Broly"}
+  ]
+}

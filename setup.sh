@@ -5,8 +5,8 @@
 # (and before building the Android APK). Maps are part of the repository and
 # are not touched.
 #
-#   - Characters (Gohan, Vegeta, Trunks, Broly, Goku SSJ3) and the effects
-#     of Trunks' and Broly's techniques come from the private
+#   - Characters (everyone but Goku base / SSJ), the portraits and the
+#     effects of the techniques of most characters come from the private
 #     dbz-assets repository: set GH_TOKEN to a GitHub token that can read it.
 #   - Goku base / SSJ, and the special technique effects (blasts, beams...)
 #     come from spritedatabase.net.
@@ -49,8 +49,34 @@ REPO_ASSETS=(
     "trunks-future-armor/base.png      Graphics/assets/trunks/base.png"
     "trunks-future-armor/ssj.png       Graphics/assets/trunks/ssj.png"
     "broly/base.png                    Graphics/assets/broly/base.png"
+    "piccolo/base.png                  Graphics/assets/piccolo/base.png"
+    # Piccolo without his weighted clothes: his power-up form
+    "piccolo/no-weight.png             Graphics/assets/piccolo/ssj.png"
+    "android17/base.png                Graphics/assets/android17/base.png"
+    "android18/base.png                Graphics/assets/android18/base.png"
+    "goten/base.png                    Graphics/assets/goten/base.png"
+    "goten/ssj.png                     Graphics/assets/goten/ssj.png"
+    "trunks-kid/base.png               Graphics/assets/kid_trunks/base.png"
+    "trunks-kid/ssj.png                Graphics/assets/kid_trunks/ssj.png"
+    "gotenks/ssj.png                   Graphics/assets/gotenks/ssj.png"
+    "gotenks/ssj3.png                  Graphics/assets/gotenks/ssj3.png"
+    "gohan-great-saiyaman/base.png     Graphics/assets/great_saiyaman/base.png"
+    "gohan-great-saiyaman/ssj.png      Graphics/assets/great_saiyaman/ssj.png"
+    "vegito/base.png                   Graphics/assets/vegito/base.png"
+    "vegito/ssj.png                    Graphics/assets/vegito/ssj.png"
+    "cell/imperfect.png                Graphics/assets/cell_imperfect/base.png"
+    "cell/semi-perfect.png             Graphics/assets/cell_semi_perfect/base.png"
+    "cell/perfect.png                  Graphics/assets/cell_perfect/base.png"
+    "buu/base.png                      Graphics/assets/buu/base.png"
+    "kid-buu/base.png                  Graphics/assets/kid_buu/base.png"
+    "super-buu/base.png                Graphics/assets/super_buu/base.png"
+    "super-buu/gotenks-absorbed.png    Graphics/assets/super_buu_gotenks/base.png"
+    "super-buu/gohab-absorbed.png      Graphics/assets/super_buu_gohan/base.png"
     # Effects of the techniques of Trunks and Broly
     "effects/effects.png               Graphics/assets/effects/sfx.png"
+    # Character portraits (character screens, dialog box)
+    "portraits/bf/portraits-bf.png     Graphics/assets/portraits/bf.png"
+    "portraits/log2/portrait-log2.png  Graphics/assets/portraits/log2.png"
 )
 # Written once the repository sheets are installed: older setups put other
 # images at some of these paths, so their presence alone proves nothing

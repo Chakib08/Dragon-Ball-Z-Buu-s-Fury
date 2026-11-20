@@ -12,6 +12,7 @@ from map import MAX_ALLIES, MAX_ENEMIES
 from portraits import portrait
 from stats import character_stats
 import settings as user_settings
+import roster
 
 GAME_TITLE = "DRAGON BALL Z"
 GAME_SUBTITLE = "TRUNKS HOPE"
@@ -54,7 +55,8 @@ class Menu:
         # True when the character was chosen for an online match
         self.online = False
         self.state = State.START
-        self.character_names = ("goku", "vegeta", "gohan", "trunks", "broly")
+        # Every character whose sheets are installed (Config/roster.json)
+        self.character_names = roster.characters()
         self.selected_character = "goku"
         # The name other players see online (saved between sessions)
         self.player_name = str(user_settings.load().get("player_name") or "")[:self.NAME_LENGTH]
@@ -390,7 +392,7 @@ class Menu:
         pygame.key.start_text_input()  # shows the keyboard on a phone
 
     def confirm_name(self):
-        self.player_name = self.player_name.strip()[:self.NAME_LENGTH] or self.selected_character.capitalize()
+        self.player_name = self.player_name.strip()[:self.NAME_LENGTH] or roster.display_name(self.selected_character)
         settings = user_settings.load()
         if settings.get("player_name") != self.player_name:
             settings["player_name"] = self.player_name
@@ -414,7 +416,7 @@ class Menu:
         text = self.character_font.render(shown + caret, True, (20, 20, 30))
         screen.blit(text, text.get_rect(midleft=(field.left + 16, field.centery)))
         if not shown:
-            placeholder = self.character_font.render(self.selected_character.capitalize(), True, (160, 160, 170))
+            placeholder = self.character_font.render(roster.display_name(self.selected_character), True, (160, 160, 170))
             screen.blit(placeholder, placeholder.get_rect(midleft=(field.left + 16 + text.get_width(), field.centery)))
         self.name_field_rect = field
         label = self.button_font.render("OK", True, (255, 255, 255))
@@ -553,7 +555,7 @@ class Menu:
                 preview = pygame.transform.flip(preview, True, False)  # facing the player
             screen.blit(preview, preview.get_rect(midtop=(inner.centerx, inner.top)))
         y = inner.top + size + 2
-        label = name_font.render(character_name.title(), True, (255, 255, 255))
+        label = name_font.render(roster.display_name(character_name), True, (255, 255, 255))
         screen.blit(label, label.get_rect(midtop=(inner.centerx, y)))
         y += name_font.get_linesize()
         if picking == "enemies":

@@ -29,7 +29,7 @@ import os
 
 import pygame
 
-from animation import AnimationDirection, load_sheet
+from animation import AnimationDirection, SpriteForm, load_sheet
 from pathmanager import PathManager
 
 DIRECTIONS = ("Down", "Right", "Left", "Up")
@@ -41,6 +41,9 @@ STATS = {
     "teleport": {"cost": 12, "damage": 35, "cooldown_ms": 1000, "reach": 200},
     "burst": {"cost": 15, "damage": 45, "cooldown_ms": 1200, "radius": 46, "push": 4},
     "ball": {"cost": 20, "damage": 85, "cooldown_ms": 1500, "speed": 4, "range": 200},
+    # Turns the user into another character: a Potara fusion, Cell
+    # absorbing an android (see evolution.py)
+    "evolve": {"cost": 40, "damage": 0, "cooldown_ms": 0},
 }
 
 
@@ -174,6 +177,10 @@ class Technique:
             for form, form_data in data.get("forms", {}).items()
             if form in character.forms
         }
+        # "evolve": who appears, how, and who the user becomes
+        self.style = data.get("style")
+        self.partner = data.get("partner")
+        self.becomes = data.get("becomes")
 
     def form_for(self, character):
         """Sprites for the character's current form (or any form it has)."""
@@ -190,4 +197,14 @@ def load_techniques(character):
     with open(path) as file:
         data = json.load(file)
     techniques = [Technique(entry, character) for entry in data.get("techniques", [])]
-    return [technique for technique in techniques if technique.forms]
+    return [technique for technique in techniques if technique.forms
+            or (technique.kind == "evolve" and _has_sheets(technique.partner) and _has_sheets(technique.becomes))]
+
+
+def _has_sheets(name):
+    """Whether a character's sprite sheets are there (an evolution needs its
+    partner's and its result's)."""
+    if not name:
+        return False
+    paths = (PathManager.character_json_path(name, form) for form in ("base", "ssj"))
+    return any(os.path.exists(path) and SpriteForm.sheet_exists(path) for path in paths)

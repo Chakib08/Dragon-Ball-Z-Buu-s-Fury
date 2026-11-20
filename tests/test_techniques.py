@@ -22,11 +22,27 @@ setUpModule, tearDownModule = steady_module_fixtures()
 
 
 EXPECTED = {
-    "goku": ["Energy Blast", "Kamehameha", "Instant Transmission"],
+    "goku": ["Energy Blast", "Kamehameha", "Instant Transmission", "Potara Fusion"],
     "gohan": ["Energy Blast", "Kamehameha", "Ki Burst"],
-    "vegeta": ["Energy Blast", "Final Flash", "Big Bang Attack"],
+    "vegeta": ["Energy Blast", "Final Flash", "Big Bang Attack", "Potara Fusion"],
     "trunks": ["Energy Blast", "Burning Attack", "Sword Slash"],
     "broly": ["Energy Blast", "Eraser Cannon", "Blaster Shell"],
+    "piccolo": ["Energy Blast", "Special Beam Cannon", "Ki Burst"],
+    "android17": ["Energy Blast", "Power Blitz", "Barrier"],
+    "android18": ["Energy Blast", "Destructo Disc", "Barrier"],
+    "goten": ["Energy Blast", "Kamehameha", "Ki Burst"],
+    "kid_trunks": ["Energy Blast", "Burning Attack", "Ki Burst"],
+    "gotenks": ["Energy Blast", "Super Ghost Kamikaze Attack", "Galactic Donut"],
+    "great_saiyaman": ["Energy Blast", "Kamehameha", "Ki Burst"],
+    "vegito": ["Energy Blast", "Final Kamehameha", "Spirit Sword"],
+    "cell_imperfect": ["Energy Blast", "Kamehameha", "Absorb Android 17"],
+    "cell_semi_perfect": ["Energy Blast", "Kamehameha", "Absorb Android 18"],
+    "cell_perfect": ["Energy Blast", "Kamehameha", "Perfect Barrier"],
+    "buu": ["Energy Blast", "Candy Beam", "Steam Rage"],
+    "super_buu": ["Energy Blast", "Human Extinction Attack", "Steam Rage"],
+    "super_buu_gotenks": ["Energy Blast", "Human Extinction Attack", "Steam Rage"],
+    "super_buu_gohan": ["Energy Blast", "Human Extinction Attack", "Steam Rage"],
+    "kid_buu": ["Energy Blast", "Planet Burst", "Steam Rage"],
 }
 
 
@@ -74,6 +90,8 @@ class TechniqueTests(unittest.TestCase):
             player = Saiyan(0, 0, False, name)
             self.assertEqual([t.name for t in player.techniques], names, name)
             for technique in player.techniques:
+                if technique.kind == "evolve":
+                    continue  # no sprites of its own (see evolution.py)
                 for form in player.forms:
                     with self.subTest(character=name, form=form, technique=technique.name):
                         player.set_form(form)
@@ -308,12 +326,12 @@ class TechniqueTests(unittest.TestCase):
     def test_switching_techniques_wraps_around(self):
         player, enemy, combat = self.fighters()
         names = [combat.technique.name]
-        for _ in range(3):
+        for _ in range(len(EXPECTED["goku"])):
             combat.cycle_technique(1)
             names.append(combat.technique.name)
         self.assertEqual(names, EXPECTED["goku"] + ["Energy Blast"])
         combat.cycle_technique(-1)
-        self.assertEqual(combat.technique.name, "Instant Transmission")
+        self.assertEqual(combat.technique.name, EXPECTED["goku"][-1])
 
 
 class TechniqueControlsTests(unittest.TestCase):

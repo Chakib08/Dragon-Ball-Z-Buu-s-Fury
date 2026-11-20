@@ -25,6 +25,7 @@ from scenes import PAUSE_KEYS, SCENES
 from touch_controls import TouchControls
 from utils import timing
 from utils.config import Config
+from roster import level_name
 
 PLAYER_SPAWN = (159, 289)
 DEFAULT_CHARACTER = "goku"
@@ -296,7 +297,10 @@ class Game:
         technique = self.map_manager.combat.technique
         character = self.character
         levels = character.super_levels if hasattr(character, "super_levels") else []
-        level = character.LEVEL_NAMES.get(character.target_level) if len(levels) > 1 else None
+        level = None
+        if len(levels) > 1:
+            level = level_name(character.character_name, character.target_level,
+                               character.LEVEL_NAMES.get(character.target_level))
         self.touch_controls.draw(self.screen, technique.name if technique else None, level)
 
     def play_frame(self, events, paused):

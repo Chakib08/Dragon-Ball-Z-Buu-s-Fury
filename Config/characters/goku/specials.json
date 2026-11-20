@@ -877,6 +877,14 @@
           ]
         }
       }
+    },
+    {
+      "id": "potara",
+      "name": "Potara Fusion",
+      "kind": "evolve",
+      "style": "fusion",
+      "partner": "vegeta",
+      "becomes": "vegito"
     }
   ]
 }

@@ -140,7 +140,7 @@ SHEETS = [
         "faint": [21, 27, 28, 28], "faint_row": "Down",
         "techniques": BROLY_TECHNIQUES,
     },
-]
+] + []  # the characters added from the second dbz-assets batch: NEW_SHEETS below
 
 # Techniques of the characters whose effects come from EFFECTS_SHEET: name,
 # kind, and the effect frames (boxes on that sheet, facing right)
@@ -170,6 +170,217 @@ NEW_SPECIALS = {
         ("blaster_shell", "Blaster Shell", "burst", {"rings": WHITE_RINGS}),
     ],
 }
+
+# ---- Second batch of dbz-assets characters -------------------------------------
+# Legacy of Goku 2 sheets (Piccolo, the androids, Cell) and Buu's Fury ones
+# (the others); "no run" sheets reuse the walk, 64 px sheets are the big
+# characters (Cell, the Buus). Columns read off each sheet.
+BIG = {"cell": 64, "rows": {"Down": 64, "Left": 128, "Right": 192, "Up": 256}}
+NO_RUN = [2, 3, 4, 5]
+LOG2_ATTACK = [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16]
+
+
+def techniques(*entries):
+    """{technique id: pose spec} from (id, columns, fire_at[, row])."""
+    out = {}
+    for entry in entries:
+        technique_id, columns, fire_at = entry[:3]
+        spec = {"pose": list(columns)}
+        if fire_at is not None:
+            spec["fire_at"] = fire_at
+        if len(entry) > 3:
+            spec["row"] = entry[3]
+        out[technique_id] = spec
+    return out
+
+
+PICCOLO = dict(attack=[10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 20], hurt=[35, 36], block=34,
+               special=[28, 29, 31], faint=[50, 51, 52, 53],
+               techniques=techniques(("energy_blast", [28, 29, 31], 2), ("special_beam_cannon", [31, 32, 33, 33], 2),
+                                     ("ki_burst", [23, 24, 25, 26], None)))
+ANDROID = dict(run=NO_RUN, attack=LOG2_ATTACK, hurt=[17, 18], block=19, special=[21, 22, 20],
+               faint=[25, 26, 27, 28],
+               techniques=techniques(("energy_blast", [21, 22, 20], 2), ("power_blitz", [21, 22, 20], 2),
+                                     ("barrier", [21, 22, 23], None)))
+GOTEN = dict(hurt=[29, 30], block=28, special=[25, 26, 27], faint=[37, 38, 39, 40],
+             techniques=techniques(("energy_blast", [25, 26, 27], 1), ("kamehameha", [20, 21, 22, 23, 24], 4),
+                                   ("ki_burst", [24, 24], None)))
+KID_TRUNKS = dict(hurt=[25, 26], block=27, special=[21, 22, 23], faint=[31, 32, 33, 34],
+                  techniques=techniques(("energy_blast", [21, 22, 23], 1), ("burning_attack", [43, 44, 45], 2),
+                                        ("ki_burst", [24, 24], None)))
+GOTENKS = dict(hurt=[22, 23], block=24, special=[19, 20, 21], faint=[30, 31, 32, 33],
+               techniques=techniques(("energy_blast", [19, 20, 21], 1),
+                                     ("super_ghost_kamikaze", [35, 36, 37, 38], 3),
+                                     ("galactic_donut", [34, 34], None)))
+SAIYAMAN = dict(hurt=[28, 29], block=27, special=[24, 25, 26], faint=[44, 45, 46, 47],
+                techniques=techniques(("energy_blast", [24, 25, 26], 1), ("kamehameha", [22, 23, 24], 2),
+                                      ("ki_burst", [31], None)))
+VEGITO = dict(hurt=[24, 25], block=26, special=[20, 21, 22], faint=[40, 41, 42, 43],
+              techniques=techniques(("energy_blast", [20, 21, 22], 1), ("final_kamehameha", [21, 22, 22, 23], 2),
+                                    ("spirit_sword", [30, 31, 32], None)))
+CELL_TECHNIQUES = (("energy_blast", [20, 21, 22], 1), ("kamehameha", [21, 22, 23], 2))
+
+NEW_SHEETS = [
+    {"character": "piccolo", "form": "base", "transform": [56, 57, 57, 58, 59], **PICCOLO},
+    {"character": "piccolo", "form": "ssj", **PICCOLO},
+    {"character": "android17", "form": "base", **ANDROID},
+    {"character": "android18", "form": "base", **ANDROID},
+    {"character": "goten", "form": "base", "transform": [52, 52, 53, 54, 55, 56], **GOTEN},
+    {"character": "goten", "form": "ssj", **GOTEN},
+    {"character": "kid_trunks", "form": "base", "transform": [48, 48, 49, 50, 51], **KID_TRUNKS},
+    {"character": "kid_trunks", "form": "ssj", **KID_TRUNKS},
+    # Gotenks is always a Super Saiyan; his SSJ sheet turns him into SSJ3
+    {"character": "gotenks", "form": "ssj", "transform": [42, 43, 44, 45], **GOTENKS},
+    {"character": "gotenks", "form": "ssj3", **GOTENKS},
+    {"character": "great_saiyaman", "form": "base", "transform": [57, 57, 58, 59, 60, 61], **SAIYAMAN},
+    {"character": "great_saiyaman", "form": "ssj", **SAIYAMAN},
+    {"character": "vegito", "form": "base", "transform": [32, 33, 33, 34, 35, 36], **VEGITO},
+    {"character": "vegito", "form": "ssj", **VEGITO},
+    # Cell: the transformation frames turn him into his next form (played
+    # while he absorbs an android, see the "evolve" techniques)
+    {"character": "cell_imperfect", "form": "base", **BIG, "attack": list(range(6, 18)), "run": NO_RUN,
+     "hurt": [27, 28], "block": 29, "special": [20, 21, 22], "faint": [32, 33, 34, 35],
+     "transform": [24, 25, 26, 36, 37, 38, 39], "techniques": techniques(*CELL_TECHNIQUES)},
+    {"character": "cell_semi_perfect", "form": "base", **BIG, "attack": list(range(6, 18)), "run": NO_RUN,
+     "hurt": [28, 29], "block": 30, "special": [20, 21, 22], "faint": [32, 33, 34, 35],
+     "transform": [24, 25, 36, 37, 38, 39, 42, 43], "techniques": techniques(*CELL_TECHNIQUES)},
+    {"character": "cell_perfect", "form": "base", **BIG, "attack": list(range(6, 18)), "run": NO_RUN,
+     "hurt": [24, 25], "block": 26, "special": [20, 21, 22], "faint": [32, 33, 34, 35],
+     "techniques": techniques(*CELL_TECHNIQUES, ("perfect_barrier", [26, 27], None))},
+    {"character": "buu", "form": "base", **BIG, "run": NO_RUN,
+     "attack": [6, 7, 7, 8, 8, 9, 14, 15, 15, 6, 7, 7], "hurt": [22, 23], "block": 24,
+     "special": [18, 18, 19], "faint": [36, 37, 38, 39],
+     "techniques": techniques(("energy_blast", [18, 18, 19], 1), ("candy_beam", [12, 13, 13], 1),
+                              ("rage", [32, 33, 34, 35], None))},
+    {"character": "kid_buu", "form": "base", "rows": {**ROWS, "Charge": 192}, "run": NO_RUN,
+     "attack": list(range(6, 18)), "hurt": [18, 19], "block": 20, "special": [12, 12, 13],
+     "faint": [21, 22, 23, 24],
+     "techniques": techniques(("energy_blast", [12, 12, 13], 1), ("planet_burst", [1, 2, 3, 4], 3, "Charge"),
+                              ("rage", [0, 1], None, "Charge"))},
+    {"character": "super_buu", "form": "base", **BIG, "run": NO_RUN,
+     "attack": [6, 7, 8, 9, 10, 10, 11, 12, 12, 16, 17, 18], "hurt": [23, 24], "block": 25,
+     "special": [13, 14, 14], "faint": [31, 32, 33, 34],
+     "techniques": techniques(("energy_blast", [13, 14, 14], 1), ("human_extinction", [36, 37, 37], 1),
+                              ("rage", [38, 39, 40], None))},
+    {"character": "super_buu_gotenks", "form": "base", **BIG, "run": NO_RUN,
+     "attack": [6, 7, 8, 9, 9, 10, 12, 13, 14, 15, 15, 6], "hurt": [18, 19], "block": 21,
+     "special": [16, 17, 17], "faint": [22, 23, 24, 25],
+     "techniques": techniques(("energy_blast", [16, 17, 17], 1), ("human_extinction", [26, 27, 28], 1),
+                              ("rage", [29, 30, 31], None))},
+    {"character": "super_buu_gohan", "form": "base", **BIG, "run": NO_RUN,
+     "attack": [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 15, 6], "hurt": [27, 28], "block": 29,
+     "special": [23, 24, 25], "faint": [35, 36, 37, 38],
+     "techniques": techniques(("energy_blast", [23, 24, 25], 1), ("human_extinction", [39, 40, 41], 1),
+                              ("rage", [42, 43, 44], None))},
+]
+SHEETS += NEW_SHEETS
+
+# Effects borrowed from another character's techniques (read from its
+# specials.json): (character, technique id)
+BORROWED = {
+    "gohan_beam": ("gohan", "kamehameha"),
+    "gohan_blast": ("gohan", "energy_blast"),
+    "gohan_burst": ("gohan", "ki_burst"),
+    "final_flash": ("vegeta", "final_flash"),
+}
+# Bigger and farther than their kind's usual (see techniques.py)
+SIGNATURE = {"effect_scale": 2, "range_scale": 4}
+
+# Name, kind and effects of the new characters' techniques: effects frames
+# on EFFECTS_SHEET, or ("borrow", key of BORROWED)
+YELLOW_PROJECTILE = {"projectile": YELLOW_BALL[-1:], "hit": YELLOW_BLAST}
+ENERGY_BLAST = ("Energy Blast", "projectile", {"projectile": FIREBALL, "hit": PURPLE_SPARK})
+NEW_CHARACTER_SPECIALS = {
+    "piccolo": {"energy_blast": ("Energy Blast", "projectile", YELLOW_PROJECTILE),
+                "special_beam_cannon": ("Special Beam Cannon", "beam", ("borrow", "final_flash")),
+                "ki_burst": ("Ki Burst", "burst", {"rings": WHITE_RINGS})},
+    "android17": {"energy_blast": ENERGY_BLAST,
+                  "power_blitz": ("Power Blitz", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
+                                                         "hit": YELLOW_BLAST}),
+                  "barrier": ("Barrier", "burst", {"rings": WHITE_RINGS})},
+    "android18": {"energy_blast": ENERGY_BLAST,
+                  "power_blitz": ("Destructo Disc", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
+                                                            "hit": YELLOW_BLAST}),
+                  "barrier": ("Barrier", "burst", {"rings": WHITE_RINGS})},
+    "goten": {"energy_blast": ("Energy Blast", "projectile", ("borrow", "gohan_blast")),
+              "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam")),
+              "ki_burst": ("Ki Burst", "burst", ("borrow", "gohan_burst"))},
+    "kid_trunks": {"energy_blast": ENERGY_BLAST,
+                   "burning_attack": ("Burning Attack", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
+                                                                "hit": YELLOW_BLAST}),
+                   "ki_burst": ("Ki Burst", "burst", {"rings": WHITE_RINGS})},
+    "gotenks": {"energy_blast": ENERGY_BLAST,
+                "super_ghost_kamikaze": ("Super Ghost Kamikaze Attack", "ball",
+                                         {"grow": WHITE_RINGS[:2], "projectile": WHITE_RINGS[-1:],
+                                          "hit": STAR_EXPLOSION}),
+                "galactic_donut": ("Galactic Donut", "burst", {"rings": WHITE_RINGS})},
+    "great_saiyaman": {"energy_blast": ("Energy Blast", "projectile", ("borrow", "gohan_blast")),
+                       "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam")),
+                       "ki_burst": ("Ki Burst", "burst", ("borrow", "gohan_burst"))},
+    "vegito": {"energy_blast": ENERGY_BLAST,
+               "final_kamehameha": ("Final Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+               "spirit_sword": ("Spirit Sword", "burst", {"rings": CROSS_SLASH})},
+    "cell_imperfect": {"energy_blast": ENERGY_BLAST,
+                       "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"))},
+    "cell_semi_perfect": {"energy_blast": ENERGY_BLAST,
+                          "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"))},
+    "cell_perfect": {"energy_blast": ENERGY_BLAST,
+                     "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+                     "perfect_barrier": ("Perfect Barrier", "burst", {"rings": WHITE_RINGS})},
+    "buu": {"energy_blast": ("Energy Blast", "projectile", {"projectile": FIREBALL, "hit": FIRE_EXPLOSION}),
+            "candy_beam": ("Candy Beam", "projectile", {"projectile": PURPLE_SPARK, "hit": STAR_EXPLOSION}),
+            "rage": ("Steam Rage", "burst", {"rings": WHITE_RINGS})},
+    "kid_buu": {"energy_blast": ("Energy Blast", "projectile", {"projectile": FIREBALL, "hit": FIRE_EXPLOSION}),
+                "planet_burst": ("Planet Burst", "ball", {"grow": GREEN_BALL, "projectile": GREEN_FLYING_BALL,
+                                                         "hit": STAR_EXPLOSION}),
+                "rage": ("Steam Rage", "burst", {"rings": WHITE_RINGS})},
+}
+for _buu in ("super_buu", "super_buu_gotenks", "super_buu_gohan"):
+    NEW_CHARACTER_SPECIALS[_buu] = {
+        "energy_blast": ("Energy Blast", "projectile", {"projectile": FIREBALL, "hit": FIRE_EXPLOSION}),
+        "human_extinction": ("Human Extinction Attack", "ball",
+                             {"grow": GREEN_BALL, "projectile": GREEN_FLYING_BALL, "hit": STAR_EXPLOSION}),
+        "rage": ("Steam Rage", "burst", {"rings": WHITE_RINGS}),
+    }
+
+# Techniques that turn the user into another character (techniques.py
+# "evolve"): the partner who appears, how (a Potara fusion, or Cell
+# absorbing an android), the character it becomes
+EVOLVE = {
+    "goku": [{"id": "potara", "name": "Potara Fusion", "kind": "evolve", "style": "fusion",
+              "partner": "vegeta", "becomes": "vegito"}],
+    "vegeta": [{"id": "potara", "name": "Potara Fusion", "kind": "evolve", "style": "fusion",
+                "partner": "goku", "becomes": "vegito"}],
+    "cell_imperfect": [{"id": "absorb_17", "name": "Absorb Android 17", "kind": "evolve", "style": "absorb",
+                        "partner": "android17", "becomes": "cell_semi_perfect"}],
+    "cell_semi_perfect": [{"id": "absorb_18", "name": "Absorb Android 18", "kind": "evolve", "style": "absorb",
+                           "partner": "android18", "becomes": "cell_perfect"}],
+}
+
+
+def borrowed_effects(key):
+    character, technique_id = BORROWED[key]
+    path = os.path.join(ROOT, "Config", "characters", character, "specials.json")
+    with open(path) as file:
+        specials = json.load(file)
+    technique = next(t for t in specials["techniques"] if t["id"] == technique_id)
+    return effects_only(next(iter(technique["forms"].values())))
+
+
+def build_character_specials(character, form_poses):
+    """Techniques of a second-batch character."""
+    techniques = []
+    for technique_id, entry in NEW_CHARACTER_SPECIALS[character].items():
+        name, kind, effects = entry[:3]
+        extra = entry[3] if len(entry) > 3 else {}
+        if isinstance(effects, tuple):
+            effects = borrowed_effects(effects[1])  # with its own "sheet" and "background"
+        else:
+            effects = {**effects, "sheet": EFFECTS_SHEET, "background": "auto"}
+        forms = {form: {**effects, **poses[technique_id]} for form, poses in form_poses.items()}
+        techniques.append({"id": technique_id, "name": name, "kind": kind, **extra, "forms": forms})
+    write_specials(character, {"techniques": techniques + EVOLVE.get(character, [])})
+
 
 # Background colour of the spritedatabase.net sheets the effects come from
 OLD_BACKGROUNDS = {
@@ -308,6 +519,8 @@ def update_specials(character, form_poses, effects):
             entry["sheet"] = source["sheet"]
             entry["background"] = source["background"]
             forms[form] = entry
+    known = {technique["id"] for technique in specials["techniques"]}
+    specials["techniques"] += [technique for technique in EVOLVE.get(character, []) if technique["id"] not in known]
     write_specials(character, specials)
 
 
@@ -339,6 +552,8 @@ def main():
     for character, form_poses in poses_by_character.items():
         if character in NEW_SPECIALS:
             build_new_specials(character, form_poses)
+        elif character in NEW_CHARACTER_SPECIALS:
+            build_character_specials(character, form_poses)
         else:
             update_specials(character, form_poses, effects_by_character[character])
     print("specials updated")

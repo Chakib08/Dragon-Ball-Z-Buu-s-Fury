@@ -7,6 +7,7 @@ It only reads the fight (CombatSystem): nothing here changes it.
 """
 
 import pygame
+from roster import display_name
 
 
 class CombatHud:
@@ -135,7 +136,7 @@ class CombatHud:
         # A dark plate behind the row, so it reads over grass, water or sky
         plate = self._plate(self.PANEL_ROW_WIDTH + 2 * self.PANEL_PADDING, height + 2 * self.PANEL_PADDING)
         screen.blit(plate, (x - self.PANEL_PADDING, y - self.PANEL_PADDING))
-        name = getattr(fighter, "bar_label", None) or fighter.character_name.capitalize()
+        name = getattr(fighter, "bar_label", None) or display_name(fighter.character_name)
         if knocked_out:
             color = self.KO_COLOR
             name += " KO"

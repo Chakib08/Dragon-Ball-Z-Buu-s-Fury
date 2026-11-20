@@ -1,6 +1,7 @@
 import pygame
 
 from pathmanager import PathManager
+import portraits
 
 # Layout designed for a 1200x1000 screen
 BOX_SIZE = (700, 300)
@@ -32,7 +33,13 @@ class DialogBox:
         self.y = screen_size[1] - box_size[1] - round(BOTTOM_MARGIN * scale)
         self.box = self.get_image(PathManager.dialog_file("dialogbox.png"), (68, 140, 203), (6, 16, 160, 64), (160,64))
         self.box = pygame.transform.scale(self.box, box_size)
-        self.portrait = self.get_image(PathManager.dialog_file("portraits.png"), (255, 174, 201), (171, 607, 64, 64), (64, 64))
+        # Vegeta's angry face, from the portraits sheet setup.sh downloads
+        # (a plain frame if it is missing)
+        sheet = portraits.sheet("bf")
+        self.portrait = pygame.Surface((64, 64))
+        if sheet is not None:
+            self.portrait.blit(sheet, (0, 0), (171, 607, 64, 64))
+            self.portrait.set_colorkey((255, 174, 201))
         self.portrait = pygame.transform.scale(self.portrait, portrait_size)
         self.font = pygame.font.Font(PathManager.dialog_file("dialog_font.ttf"), max(12, round(FONT_SIZE * scale)))
         

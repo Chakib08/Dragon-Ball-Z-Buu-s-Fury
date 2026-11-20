@@ -636,6 +636,14 @@
           ]
         }
       }
+    },
+    {
+      "id": "potara",
+      "name": "Potara Fusion",
+      "kind": "evolve",
+      "style": "fusion",
+      "partner": "goku",
+      "becomes": "vegito"
     }
   ]
 }

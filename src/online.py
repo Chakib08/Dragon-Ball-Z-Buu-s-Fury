@@ -22,6 +22,7 @@ from saiyan import Saiyan
 import settings as user_settings
 from taps import tap_position
 from utils import timing
+from roster import display_name
 
 
 def _number(value, default=None):
@@ -54,8 +55,8 @@ class RemoteFighter(Character):
         super().__init__(0, 0, character_name)
         self.player_name = player_name
         self.index = index
-        self.bar_label = (f"{player_name} ({character_name.capitalize()})" if index == 0
-                          else f"{character_name.capitalize()} ({player_name})")
+        self.bar_label = (f"{player_name} ({display_name(character_name)})" if index == 0
+                          else f"{display_name(character_name)} ({player_name})")
         self._send = send
         self.target_position = None
         self._remote_powered = False
@@ -354,7 +355,7 @@ class OnlineMatch:
     def draw(self, screen):
         width, height = screen.get_size()
         names = self.info_font.render(
-            f"{self.player.character_name.capitalize()} (you)  vs  {self.opponent.bar_label}",
+            f"{display_name(self.player.character_name)} (you)  vs  {self.opponent.bar_label}",
             True, (255, 255, 255),
         )
         screen.blit(names, names.get_rect(midtop=(width / 2, 8)))
@@ -389,7 +390,7 @@ class LobbyScreen:
         self.allies = list(allies)[:MAX_ALLIES]
         self.background = background
         self.settings = user_settings.load()
-        self.name = (name or "").strip() or f"{character.capitalize()} {random.randint(100, 999)}"
+        self.name = (name or "").strip() or f"{display_name(character)} {random.randint(100, 999)}"
         self.rooms = []
         self.room_id = None  # our room while waiting in it
         self.room_mode = "1v1"
@@ -575,18 +576,18 @@ class LobbyScreen:
     # ---- Drawing --------------------------------------------------------------------
     def team_label(self):
         """The player's character, and its allies (used in team matches)."""
-        team = self.character.capitalize()
+        team = display_name(self.character)
         if self.allies:
-            team += " + " + ", ".join(name.capitalize() for name in self.allies)
+            team += " + " + ", ".join(display_name(name) for name in self.allies)
         return team
 
     @staticmethod
     def room_label(room):
         host = str(room.get("host", "?"))
-        character = str(room.get("character", "?")).capitalize()
+        character = display_name(str(room.get("character", "?")))
         if room.get("mode") == "team":
             allies = room.get("allies") if isinstance(room.get("allies"), list) else []
-            team = " + ".join([character, *(str(name).capitalize() for name in allies)])
+            team = " + ".join([character, *(display_name(str(name)) for name in allies)])
             return f"Team: {host} ({team})"
         return f"1v1: {host} ({character})"
 

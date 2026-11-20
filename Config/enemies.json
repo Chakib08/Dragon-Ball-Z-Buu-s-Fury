@@ -121,6 +121,109 @@
         "Kakarot...",
         "I am the Legendary Super Saiyan! Nothing can stop me!"
       ]
+    },
+    "piccolo": {
+      "difficulty": "normal",
+      "dialog": [
+        "I'll test your strength myself.",
+        "Don't disappoint me."
+      ]
+    },
+    "android17": {
+      "difficulty": "normal",
+      "dialog": [
+        "Let's see if you can keep up.",
+        "This should be fun."
+      ]
+    },
+    "android18": {
+      "difficulty": "normal",
+      "dialog": [
+        "You're in my way.",
+        "Don't think I'll go easy on you."
+      ]
+    },
+    "goten": {
+      "difficulty": "easy",
+      "dialog": [
+        "Let's spar! It'll be fun!"
+      ]
+    },
+    "kid_trunks": {
+      "difficulty": "easy",
+      "dialog": [
+        "I'm way stronger than Goten!"
+      ]
+    },
+    "gotenks": {
+      "difficulty": "normal",
+      "dialog": [
+        "The great Gotenks is here!",
+        "Prepare for the Super Ghost Kamikaze Attack!"
+      ]
+    },
+    "great_saiyaman": {
+      "difficulty": "normal",
+      "dialog": [
+        "Evildoer! The Great Saiyaman will stop you!"
+      ]
+    },
+    "vegito": {
+      "difficulty": "hard",
+      "dialog": [
+        "You're fighting the strongest warrior in the universe.",
+        "Kakarot and Vegeta, together!"
+      ]
+    },
+    "cell_imperfect": {
+      "difficulty": "normal",
+      "dialog": [
+        "I need the androids to become perfect...",
+        "Your energy will do for now."
+      ]
+    },
+    "cell_semi_perfect": {
+      "difficulty": "normal",
+      "dialog": [
+        "Just one more android and I'll be perfect."
+      ]
+    },
+    "cell_perfect": {
+      "difficulty": "hard",
+      "dialog": [
+        "Behold, perfection!",
+        "Let the Cell Games begin."
+      ]
+    },
+    "buu": {
+      "difficulty": "normal",
+      "dialog": [
+        "Buu turn you into candy!"
+      ]
+    },
+    "super_buu": {
+      "difficulty": "hard",
+      "dialog": [
+        "Now I'll have some fun."
+      ]
+    },
+    "super_buu_gotenks": {
+      "difficulty": "hard",
+      "dialog": [
+        "Gotenks' power is mine now!"
+      ]
+    },
+    "super_buu_gohan": {
+      "difficulty": "hard",
+      "dialog": [
+        "With Gohan's power, nothing can stop me!"
+      ]
+    },
+    "kid_buu": {
+      "difficulty": "hard",
+      "dialog": [
+        "Hehehehe!"
+      ]
     }
   }
 }
