@@ -96,8 +96,8 @@ class OnlineMatchTests(unittest.TestCase):
         self.assertTrue(remote.blocking)
         self.assertEqual(remote.facing, player.facing)
         # Exactly the frame the other game shows
-        name, flipped = player._sprites.frame_key(player.image)
-        self.assertIs(remote.image, remote.get_image_by_animation_name(name, flipped))
+        name, flipped = player.animator.frame_key()
+        self.assertIs(remote.image, remote.frame_image(name, flipped))
 
     def test_a_hit_on_the_opponent_is_applied_by_its_own_game(self):
         source = self.a.player.feet.center

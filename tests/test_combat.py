@@ -818,7 +818,7 @@ class CombatTests(unittest.TestCase):
                         fighter.stop_block()
                         self.assertTrue(fighter.start_block())
                         self.assertEqual(fighter.animation_name, f"Block {direction}")
-                        idle = fighter.get_image_by_animation_name(
+                        idle = fighter.frame_image(
                             f"IDLE {direction}", flipped=direction == "Left"
                         )
                         self.assertIsNot(fighter.image, idle)
@@ -870,7 +870,7 @@ class CombatTests(unittest.TestCase):
             with self.subTest(character=name):
                 fighter = Saiyan(100, 100, False, name)
                 fighter.facing = "Right"
-                moves = fighter.get_attack_moves("Right")
+                moves = fighter.attack_moves("Right")
                 self.assertEqual(len(moves), expected_moves)
                 self.assertEqual(sum(len(move) for move in moves), 12)
 
@@ -888,8 +888,8 @@ class CombatTests(unittest.TestCase):
                 self.assertIsNone(fighter.action)
 
     def test_left_strikes_are_mirrored(self):
-        right = self.player.get_attack_moves("Right")[0][0]
-        left = self.player.get_attack_moves("Left")[0][0]
+        right = self.player.attack_moves("Right")[0][0]
+        left = self.player.attack_moves("Left")[0][0]
         self.assertIsNot(left, right)
         self.assertEqual(left.get_size(), right.get_size())
 

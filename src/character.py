@@ -1,6 +1,6 @@
 import pygame
 
-from animation import Animation, AnimationDirection, AnimationType
+from animation import AnimationDirection, AnimationType, Animator
 from constants import C_FAINT_ANIMATION_COUNT
 from movement import resolve_movement_collisions
 from techniques import load_techniques
@@ -15,8 +15,19 @@ DIRECTION_VECTORS = {
 }
 
 
-class Character(Animation):
-    """A sprite that can move, fight, get hurt and be knocked out."""
+class Character(pygame.sprite.Sprite):
+    """A sprite that can move, fight, get hurt and be knocked out.
+
+    What it looks like is its animator's business (self.animator, see
+    animation.py): the forms, the frame shown and the walk cycle. The
+    character decides what happens (moves, strikes, flinches) and tells the
+    animator what to show.
+    """
+
+    BASE_FORM = Animator.BASE_FORM
+    SUPER_FORM = Animator.SUPER_FORM
+    SUPER_3_FORM = Animator.SUPER_3_FORM
+    SUPER_FORMS = Animator.SUPER_FORMS
 
     MAX_HP = 200
     MAX_KI = 100
@@ -61,7 +72,8 @@ class Character(Animation):
     team = "heroes"
 
     def __init__(self, pos_x, pos_y, name):
-        super().__init__(name)
+        super().__init__()
+        self.animator = Animator(name)
         self.speed = 0
         self.position = [pos_x, pos_y]
         self.old_position = self.position.copy()
@@ -101,6 +113,57 @@ class Character(Animation):
         self.faint_clock = 0
         self.faint_finished = False
 
+    # ---- Looks (the animator's) ---------------------------------------------------
+    @property
+    def image(self):
+        """The frame to draw (pygame's sprite groups read it)."""
+        return self.animator.image
+
+    @image.setter
+    def image(self, image):
+        self.animator.image = image
+
+    @property
+    def animation_name(self):
+        return self.animator.animation_name
+
+    @animation_name.setter
+    def animation_name(self, name):
+        self.animator.animation_name = name
+
+    @property
+    def character_name(self):
+        return self.animator.character_name
+
+    @property
+    def form(self):
+        return self.animator.form
+
+    @property
+    def forms(self):
+        return self.animator.forms
+
+    def has_form(self, form):
+        return self.animator.has_form(form)
+
+    def set_form(self, form):
+        self.animator.set_form(form)
+
+    def has_animation(self, animation_name):
+        return self.animator.has_animation(animation_name)
+
+    def frame_count(self, animation_macro):
+        return self.animator.frame_count(animation_macro)
+
+    def frames(self, animation_macro, count=None):
+        return self.animator.frames(animation_macro, count)
+
+    def frame_image(self, animation_name, flipped=False):
+        return self.animator.image_by_name(animation_name, flipped)
+
+    def attack_moves(self, direction):
+        return self.animator.attack_moves(direction)
+
     # ---- Online play ----------------------------------------------------------
     def snapshot(self):
         """What the other player needs to draw this character exactly."""
@@ -118,7 +181,7 @@ class Character(Animation):
         if self.faint_frames:
             state["faint"] = self.faint_index
         else:
-            key = self._sprites.frame_key(self.image)
+            key = self.animator.frame_key()
             if key is not None:
                 state["frame"] = list(key)
         return state
@@ -127,7 +190,7 @@ class Character(Animation):
     def _measure_body_width(self):
         """Width the character takes on the ground, from the standing pose:
         most of the drawn width (arms, Broly's bulk), at least the legs."""
-        image = self.get_image_by_animation_name("IDLE Down")
+        image = self.frame_image("IDLE Down")
         mask = pygame.mask.from_surface(image)
         rects = mask.get_bounding_rects()
         if not rects:
@@ -167,16 +230,13 @@ class Character(Animation):
         """Stand still, facing the given (or current) direction."""
         if direction is not None:
             self.facing = direction
-        self.reset_animation()
-        self.animation_name = f"IDLE {self.facing}"
-        self.image = self.get_image_by_animation_name(
-            self.animation_name, flipped=self.facing == AnimationDirection.LEFT.value
-        )
+        self.animator.reset()
+        self.animator.show(f"IDLE {self.facing}",
+                           flipped=self.facing == AnimationDirection.LEFT.value)
 
     def move(self, animation_macro, animation_count, movement=None):
         macro, side = animation_macro.split()
         self.facing = side
-        self.clock_speed = Config.CLOCK_SPEED
         self.speed = self.RUN_SPEED if macro == AnimationType.RUN.value else self.WALK_SPEED
         if self.powered_up:
             self.speed *= self.SUPER_SPEED_MULTIPLIER
@@ -190,14 +250,14 @@ class Character(Animation):
         self.old_position = self.position.copy()
         self.position[0] += movement[0] / length * self.speed
         self.position[1] += movement[1] / length * self.speed
-        self.animate(animation_macro, animation_count)
+        self.animator.loop(animation_macro, animation_count, Config.CLOCK_SPEED)
 
     def strike(self):
         """One attack move: a punch or a kick, the next one of the combo.
 
         Returns False if the character has no attack sprites.
         """
-        moves = self.get_attack_moves(self.facing)
+        moves = self.attack_moves(self.facing)
         if not moves:
             return False
         frames = moves[self.attack_move_index % len(moves)]
@@ -288,13 +348,11 @@ class Character(Animation):
             return False
         if not self.blocking:
             self.blocking = True
-            self.reset_animation()
+            self.animator.reset()
         name = f"Block {self.facing} 0"
         if self.has_animation(name):
-            self.animation_name = f"Block {self.facing}"
-            self.image = self.get_image_by_animation_name(
-                name, flipped=self.facing == AnimationDirection.LEFT.value
-            )
+            self.animator.show(f"Block {self.facing}", frame=name,
+                               flipped=self.facing == AnimationDirection.LEFT.value)
         else:
             # No guard sprite in this form: hold the standing pose
             self.face_idle()
@@ -328,7 +386,7 @@ class Character(Animation):
         on_last_frame fires when the last frame appears, on_done when the
         action is over (after the last frame was held for hold_ticks).
         """
-        frames = self.get_frames(animation_macro)
+        frames = self.frames(animation_macro)
         if not frames:
             return False
         self._play(name, frames, clock_speed, hold_ticks, on_last_frame, on_done)
@@ -348,7 +406,7 @@ class Character(Animation):
             "on_done": on_done,
             "on_frame": on_frame,
         }
-        self.reset_animation()
+        self.animator.reset()
         self.image = frames[0]
         self._fire_frame_callback(self.action)
         if len(frames) == 1:
@@ -420,7 +478,7 @@ class Character(Animation):
             names = [f"{hurt} {count - 1}"] if count else []
         frames = []
         for name in names:
-            frame = self.get_image_by_animation_name(name, flipped)
+            frame = self.frame_image(name, flipped)
             # Pad the shorter "lying down" frames to the standing height
             colorkey = frame.get_colorkey()
             padded = pygame.Surface((frame.get_width(), max(self.rect.height, frame.get_height())))
@@ -439,7 +497,7 @@ class Character(Animation):
             self.action = None
             self.blocking = False
             self.set_form(self.BASE_FORM)
-            self.reset_animation()
+            self.animator.reset()
             self.faint_frames = self._load_faint_frames()
         if not self.faint_frames:
             # No knock-out sprites for this character: just stand still

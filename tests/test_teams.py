@@ -285,7 +285,7 @@ class BigCharacterTests(unittest.TestCase):
         sprites = kamehameha.form_for(goku)
         for direction in ("Right", "Left", "Down", "Up"):
             with self.subTest(direction=direction):
-                frames = goku.get_frames(kamehameha.pose_macro(direction))
+                frames = goku.frames(kamehameha.pose_macro(direction))
                 charging = frames[:sprites.fire_frame(direction)]
                 self.assertEqual(len(charging), 1)
         pose = sprites.data["pose"]["Right"]

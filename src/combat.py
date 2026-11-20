@@ -277,7 +277,7 @@ class CombatSystem:
                 direction = AnimationDirection.DOWN.value if dy >= 0 else AnimationDirection.UP.value
         user.facing = direction
         sprites = technique.form_for(user)
-        frames = user.get_frames(technique.pose_macro(direction))
+        frames = user.frames(technique.pose_macro(direction))
         if sprites is None or not frames:
             return False
         if technique.kind == "teleport":
@@ -379,7 +379,7 @@ class CombatSystem:
             return False
         sprites = technique.form_for(player)
         facing = player.facing
-        frames = player.get_frames(technique.pose_macro(facing))
+        frames = player.frames(technique.pose_macro(facing))
         if sprites is None or not frames:
             return False
 
@@ -598,7 +598,7 @@ class CombatSystem:
             player.position = old_position  # would land in a wall: stay
             player.update()
         player.save_location()
-        frames = player.get_frames(technique.pose_macro(player.facing))[::-1]
+        frames = player.frames(technique.pose_macro(player.facing))[::-1]
         damage = technique.damage * self._damage_multiplier(player)
         if player is not self.player:
             damage *= getattr(player, "technique_damage", 1.0)

@@ -129,7 +129,15 @@ class SpriteForm:
         return image
 
 
-class Animation(pygame.sprite.Sprite):
+class Animator:
+    """What a character looks like right now: its forms (sprite sheets), the
+    current one, the frame shown (image) and the clock of the looping
+    animation (walk, run). A component: Character owns one (self.animator)
+    and decides when it moves, gets hurt or transforms; this only picks
+    frames. It needs no position and is not a pygame sprite, so the menu
+    can use one just for a preview.
+    """
+
     BASE_FORM = "base"
     SUPER_FORM = "ssj"
     SUPER_3_FORM = "ssj3"
@@ -137,7 +145,6 @@ class Animation(pygame.sprite.Sprite):
     SUPER_FORMS = (SUPER_FORM, SUPER_3_FORM)
 
     def __init__(self, name):
-        super().__init__()
         # Every form uses the same animation names, so switching form only
         # swaps what gets drawn
         self.forms = {}
@@ -151,57 +158,49 @@ class Animation(pygame.sprite.Sprite):
             )
         # A character with only a Super Saiyan sheet is always a Super Saiyan
         self.form = self.BASE_FORM if self.BASE_FORM in self.forms else self.SUPER_FORM
-        self._sprites = self.forms[self.form]
-        self.character_name = self._sprites.character_name
+        self.sprites = self.forms[self.form]
+        self.character_name = self.sprites.character_name
 
         self.current_animation_index = 0
         self.current_animation_macro = None
         self.animation_name = "IDLE Down"
-        self.image = self.get_image_by_animation_name(self.animation_name)
+        self.image = self.image_by_name(self.animation_name)
         self.images = []
-        self.rect = self.image.get_rect()
-        self.clock = 0
-        self.clock_speed = Config.CLOCK_SPEED
+        self.clock = 0.0
 
     # ---- Frames of the current form -----------------------------------------
-    @property
-    def sprit_sheet(self):
-        return self._sprites.sheet
-
-    @property
-    def animations(self):
-        return self._sprites.animations
-
-    def get_animation_by_name(self, animation_name):
-        return self._sprites.frames_by_name.get(animation_name)
+    def image_by_name(self, animation_name, flipped=False):
+        return self.sprites.image(animation_name, flipped)
 
     def has_animation(self, animation_name):
-        return self._sprites.has(animation_name)
+        return self.sprites.has(animation_name)
 
     def frame_count(self, animation_macro):
         """Number of frames named "<macro> 0", "<macro> 1", ..."""
-        return self._sprites.frame_count(animation_macro)
+        return self.sprites.frame_count(animation_macro)
 
-    def get_image_by_animation_name(self, animation_name, flipped=False):
-        return self._sprites.image(animation_name, flipped)
-
-    def get_frames(self, animation_macro, count=None):
+    def frames(self, animation_macro, count=None):
         """Frames "<macro> 0..count-1", mirrored for left-facing animations."""
         if count is None:
             count = self.frame_count(animation_macro)
         flipped = AnimationDirection.LEFT.value in animation_macro
         return [
-            self._sprites.image(f"{animation_macro} {index}", flipped)
+            self.sprites.image(f"{animation_macro} {index}", flipped)
             for index in range(count)
         ]
 
-    def get_attack_moves(self, direction):
+    def attack_moves(self, direction):
         """The attack combo of a direction, split into its moves (one list
         of frames per punch or kick)."""
-        frames = self.get_frames(f"{AnimationType.ATTACK.value} {direction}")
-        moves = max(1, min(self._sprites.attack_moves, len(frames)))
+        frames = self.frames(f"{AnimationType.ATTACK.value} {direction}")
+        moves = max(1, min(self.sprites.attack_moves, len(frames)))
         size = len(frames) // moves
         return [frames[index * size:(index + 1) * size] for index in range(moves)] if frames else []
+
+    def frame_key(self, image=None):
+        """(animation name, flipped) of the frame shown (or of image), or
+        None for a frame made elsewhere (a padded knock-out pose)."""
+        return self.sprites.frame_key(self.image if image is None else image)
 
     # ---- Forms ----------------------------------------------------------------
     def has_form(self, form):
@@ -211,33 +210,38 @@ class Animation(pygame.sprite.Sprite):
         if form == self.form or form not in self.forms:
             return
         self.form = form
-        self._sprites = self.forms[form]
-        self.reset_animation()
+        self.sprites = self.forms[form]
+        self.reset()
 
     # ---- Looping animations (walk, run, attack) -------------------------------
-    def reset_animation(self):
+    def reset(self):
         self.images = []
         self.current_animation_macro = None
         self.current_animation_index = 0
-        self.clock = 0
+        self.clock = 0.0
 
-    def animate(self, animation_macro, animation_nbr):
+    def show(self, animation_name, flipped=False, frame=None):
+        """Hold one frame: frame (a frame's name), else the one named
+        animation_name (standing poses are named "IDLE Down"...)."""
+        self.animation_name = animation_name
+        self.image = self.image_by_name(frame or animation_name, flipped)
+
+    def loop(self, animation_macro, animation_nbr, clock_speed, ticks=1.0):
+        """Show the looping animation, advanced by ticks frames' worth of
+        time (see utils.timing)."""
         if self.current_animation_macro != animation_macro:
-            self.images = self.get_frames(animation_macro, animation_nbr)
+            self.images = self.frames(animation_macro, animation_nbr)
             self.current_animation_macro = animation_macro
             self.current_animation_index = 0
-            self.clock = 0
+            self.clock = 0.0
         elif len(self.images) != animation_nbr:
-            self.images = self.get_frames(animation_macro, animation_nbr)
+            self.images = self.frames(animation_macro, animation_nbr)
             self.current_animation_index %= len(self.images)
 
         self.animation_name = animation_macro
         self.image = self.images[self.current_animation_index]
 
-        self.clock += self.clock_speed
+        self.clock += clock_speed * ticks
         if self.clock >= Config.CLOCK_LIMIT:
             self.current_animation_index = (self.current_animation_index + 1) % len(self.images)
-            self.clock = 0
-
-    def get_character_name(self):
-        return self.character_name
+            self.clock = 0.0

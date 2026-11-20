@@ -90,7 +90,7 @@ class RemoteFighter(Character):
         self.faint_finished = False
         frame = state.get("frame")
         if isinstance(frame, list) and len(frame) == 2 and self.has_animation(str(frame[0])):
-            self.image = self.get_image_by_animation_name(str(frame[0]), bool(frame[1]))
+            self.image = self.frame_image(str(frame[0]), bool(frame[1]))
 
     def follow_snapshot(self):
         """Move smoothly towards the latest received position."""

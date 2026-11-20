@@ -3,7 +3,7 @@ from typing import List
 from enum import Enum
 
 from pathmanager import PathManager
-from animation import Animation
+from animation import Animator
 from difficulty import enemy_profile
 from taps import tap_position
 from version import __version__
@@ -83,7 +83,7 @@ class Menu:
         self._fitted_previews = {}
         self.character_rects = {}
         for character_name in self.character_names:
-            preview = Animation(character_name).image
+            preview = Animator(character_name).image
             self.character_previews[character_name] = pygame.transform.scale(
                 preview, (preview.get_width() * 4, preview.get_height() * 4)
             )

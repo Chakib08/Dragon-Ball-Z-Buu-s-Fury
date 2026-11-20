@@ -74,7 +74,7 @@ class TechniqueTests(unittest.TestCase):
                         sprites = technique.form_for(player)
                         self.assertIsNotNone(sprites)
                         for direction in ("Down", "Right", "Left", "Up"):
-                            frames = player.get_frames(technique.pose_macro(direction))
+                            frames = player.frames(technique.pose_macro(direction))
                             self.assertTrue(frames)
                             self.assertTrue(all(f.get_width() > 0 for f in frames))
 
