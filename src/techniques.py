@@ -158,7 +158,15 @@ class Technique:
         self.id = data["id"]
         self.name = data["name"]
         self.kind = data["kind"]
-        self.stats = STATS[self.kind]
+        # A signature technique can be bigger than its kind's usual effect
+        # ("effect_scale", the sprites) and reach farther ("range_scale",
+        # flying as much faster, so it takes as long to get there)
+        self.effect_scale = float(data.get("effect_scale", 1.0))
+        range_scale = float(data.get("range_scale", 1.0))
+        self.stats = dict(STATS[self.kind])
+        for stat in ("range", "speed", "reach", "radius"):
+            if stat in self.stats:
+                self.stats[stat] = self.stats[stat] * range_scale
         self.cost = self.stats["cost"]
         self.damage = self.stats["damage"]
         self.forms = {

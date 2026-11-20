@@ -90,10 +90,11 @@ def charge_scale(power):
 class ChargeGlow(Effect):
     """The ki ball growing in the hands while a technique charges."""
 
-    def __init__(self, frames, caster):
+    def __init__(self, frames, caster, scale=1.0):
         super().__init__()
         self.frames = frames
         self.caster = caster
+        self.scale = scale
         self.level = 0.0
         self.update_effect(())
 
@@ -102,7 +103,7 @@ class ChargeGlow(Effect):
         index = min(len(self.frames) - 1, int(self.level * len(self.frames)))
         # A slight pulse so the charge looks alive
         pulse = 1 + 0.08 * (self.frame_number(3) % 2)
-        self.image = scale_frame(self.frames[index], (0.8 + 0.4 * self.level) * pulse)
+        self.image = scale_frame(self.frames[index], (0.8 + 0.4 * self.level) * pulse * self.scale)
         self.rect = self.image.get_rect(center=chest_origin(self.caster, self.caster.facing))
 
 
@@ -337,12 +338,13 @@ def build_effect(technique, sprites, caster, direction, damage, on_hit, spawn, o
     origin = (float(origin[0]), float(origin[1]))
     scale = 1.0 if power is None else charge_scale(power)
     scale *= sprites.data.get("scale", 1.0)  # e.g. a bigger SSJ3 Kamehameha
+    scale *= getattr(technique, "effect_scale", 1.0)  # a signature technique
     if kind in ("projectile", "ball"):
         frames = [scale_frame(sprites.oriented(image, direction), scale) for image in sprites.cuts("projectile")]
         if not frames:
             return None
         # A charged ball already grew in the hands
-        grow = sprites.cuts("grow") if power is None else ()
+        grow = [scale_frame(f, scale) for f in sprites.cuts("grow")] if power is None else ()
         effect = Projectile(frames, [scale_frame(f, scale) for f in sprites.cuts("hit")], origin,
                             direction, stats["speed"], stats["range"], damage, on_hit,
                             grow_frames=grow, spawn=spawn)

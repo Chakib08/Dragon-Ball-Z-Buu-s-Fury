@@ -283,7 +283,7 @@ class CombatSystem:
         fire_frames = frames[fire_at:] or frames[-1:]
         player._play("charging", charge_frames, player.SPECIAL_CLOCK_SPEED, hold_ticks=10 ** 9)
         glow_frames = sprites.cuts("charge") or sprites.cuts("grow")
-        glow = ChargeGlow(glow_frames, player) if glow_frames else None
+        glow = ChargeGlow(glow_frames, player, technique.effect_scale) if glow_frames else None
         if glow is not None:
             self.add_effect(glow)
         self.charge = {"technique": technique, "direction": facing, "start_ms": now,

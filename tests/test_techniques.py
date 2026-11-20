@@ -114,7 +114,9 @@ class TechniqueTests(unittest.TestCase):
                 if kind is None:
                     continue
                 with self.subTest(character=name, technique=index):
-                    player, enemy, combat = self.fighters(name, gap=30 if kind is Burst else 70)
+                    # A bigger effect (a signature technique) needs more room
+                    scale = Saiyan(0, 0, False, name).techniques[index].effect_scale
+                    player, enemy, combat = self.fighters(name, gap=30 if kind is Burst else 70 * scale)
                     self.use(combat, index)
                     seen = None
                     for _ in range(160):  # long enough for a full charge
@@ -208,11 +210,42 @@ class TechniqueTests(unittest.TestCase):
     def test_a_longer_charge_is_bigger_and_stronger(self):
         for name, index in (("goku", 1), ("vegeta", 2)):
             with self.subTest(character=name):
-                quick, quick_damage = self.charge_and_release(name, index, 100)
-                full, full_damage = self.charge_and_release(name, index, 10_000)
+                gap = 70 * Saiyan(0, 0, False, name).techniques[index].effect_scale
+                quick, quick_damage = self.charge_and_release(name, index, 100, gap)
+                full, full_damage = self.charge_and_release(name, index, 10_000, gap)
                 self.assertGreater(full_damage, quick_damage)
                 self.assertGreater(full.image.get_height() if isinstance(full, Projectile) else full.pieces["heads"][0].get_height(),
                                    quick.image.get_height() if isinstance(quick, Projectile) else quick.pieces["heads"][0].get_height())
+
+    def test_signature_techniques_are_four_times_bigger_and_reach_four_times_farther(self):
+        from effects import build_effect
+        from techniques import STATS
+        signature = {"goku": ["kamehameha"], "gohan": ["kamehameha"], "vegeta": ["final_flash", "big_bang"]}
+        for name, ids in signature.items():
+            player = Saiyan(100, 100, False, name)
+            player.update()
+            for technique in player.techniques:
+                with self.subTest(character=name, technique=technique.id):
+                    usual = STATS[technique.kind]
+                    big = technique.id in ids
+                    self.assertEqual(technique.effect_scale, 4.0 if big else 1.0)
+                    self.assertEqual(technique.stats.get("range"),
+                                     usual.get("range") * 4 if big and "range" in usual else usual.get("range"))
+                    if not big or technique.kind == "teleport":
+                        continue
+                    sprites = technique.form_for(player)
+                    effect = build_effect(technique, sprites, player, "Right", 0, None, lambda e: None)
+                    technique.effect_scale = 1.0
+                    plain = build_effect(technique, sprites, player, "Right", 0, None, lambda e: None)
+                    technique.effect_scale = 4.0
+                    size = (lambda e: e.pieces["heads"][0].get_height()) if technique.kind == "beam" \
+                        else (lambda e: e.frames[0].get_height())
+                    self.assertAlmostEqual(size(effect) / size(plain), 4, delta=0.1)
+        # Everyone else's techniques are as before
+        trunks = Saiyan(0, 0, False, "trunks")
+        self.assertTrue(all(t.effect_scale == 1.0 for t in trunks.techniques))
+        # The shared table is untouched
+        self.assertEqual(STATS["beam"]["range"], 230)
 
     def test_ssj3_kamehameha_is_bigger_and_stronger_than_ssj(self):
         from effects import build_effect
