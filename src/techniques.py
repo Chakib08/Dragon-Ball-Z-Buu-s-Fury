@@ -113,11 +113,23 @@ class TechniqueForm:
         x, y, width, height = box
         frame = {"AnimationName": name, "x": x, "y": y, "Area Width": width, "Area Height": height,
                  "Size": {"Width": width, "Height": height}}
-        if not self.own_sheet:
-            frame["Background"] = {"R": self.background[0], "G": self.background[1], "B": self.background[2]}
+        # The pose's own cell colour: the sheets alternate two shades from
+        # one cell to the next, and a corner of the box may be the sprite
+        r, g, b = self._cell_background(x, y, width, height)
+        frame["Background"] = {"R": r, "G": g, "B": b}
         if flip:
             frame["Flip"] = True
         self.sprite_form.frames_by_name.setdefault(name, frame)
+
+    def _cell_background(self, x, y, width, height):
+        """The most common colour of the box's four corners on the
+        character's sheet."""
+        sheet = self.sprite_form.sheet
+        corners = []
+        for px, py in ((x, y), (x + width - 1, y), (x, y + height - 1), (x + width - 1, y + height - 1)):
+            if 0 <= px < sheet.get_width() and 0 <= py < sheet.get_height():
+                corners.append(tuple(sheet.get_at((px, py)))[:3])
+        return max(set(corners), key=corners.count) if corners else (0, 0, 0)
 
     def fire_frame(self, direction):
         fire_at = self.fire_at

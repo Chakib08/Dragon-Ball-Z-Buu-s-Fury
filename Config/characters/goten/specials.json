@@ -28,6 +28,12 @@
               15
             ]
           ],
+          "sheet": "Graphics/assets/effects/gohan_base.png",
+          "background": [
+            0,
+            156,
+            255
+          ],
           "pose": {
             "Down": [
               [
@@ -114,6 +120,12 @@
               14,
               15
             ]
+          ],
+          "sheet": "Graphics/assets/effects/gohan_base.png",
+          "background": [
+            0,
+            156,
+            255
           ],
           "pose": {
             "Down": [
@@ -218,6 +230,12 @@
               14,
               14
             ]
+          ],
+          "sheet": "Graphics/assets/effects/gohan_base.png",
+          "background": [
+            0,
+            156,
+            255
           ],
           "pose": {
             "Down": [
@@ -351,6 +369,12 @@
               14,
               14
             ]
+          ],
+          "sheet": "Graphics/assets/effects/gohan_base.png",
+          "background": [
+            0,
+            156,
+            255
           ],
           "pose": {
             "Down": [
@@ -504,6 +528,12 @@
               22
             ]
           ],
+          "sheet": "Graphics/assets/effects/gohan_base.png",
+          "background": [
+            0,
+            156,
+            255
+          ],
           "pose": {
             "Down": [
               [
@@ -593,6 +623,12 @@
               31,
               22
             ]
+          ],
+          "sheet": "Graphics/assets/effects/gohan_base.png",
+          "background": [
+            0,
+            156,
+            255
           ],
           "pose": {
             "Down": [

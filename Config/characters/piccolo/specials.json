@@ -232,6 +232,12 @@
             ],
             "points_left": true
           },
+          "sheet": "Graphics/assets/effects/vegeta_ssj.png",
+          "background": [
+            0,
+            128,
+            0
+          ],
           "pose": {
             "Down": [
               [
@@ -332,6 +338,12 @@
             ],
             "points_left": true
           },
+          "sheet": "Graphics/assets/effects/vegeta_ssj.png",
+          "background": [
+            0,
+            128,
+            0
+          ],
           "pose": {
             "Down": [
               [

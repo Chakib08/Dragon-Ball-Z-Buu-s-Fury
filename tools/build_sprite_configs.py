@@ -261,17 +261,17 @@ NEW_SHEETS = [
      "attack": [6, 7, 8, 9, 10, 10, 11, 12, 12, 16, 17, 18], "hurt": [23, 24], "block": 25,
      "special": [13, 14, 14], "faint": [31, 32, 33, 34],
      "techniques": techniques(("energy_blast", [13, 14, 14], 1), ("human_extinction", [36, 37, 37], 1),
-                              ("rage", [38, 39, 40], None))},
+                              ("rage", [38, 39, 40], None, "Down"))},
     {"character": "super_buu_gotenks", "form": "base", **BIG, "run": NO_RUN,
      "attack": [6, 7, 8, 9, 9, 10, 12, 13, 14, 15, 15, 6], "hurt": [18, 19], "block": 21,
      "special": [16, 17, 17], "faint": [22, 23, 24, 25],
      "techniques": techniques(("energy_blast", [16, 17, 17], 1), ("human_extinction", [26, 27, 28], 1),
-                              ("rage", [29, 30, 31], None))},
+                              ("rage", [29, 30, 31], None, "Down"))},
     {"character": "super_buu_gohan", "form": "base", **BIG, "run": NO_RUN,
      "attack": [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 15, 6], "hurt": [27, 28], "block": 29,
      "special": [23, 24, 25], "faint": [35, 36, 37, 38],
      "techniques": techniques(("energy_blast", [23, 24, 25], 1), ("human_extinction", [39, 40, 41], 1),
-                              ("rage", [42, 43, 44], None))},
+                              ("rage", [42, 43, 44], None, "Down"))},
 ]
 SHEETS += NEW_SHEETS
 
@@ -364,7 +364,9 @@ def borrowed_effects(key):
     with open(path) as file:
         specials = json.load(file)
     technique = next(t for t in specials["techniques"] if t["id"] == technique_id)
-    return effects_only(next(iter(technique["forms"].values())))
+    form = next(iter(technique["forms"].values()))
+    # The frames are on that character's effects sheet: keep which one
+    return {**effects_only(form), "sheet": form["sheet"], "background": form["background"]}
 
 
 def build_character_specials(character, form_poses):
@@ -509,6 +511,8 @@ def update_specials(character, form_poses, effects):
     with open(path) as file:
         specials = json.load(file)
     for technique in specials["techniques"]:
+        if "forms" not in technique:
+            continue  # an "evolve" technique: no sprites of its own
         forms = technique["forms"]
         for form, poses in form_poses.items():
             if technique["id"] not in poses:
