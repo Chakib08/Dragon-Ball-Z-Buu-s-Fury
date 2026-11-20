@@ -23,8 +23,8 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
+    # No v* tags for now: releases ship Android and Windows only, until the
+    # iOS build passes its smoke test
   pull_request:
     branches:
       - main
