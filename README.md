@@ -25,6 +25,8 @@ The sprite configs of the dbz-assets sheets (`Config/characters/<name>/<form>.js
 
 Map collisions: rooms are closed (walls, furniture and the void around them block movement) and the river can only be crossed on the bridge. The boxes are generated into the maps by `tools/build_collisions.py`, which describes each room's walkable floor and furniture; after changing a map, update its floor there and run `python3 tools/build_collisions.py` (hand-made collision boxes in the maps are kept).
 
+New arenas: `tools/png_to_map.py` turns a PNG picture of a map into a map the game plays on (16x16 tiles with a tileset, collision boxes, the player's spawn and the enemies' patrol). Collisions come from a mask you paint over a copy of the picture (`--mask`), from colours (`--water`, `--block-colour R,G,B`, or `--walkable-colour R,G,B` for the opposite), and `--preview check.png` shows them in red. Then set `"arena": "<name>"` in `Config/config.json` to fight there (`python3 tools/png_to_map.py --help`).
+
 To find sprites yourself in a ROM dumped from your own cartridge, `tools/gba_rip.py` finds compressed graphics and renders them as browsable PNG tile sheets (`python3 tools/gba_rip.py --help`). Never commit the ROM or its output.
 
 Application settings are stored in `Config/config.json`.

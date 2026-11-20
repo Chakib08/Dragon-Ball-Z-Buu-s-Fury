@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
@@ -11,6 +12,7 @@ from movement import resolve_movement_collisions, solid_bodies
 from difficulty import enemy_profile
 from npc import HEROES, NPC, SaiyanNPC
 from pathmanager import PathManager
+from utils.config import Config
 from utils import timing
 
 
@@ -61,6 +63,9 @@ class MapDefinition:
     portals: List[Portal] = field(default_factory=list)
     # Called on first visit, so NPCs of unvisited maps cost nothing
     make_npcs: Optional[Callable[[], List[NPC]]] = None
+    # The .tmx file (Graphics/maps/<file>.tmx), when not the map's name: the
+    # world map can be another arena (Config "arena", tools/png_to_map.py)
+    file: Optional[str] = None
 
 
 @dataclass
@@ -111,12 +116,30 @@ def _world_npcs(enemies=(DEFAULT_ENEMY,), allies=()):
     return npcs
 
 
-def map_definitions(enemies=(DEFAULT_ENEMY,), allies=()):
+def _has_object(tmx_data, name):
+    try:
+        tmx_data.get_object_by_name(name)
+        return True
+    except (KeyError, ValueError):
+        return False
+
+
+def arena():
+    """The map arcade fights happen on: "map" (Goku's home), or a map made
+    with tools/png_to_map.py, named in Config/config.json ("arena")."""
+    name = Config.get_config_value("arena", default_value="map") or "map"
+    try:
+        return name if os.path.exists(PathManager.map_path(name)) else "map"
+    except ValueError:
+        return "map"
+
+
+def map_definitions(enemies=(DEFAULT_ENEMY,), allies=(), world_file=None):
     world = PathManager.soundtrack(WORLD_MUSIC)
     home = PathManager.soundtrack(HOME_MUSIC)
     return [
         MapDefinition("map", world, [Portal("map", "enter_house", "house", "spawn_house")],
-                      lambda: _world_npcs(enemies, allies)),
+                      lambda: _world_npcs(enemies, allies), file=world_file),
         MapDefinition("house", home, [
             Portal("house", "exit_house", "map", "spawn_world"),
             Portal("house", "enter_hall", "hall", "spawn_from_house_to_hall"),
@@ -158,8 +181,10 @@ class MapManager:
         self.combat = CombatSystem(character, screen.get_size())
         self.enemies = tuple(enemies)
         self.allies = tuple(allies)
+        # Online matches stay on Goku's home: both players need the same map
+        self.world_file = "map" if versus else arena()
         self.definitions = {definition.name: definition
-                            for definition in map_definitions(self.enemies, self.allies)}
+                            for definition in map_definitions(self.enemies, self.allies, self.world_file)}
         self.maps = {}
 
         # Fade to black between two maps
@@ -202,7 +227,7 @@ class MapManager:
             return self.maps[name]
 
         definition = self.definitions[name]
-        tmx_data = pytmx.load_pygame(PathManager.map_path(name))
+        tmx_data = pytmx.load_pygame(PathManager.map_path(definition.file or name))
         map_layer = pyscroll.orthographic.BufferedRenderer(
             pyscroll.data.TiledMapData(tmx_data), self.screen.get_size()
         )
@@ -213,11 +238,20 @@ class MapManager:
             for obj in tmx_data.objects
             if obj.type == "collision"
         ]
+        if name == "map" and definition.file not in (None, "map") and _has_object(tmx_data, "spawn_world"):
+            # Another arena: the player starts on its spawn point
+            spawn = tmx_data.get_object_by_name("spawn_world")
+            self.character.position = [spawn.x - self.character.rect.width / 2,
+                                       spawn.y - self.character.rect.height]
+            self.character.update()
+            self.character.save_location()
         if self.versus:
             npcs = _world_npcs((), self.allies)  # the player's allies only
         else:
             npcs = definition.make_npcs() if definition.make_npcs else []
         portals = [] if self.versus else definition.portals
+        # A map without a door's spot (a new arena) has no such door
+        portals = [portal for portal in portals if _has_object(tmx_data, portal.src_point)]
         group = CharacterGroup(map_layer=map_layer, default_layer=1)
         group.add(self.character, *npcs, *self.opponents)
 

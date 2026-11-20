@@ -9,6 +9,7 @@
     "width": 1200,
     "heigth": 1000
   },
+  "arena": "map",
   "MAP_DIR": "Graphics/maps/",
   "CONFIG_DIR": "Config/characters/",
   "MENU_DIR": "Graphics/menu/",
