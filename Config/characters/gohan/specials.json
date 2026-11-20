@@ -197,7 +197,7 @@
       "id": "kamehameha",
       "name": "Kamehameha",
       "kind": "beam",
-      "effect_scale": 4,
+      "effect_scale": 2,
       "range_scale": 4,
       "forms": {
         "base": {

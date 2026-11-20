@@ -223,7 +223,7 @@ class TechniqueTests(unittest.TestCase):
                 self.assertGreater(full.image.get_height() if isinstance(full, Projectile) else full.pieces["heads"][0].get_height(),
                                    quick.image.get_height() if isinstance(quick, Projectile) else quick.pieces["heads"][0].get_height())
 
-    def test_signature_techniques_are_four_times_bigger_and_reach_four_times_farther(self):
+    def test_signature_techniques_are_twice_as_big_and_reach_four_times_farther(self):
         from effects import build_effect
         from techniques import STATS
         signature = {"goku": ["kamehameha"], "gohan": ["kamehameha"], "vegeta": ["final_flash", "big_bang"]}
@@ -234,7 +234,7 @@ class TechniqueTests(unittest.TestCase):
                 with self.subTest(character=name, technique=technique.id):
                     usual = STATS[technique.kind]
                     big = technique.id in ids
-                    self.assertEqual(technique.effect_scale, 4.0 if big else 1.0)
+                    self.assertEqual(technique.effect_scale, 2.0 if big else 1.0)
                     self.assertEqual(technique.stats.get("range"),
                                      usual.get("range") * 4 if big and "range" in usual else usual.get("range"))
                     if not big or technique.kind == "teleport":
@@ -243,10 +243,10 @@ class TechniqueTests(unittest.TestCase):
                     effect = build_effect(technique, sprites, player, "Right", 0, None, lambda e: None)
                     technique.effect_scale = 1.0
                     plain = build_effect(technique, sprites, player, "Right", 0, None, lambda e: None)
-                    technique.effect_scale = 4.0
+                    technique.effect_scale = 2.0
                     size = (lambda e: e.pieces["heads"][0].get_height()) if technique.kind == "beam" \
                         else (lambda e: e.frames[0].get_height())
-                    self.assertAlmostEqual(size(effect) / size(plain), 4, delta=0.1)
+                    self.assertAlmostEqual(size(effect) / size(plain), 2, delta=0.1)
         # Everyone else's techniques are as before
         trunks = Saiyan(0, 0, False, "trunks")
         self.assertTrue(all(t.effect_scale == 1.0 for t in trunks.techniques))

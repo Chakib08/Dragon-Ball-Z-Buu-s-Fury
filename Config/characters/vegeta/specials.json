@@ -209,7 +209,7 @@
       "id": "final_flash",
       "name": "Final Flash",
       "kind": "beam",
-      "effect_scale": 4,
+      "effect_scale": 2,
       "range_scale": 4,
       "forms": {
         "ssj": {
@@ -430,7 +430,7 @@
       "id": "big_bang",
       "name": "Big Bang Attack",
       "kind": "ball",
-      "effect_scale": 4,
+      "effect_scale": 2,
       "range_scale": 4,
       "forms": {
         "ssj": {
