@@ -14,6 +14,14 @@ FONT_SIZE = 40
 
 class DialogBox:
     def __init__(self, screen_size=(1200, 1000)) -> None:
+        self.texts = ["KAKAROT !!!", "I want my revenge !!"]
+        self.text_idx = 0
+        self.letter_idx = 0
+        self.isBoxOpened = False
+        self.resize(screen_size)
+
+    def resize(self, screen_size):
+        """Lay the box out for this screen size (what it says is kept)."""
         total_width = BOX_SIZE[0] + PORTRAIT_SIZE[0]
         scale = min(1, screen_size[0] / (total_width + 100), screen_size[1] / 1000)
         box_size = (round(BOX_SIZE[0] * scale), round(BOX_SIZE[1] * scale))
@@ -26,11 +34,7 @@ class DialogBox:
         self.box = pygame.transform.scale(self.box, box_size)
         self.portrait = self.get_image(PathManager.dialog_file("portraits.png"), (255, 174, 201), (171, 607, 64, 64), (64, 64))
         self.portrait = pygame.transform.scale(self.portrait, portrait_size)
-        self.texts = ["KAKAROT !!!", "I want my revenge !!"]
-        self.text_idx = 0
-        self.letter_idx = 0
         self.font = pygame.font.Font(PathManager.dialog_file("dialog_font.ttf"), max(12, round(FONT_SIZE * scale)))
-        self.isBoxOpened = False
         
     def render(self, screen):
         if self.isBoxOpened:

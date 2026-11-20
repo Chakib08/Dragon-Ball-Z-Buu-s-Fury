@@ -12,7 +12,6 @@ from dialog.dialogbox import DialogBox
 from gamepad import Gamepad
 from map import DEFAULT_ENEMY, MapManager
 from npc import HEROES
-from result_screen import ResultScreen
 import smoke
 from menu import Menu, State
 from net import NetClient
@@ -20,6 +19,7 @@ from online import LobbyScreen, OnlineMatch
 from pathmanager import PathManager
 from quit_prompt import QuitPrompt
 from saiyan import Saiyan
+from scenes import PAUSE_KEYS, SCENES
 from touch_controls import TouchControls
 from utils import timing
 from utils.config import Config
@@ -100,13 +100,12 @@ class Game:
         # Everything is laid out from the size the display really has
         self.resolution = self.screen.get_size()
         self.menu = None
-        # menu, story, lobby or online (an online match)
-        self.scene = "menu"
+        # The screens (see scenes.py), and the one showing
+        self.scenes = {scene.name: scene(self) for scene in SCENES}
+        self.current = self.scenes["menu"]
         self.net = NetClient()
         self.lobby = None
         self.match = None
-        # Result of the story fight (ResultScreen) once it is over
-        self.result = None
 
         self.music = None
         self.character = None
@@ -120,6 +119,25 @@ class Game:
         self.quit_prompt = QuitPrompt(self.resolution)
         # When the attack button was last pressed (None once it was used)
         self.attack_pressed_ms = None
+
+    # ---- Scenes (see scenes.py) ------------------------------------------------
+    @property
+    def scene(self):
+        """The name of the screen showing: menu, story, lobby or online."""
+        return self.current.name
+
+    @scene.setter
+    def scene(self, name):
+        self.current = self.scenes[name]
+
+    @property
+    def result(self):
+        """The story fight's result screen once it is over, else None."""
+        return self.scenes["story"].result
+
+    @result.setter
+    def result(self, result):
+        self.scenes["story"].result = result
 
     @property
     def is_fullscreen(self):
@@ -140,32 +158,12 @@ class Game:
         self.screen = screen
         self.resolution = screen.get_size()
         self.map_manager.set_screen(screen)
-        # Rebuilt for the new size, keeping what is on screen right now
-        dialog = self.dialogBox
-        self.dialogBox = DialogBox(self.resolution)
-        self.dialogBox.isBoxOpened = dialog.isBoxOpened
-        self.dialogBox.texts = dialog.texts
-        self.dialogBox.text_idx = dialog.text_idx
-        self.dialogBox.letter_idx = dialog.letter_idx
-        self.touch_controls = TouchControls(self.resolution)
-        quit_prompt = self.quit_prompt
-        self.quit_prompt = QuitPrompt(self.resolution)
-        self.quit_prompt.is_open = quit_prompt.is_open
-        if self.menu is not None:
-            menu = Menu(self.resolution)
-            menu.state = self.menu.state
-            menu.isPlaying = self.menu.isPlaying
-            menu.online = self.menu.online
-            menu.selected_character = self.menu.selected_character
-            menu.selected_allies = list(self.menu.selected_allies)
-            menu.selected_enemies = list(self.menu.selected_enemies)
-            self.menu = menu
-        if self.lobby is not None:
-            lobby = self.lobby
-            lobby.screen_size = self.resolution
-            lobby.background = self.menu.menu_image if self.menu is not None else None
-        if self.match is not None:
-            self.match._fonts(self.resolution)
+        # Everything lays itself out again, keeping what it shows
+        for part in (self.dialogBox, self.touch_controls, self.quit_prompt, self.menu):
+            if part is not None:
+                part.resize(self.resolution)
+        for scene in self.scenes.values():
+            scene.resize(self.resolution)
         self.release_input()
 
     def select_character(self, name, enemies=(DEFAULT_ENEMY,), allies=()):
@@ -268,32 +266,16 @@ class Game:
             character.save_location()
             character.face_idle()
 
-    # The controller's presses as the keys the game already understands
-    # (see gamepad.py): what a button does depends on what is on screen
-    GAMEPAD_FIGHT_KEYS = {"a": pygame.K_a, "y": pygame.K_s, "x": pygame.K_d, "lb": pygame.K_q,
-                          "rb": pygame.K_e, "rt": pygame.K_x, "view": pygame.K_t, "menu": pygame.K_ESCAPE}
-    GAMEPAD_MENU_KEYS = {"up": pygame.K_UP, "down": pygame.K_DOWN, "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
-                         "a": pygame.K_RETURN, "menu": pygame.K_RETURN, "b": pygame.K_ESCAPE, "x": pygame.K_SPACE}
-    GAMEPAD_LOBBY_KEYS = {"a": pygame.K_1, "b": pygame.K_ESCAPE, "x": pygame.K_c, "y": pygame.K_r}
-    GAMEPAD_RESULT_KEYS = {"a": pygame.K_RETURN, "b": pygame.K_ESCAPE, "menu": pygame.K_RETURN}
-    # Pause (Quit / Main menu / No): no button quits by accident
-    GAMEPAD_PAUSE_KEYS = {"x": pygame.K_RETURN, "y": pygame.K_m, "b": pygame.K_ESCAPE, "menu": pygame.K_ESCAPE}
-
     def gamepad_key_events(self):
-        """KEYDOWN events for the controller buttons pressed this frame."""
+        """KEYDOWN events for the controller buttons pressed this frame: what
+        a button stands for depends on the screen (see scenes.py)."""
         gamepad = self.gamepad
         if not gamepad.connected:
             return []
         if self.quit_prompt.is_open:
-            mapping, presses = self.GAMEPAD_PAUSE_KEYS, gamepad.pressed
-        elif self.scene in ("story", "online") and self.result is not None:
-            mapping, presses = self.GAMEPAD_RESULT_KEYS, gamepad.pressed
-        elif self.scene in ("story", "online"):
-            mapping, presses = self.GAMEPAD_FIGHT_KEYS, gamepad.pressed
-        elif self.scene == "lobby":
-            mapping, presses = {**self.GAMEPAD_MENU_KEYS, **self.GAMEPAD_LOBBY_KEYS}, gamepad.menu_presses()
+            mapping, presses = PAUSE_KEYS, gamepad.pressed
         else:
-            mapping, presses = self.GAMEPAD_MENU_KEYS, gamepad.menu_presses()
+            mapping, presses = self.current.gamepad_presses()
         return [pygame.event.Event(pygame.KEYDOWN, key=mapping[button], mod=0, unicode="", scancode=0,
                                    gamepad=True)
                 for button in sorted(presses) if button in mapping]
@@ -399,45 +381,7 @@ class Game:
 
     def frame(self, events, paused):
         """One frame of whichever scene is showing."""
-        if self.scene == "menu":
-            self.menu.launch_menu(self.screen, self.resolution, events)
-            if self.menu.isPlaying:
-                if self.menu.online:
-                    self.open_lobby()
-                else:
-                    self.start_story()
-        elif self.scene == "story":
-            if self.result is None:
-                self.play_frame(events, paused)
-                outcome = self.story_outcome()
-                if outcome is not None:
-                    self.release_input()
-                    self.result = ResultScreen(self.resolution, victory=outcome == "victory")
-            else:
-                # The fight is over: the world stays frozen behind the choice
-                self.play_frame([], True)
-                choice = None if paused else self.result.process(events)
-                self.result.draw(self.screen)
-                if choice == "retry":
-                    self.start_story()
-                elif choice == "menu":
-                    self.back_to_menu()
-        elif self.scene == "lobby":
-            action = self.lobby.update([] if paused else events)
-            if action == "back":
-                self.back_to_menu()
-            elif isinstance(action, dict):
-                self.start_match(action)
-            else:
-                self.lobby.draw(self.screen)
-        elif self.scene == "online":
-            # An online match never pauses: the opponent keeps playing
-            self.match.handle_messages(self.net.poll())
-            self.play_frame(events, False)
-            self.match.after_frame()
-            self.match.draw(self.screen)
-            if self.match.finished:
-                self.end_match()
+        self.current.frame(events, paused)
 
     def show_gamepad_hints(self):
         """While the controller is used: its buttons in the on-screen hints,
@@ -462,13 +406,10 @@ class Game:
         # sub-screens and the lobby, so it only asks to quit from the main
         # menu or while playing
         was_asking = self.quit_prompt.is_open
-        playing = self.scene in ("story", "online")
         events = self.quit_prompt.process(
             events,
-            # On the result screen Esc means "main menu"
-            escape_opens=(playing and self.result is None)
-            or (self.scene == "menu" and self.menu.state == State.START),
-            menu_available=playing,
+            escape_opens=self.current.escape_opens_prompt(),
+            menu_available=self.current.in_fight,
         )
         if self.quit_prompt.confirmed:
             self.isRunning = False

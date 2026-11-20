@@ -19,13 +19,17 @@ class QuitPrompt:
     gamepad_hints = False
 
     def __init__(self, screen_size):
-        self.screen_size = screen_size
         self.is_open = False
         self.confirmed = False
         # "Main menu" chosen (only offered while menu_available)
         self.to_menu = False
         self.menu_available = False
+        self.resize(screen_size)
 
+    def resize(self, screen_size):
+        """Lay the button and the dialog out for this screen size (an open
+        dialog stays open)."""
+        self.screen_size = screen_size
         shortest = min(screen_size)
         # Top-right: clear of the HP/KI bars (top-left) and the touch controls
         # (bottom corners), and where a close button is expected
@@ -59,6 +63,7 @@ class QuitPrompt:
         self.shade = pygame.Surface(screen_size, pygame.SRCALPHA)
         self.shade.fill((0, 0, 0, 150))
         self.button_surface = self._make_button_surface()
+        self._layout()
 
     def _make_button_surface(self):
         radius = self.radius

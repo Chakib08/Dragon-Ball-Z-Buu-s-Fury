@@ -159,9 +159,9 @@ class OnlineMatch:
         self.result = None
         self.result_since = None
         self.last_sent_ms = -self.SEND_INTERVAL_MS
-        self._fonts(game.resolution)
+        self.resize(game.resolution)
 
-    def _fonts(self, resolution):
+    def resize(self, resolution):
         self.banner_font = pygame.font.Font(None, max(48, resolution[1] // 7))
         self.info_font = pygame.font.Font(None, max(22, resolution[1] // 28))
 
@@ -274,11 +274,18 @@ class LobbyScreen:
         self.buttons = {}
         self.room_buttons = []
         self._said_hello = False
+        self.resize(screen_size, background)
+        self.connect()
+
+    def resize(self, screen_size, background=None):
+        """Lay the lobby out for this screen size (background: the menu
+        artwork made for it)."""
+        self.screen_size = screen_size
+        self.background = background
         height = screen_size[1]
         self.title_font = pygame.font.Font(None, max(40, height // 12))
         self.font = pygame.font.Font(None, max(24, height // 22))
         self.small_font = pygame.font.Font(None, max(20, height // 30))
-        self.connect()
 
     # ---- Connection -------------------------------------------------------------
     @property

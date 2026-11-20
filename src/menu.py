@@ -36,29 +36,11 @@ class Menu:
     gamepad_hints = False
 
     def __init__(self, resolution) -> None:
-        artwork = pygame.image.load(PathManager.menu_image_path(BACKGROUND_IMAGE))
-        # The artwork fills the screen without being stretched
-        self.background = self._cover(artwork, resolution)
-        # Behind the other screens (characters, options, lobby): darker, so
-        # their cards and text stand out
-        self.menu_image = self.background.copy()
-        shade = pygame.Surface(resolution, pygame.SRCALPHA)
-        shade.fill((8, 10, 20, 150))
-        self.menu_image.blit(shade, (0, 0))
-        # Main menu: dark on the left, where the title and entries are
-        self.main_image = self.background.copy()
-        self.main_image.blit(self._left_gradient(resolution), (0, 0))
-        self._layout_main(resolution)
+        self._artwork = pygame.image.load(PathManager.menu_image_path(BACKGROUND_IMAGE))
         # Highlighted entry (Arcade: the one most players want)
         self.selected_item = 1
         # "Not available yet" message (Story mode) until this time
         self.notice_until = 0
-
-        # The control guide must fit on any screen height
-        self.options_font_size = max(20, min(42, int(resolution[1] / 25)))
-        self.options_font = pygame.font.Font(None, self.options_font_size)
-        self.options_title_font = pygame.font.Font(None, int(self.options_font_size * 1.4))
-
         self.isPlaying = False
         # True when the character was chosen for an online match
         self.online = False
@@ -74,19 +56,44 @@ class Menu:
         self.continue_rect = None
         self.back_rect = None
         self.button_font = pygame.font.Font(None, 40)
-        self._version_label = None
         self.enemy_difficulties = {name: enemy_profile(name).difficulty for name in self.character_names}
         self.difficulty_font = pygame.font.Font(None, 32)
         self.character_font = pygame.font.Font(None, 42)
         self.character_title_font = pygame.font.Font(None, 58)
         self.character_previews = {}
-        self._fitted_previews = {}
         self.character_rects = {}
         for character_name in self.character_names:
             preview = Animator(character_name).image
             self.character_previews[character_name] = pygame.transform.scale(
                 preview, (preview.get_width() * 4, preview.get_height() * 4)
             )
+        self.resize(resolution)
+
+    def resize(self, resolution):
+        """Lay the menu out for this screen size; where the player is in it
+        (screen, choices) stays."""
+        self.resolution = resolution
+        artwork = self._artwork
+        # The artwork fills the screen without being stretched
+        self.background = self._cover(artwork, resolution)
+        # Behind the other screens (characters, options, lobby): darker, so
+        # their cards and text stand out
+        self.menu_image = self.background.copy()
+        shade = pygame.Surface(resolution, pygame.SRCALPHA)
+        shade.fill((8, 10, 20, 150))
+        self.menu_image.blit(shade, (0, 0))
+        # Main menu: dark on the left, where the title and entries are
+        self.main_image = self.background.copy()
+        self.main_image.blit(self._left_gradient(resolution), (0, 0))
+        self._layout_main(resolution)
+
+        # The control guide must fit on any screen height
+        self.options_font_size = max(20, min(42, int(resolution[1] / 25)))
+        self.options_font = pygame.font.Font(None, self.options_font_size)
+        self.options_title_font = pygame.font.Font(None, int(self.options_font_size * 1.4))
+        # Previews scaled to the cards of this screen size
+        self._fitted_previews = {}
+        self._version_label = None
         
 
     def launch_menu(self, screen: pygame.Surface, resolution: tuple, events: List[pygame.event.Event]) -> None:

@@ -19,8 +19,11 @@ class ResultScreen:
     MENU_KEYS = (pygame.K_ESCAPE, pygame.K_AC_BACK, pygame.K_m)
 
     def __init__(self, screen_size, victory):
-        self.screen_size = screen_size
         self.victory = victory
+        self.resize(screen_size)
+
+    def resize(self, screen_size):
+        self.screen_size = screen_size
         shortest = min(screen_size)
         panel_width = min(screen_size[0] - 40, max(380, int(shortest * 0.7)))
         panel_height = max(200, int(shortest * 0.32))

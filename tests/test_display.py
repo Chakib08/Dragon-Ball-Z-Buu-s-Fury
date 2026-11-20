@@ -11,6 +11,7 @@ import game
 from dialog.dialogbox import DialogBox
 from map import MapManager
 from menu import Menu, State
+from result_screen import ResultScreen
 from utils.config import Config
 
 
@@ -100,6 +101,34 @@ class DisplayTests(unittest.TestCase):
                     game_.play_frame([], False)
                 game_.menu.launch_menu(game_.screen, game_.resolution, [])
                 game_.quit_prompt.draw(game_.screen)
+
+    def test_resizing_keeps_what_each_screen_shows_and_lays_it_out_again(self):
+        game_ = game.Game((1200, 1000), "test")
+        game_.menu = game.Menu(game_.resolution)
+        menu = game_.menu
+        menu.state = State.CHARACTER_SELECT
+        menu.selected_character = "trunks"
+        menu.selected_enemies = ["broly", "vegeta"]
+        game_.quit_prompt.is_open = True
+        game_.scene = "story"
+        game_.result = ResultScreen(game_.resolution, victory=True)
+        touch, prompt, result = game_.touch_controls, game_.quit_prompt, game_.result
+
+        game_.set_screen(pygame.display.set_mode((2400, 1080)))
+
+        # The same objects, laid out for the new size
+        self.assertIs(game_.menu, menu)
+        self.assertIs(game_.touch_controls, touch)
+        self.assertIs(game_.quit_prompt, prompt)
+        self.assertIs(game_.result, result)
+        self.assertEqual(menu.state, State.CHARACTER_SELECT)
+        self.assertEqual((menu.selected_character, menu.selected_enemies), ("trunks", ["broly", "vegeta"]))
+        self.assertEqual(menu.main_image.get_size(), (2400, 1080))
+        self.assertTrue(prompt.is_open)
+        self.assertEqual(prompt.panel.center, (1200, 540))
+        self.assertEqual(result.panel.center, (1200, 540))
+        self.assertGreater(touch.buttons["attack"][0], 1200)
+        self.assertEqual(game_.scene, "story")
 
     def test_toggling_full_screen_asks_for_the_other_mode(self):
         game_ = game.Game((1200, 1000), "test")

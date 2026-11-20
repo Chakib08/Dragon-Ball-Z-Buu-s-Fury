@@ -36,6 +36,15 @@ class TouchControls:
     RUN_THRESHOLD = 0.85
 
     def __init__(self, screen_size):
+        self.pointers = {}
+        self.pressed_actions = set()
+        self.stick_pointer = None
+        self.resize(screen_size)
+
+    def resize(self, screen_size):
+        """Place and draw the controls for this screen size. Touches in
+        progress are dropped: their fingers are no longer on the same
+        controls."""
         self.screen_size = screen_size
         shortest = min(screen_size)
         self.button_size = max(60, min(150, int(shortest * 0.14)))
@@ -47,11 +56,7 @@ class TouchControls:
         self.stick_center = (size * 2.0, screen_size[1] - size * 2.0)
         # A touch this close to the stick grabs it, so it is easy to find
         self.stick_grab_radius = self.stick_radius * 1.6
-        self.stick_pointer = None
-        self.stick_position = self.stick_center
-
-        self.pointers = {}
-        self.pressed_actions = set()
+        self.clear()
         self.font = pygame.font.Font(None, max(30, int(size * 0.6)))
         self.small_font = pygame.font.Font(None, max(22, int(size * 0.4)))
         self._button_art = {}
