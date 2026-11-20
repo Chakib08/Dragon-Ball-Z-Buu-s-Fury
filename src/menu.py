@@ -1,3 +1,4 @@
+import json
 import pygame
 from typing import List
 from enum import Enum
@@ -146,61 +147,14 @@ class Menu:
                     self.state = State.START
             return
 
-        if self.state == State.CHARACTER_SELECT:
-            self._draw_character_select(screen, resolution)
+        if self.state in self.PICKING:
+            picking = self.PICKING[self.state]
+            self._draw_character_select(screen, resolution, picking)
+            state = self.state
             for event in events:
-                chosen = None
-                if event.type == pygame.KEYDOWN:
-                    if event.key in (pygame.K_LEFT, pygame.K_a):
-                        self._cycle_character(-1)
-                    elif event.key in (pygame.K_RIGHT, pygame.K_d):
-                        self._cycle_character(1)
-                    elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
-                        chosen = self.selected_character
-                    elif event.key == pygame.K_ESCAPE:
-                        self.go_back()
-                elif self._is_tap(event, resolution):
-                    position = self._event_position(event, resolution)
-                    if self.back_rect is not None and self.back_rect.collidepoint(position):
-                        self.go_back()
-                        break
-                    chosen = self._card_at(position)
-                if chosen is not None:
-                    self._choose_character(chosen)
-                    break
-            return
-
-        if self.state in (State.ALLY_SELECT, State.ENEMY_SELECT):
-            choosing_enemies = self.state == State.ENEMY_SELECT
-            self._draw_character_select(screen, resolution, "enemies" if choosing_enemies else "allies")
-            for event in events:
-                if event.type == pygame.KEYDOWN:
-                    if event.key in (pygame.K_LEFT, pygame.K_a):
-                        self.focus = (self.focus - 1) % len(self.character_names)
-                    elif event.key in (pygame.K_RIGHT, pygame.K_d):
-                        self.focus = (self.focus + 1) % len(self.character_names)
-                    elif event.key == pygame.K_SPACE:
-                        self._toggle(self.character_names[self.focus], choosing_enemies)
-                    elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                        if choosing_enemies and not self.selected_enemies:
-                            # Enter on a card with none picked: that one
-                            self._toggle(self.character_names[self.focus], True)
-                        self._continue(choosing_enemies)
-                    elif event.key == pygame.K_ESCAPE:
-                        self.go_back()
-                elif self._is_tap(event, resolution):
-                    position = self._event_position(event, resolution)
-                    if self.back_rect is not None and self.back_rect.collidepoint(position):
-                        self.go_back()
-                    elif self.continue_rect is not None and self.continue_rect.collidepoint(position):
-                        self._continue(choosing_enemies)
-                    else:
-                        name = self._card_at(position)
-                        if name is not None:
-                            self.focus = self.character_names.index(name)
-                            self._toggle(name, choosing_enemies)
+                self._select_event(event, resolution, picking)
                 # The screen changed (Back, Next, Fight!): the rest is not for it
-                if self.isPlaying or self.state != (State.ENEMY_SELECT if choosing_enemies else State.ALLY_SELECT):
+                if self.isPlaying or self.state != state:
                     break
             return
 
@@ -517,15 +471,88 @@ class Menu:
     # Stats go from about 0.9 to 1.3 (1.0: average): a bar shows this range
     STAT_RANGE = (0.7, 1.4)
 
-    def _card_fonts(self, card_height):
-        key = ("fonts", card_height)
-        fonts = self._fitted_previews.get(key)
-        if fonts is None:
-            fonts = self._fitted_previews[key] = (
-                pygame.font.Font(None, max(22, min(42, int(card_height * 0.12)))),
-                pygame.font.Font(None, max(15, min(26, int(card_height * 0.078)))),
-            )
-        return fonts
+    # ---- Character screens -----------------------------------------------------
+    # The portraits of everyone on the left (a grid), the one in focus on the
+    # right: walking, with its stats. picking: None (the player's character),
+    # "allies" or "enemies" (several, with a button to go on)
+    SCREEN_TITLES = {
+        None: "Choose your character",
+        "allies": "Choose your allies (optional)",
+        "enemies": "Choose your opponents",
+        "online allies": "Your allies for team matches (optional)",
+    }
+    PICKING = {State.CHARACTER_SELECT: None, State.ALLY_SELECT: "allies", State.ENEMY_SELECT: "enemies"}
+    WALK_FRAME_MS = 160
+    grid_columns = 1
+
+    def _focused(self):
+        return self.character_names[self.focus % len(self.character_names)]
+
+    def _set_focus(self, index, picking):
+        self.focus = index % len(self.character_names)
+        if picking is None:
+            self.selected_character = self._focused()
+
+    def _select_event(self, event, resolution, picking):
+        """One event on a character screen."""
+        count, columns = len(self.character_names), max(1, self.grid_columns)
+        if picking is None and self.character_names[self.focus % count] != self.selected_character \
+                and self.selected_character in self.character_names:
+            self.focus = self.character_names.index(self.selected_character)
+        if event.type == pygame.KEYDOWN:
+            moves = {pygame.K_LEFT: -1, pygame.K_a: -1, pygame.K_RIGHT: 1, pygame.K_d: 1,
+                     pygame.K_UP: -columns, pygame.K_w: -columns, pygame.K_DOWN: columns, pygame.K_s: columns}
+            if event.key in moves:
+                self._set_focus(self.focus + moves[event.key], picking)
+            elif event.key == pygame.K_SPACE:
+                if picking is None:
+                    self._choose_character(self._focused())
+                else:
+                    self._toggle(self._focused(), picking == "enemies")
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                if picking is None:
+                    self._choose_character(self._focused())
+                else:
+                    if picking == "enemies" and not self.selected_enemies:
+                        # Enter on a card with none picked: that one
+                        self._toggle(self._focused(), True)
+                    self._continue(picking == "enemies")
+            elif event.key == pygame.K_ESCAPE:
+                self.go_back()
+            return
+        if event.type == pygame.MOUSEMOTION and not getattr(event, "touch", False):
+            name = self._card_at(event.pos)
+            if name is not None:
+                self._set_focus(self.character_names.index(name), picking)  # the mouse shows what it points at
+            return
+        if not self._is_tap(event, resolution):
+            return
+        position = self._event_position(event, resolution)
+        if self.back_rect is not None and self.back_rect.collidepoint(position):
+            self.go_back()
+        elif self.continue_rect is not None and self.continue_rect.collidepoint(position):
+            if picking is None:
+                self._choose_character(self._focused())
+            else:
+                self._continue(picking == "enemies")
+        else:
+            name = self._card_at(position)
+            if name is None:
+                return
+            index = self.character_names.index(name)
+            if picking is None:
+                # A first tap shows the character on the right, a second
+                # one (or the button) chooses it
+                if index == self.focus % count and self._focus_shown:
+                    self._choose_character(name)
+                else:
+                    self._set_focus(index, picking)
+                    self._focus_shown = True
+            else:
+                self._set_focus(index, picking)
+                self._toggle(name, picking == "enemies")
+
+    _focus_shown = False
 
     def _portrait(self, character_name, size):
         """The character's portrait, scaled (pixel art: no smoothing), or None."""
@@ -535,148 +562,208 @@ class Menu:
             self._fitted_previews[key] = None if face is None else pygame.transform.scale(face, (size, size))
         return self._fitted_previews[key]
 
-    def _draw_card_contents(self, screen, rect, character_name, picking):
-        """A character card: the portrait, the name (an opponent's
-        difficulty under it) and the character's stats as bars."""
-        name_font, small_font = self._card_fonts(rect.height)
-        inner = rect.inflate(-14, -14)
-        stat_height = small_font.get_linesize()
-        stats_height = stat_height * len(self.STAT_ROWS)
-        difficulty_height = small_font.get_linesize() if picking == "enemies" else 0
-        space = inner.height - name_font.get_linesize() - difficulty_height - stats_height - 8
-        size = max(24, min(inner.width, space))
-        face = self._portrait(character_name, size)
-        if face is not None:
-            screen.blit(face, face.get_rect(midtop=(inner.centerx, inner.top)))
-        else:
-            # No portrait for this one: its sprite
-            preview = self._fitted_preview(character_name, inner.width, size)
-            if picking == "enemies":
-                preview = pygame.transform.flip(preview, True, False)  # facing the player
-            screen.blit(preview, preview.get_rect(midtop=(inner.centerx, inner.top)))
-        y = inner.top + size + 2
-        label = name_font.render(roster.display_name(character_name), True, (255, 255, 255))
-        screen.blit(label, label.get_rect(midtop=(inner.centerx, y)))
-        y += name_font.get_linesize()
-        if picking == "enemies":
-            difficulty = self.enemy_difficulties[character_name]
-            text = small_font.render(difficulty.label, True, difficulty.color)
-            screen.blit(text, text.get_rect(midtop=(inner.centerx, y)))
-            y += difficulty_height
-        y = max(y + 4, inner.bottom - stats_height)
-        stats = character_stats(character_name)
-        low, high = self.STAT_RANGE
-        label_width = small_font.size("POW ")[0]
-        value_width = small_font.size("130")[0] + 4
-        bar_left = inner.left + label_width
-        bar_width = max(10, inner.width - label_width - value_width)
-        bar_height = max(4, stat_height // 2)
-        for name, field, colour in self.STAT_ROWS:
-            value = getattr(stats, field)
-            screen.blit(small_font.render(name, True, (215, 215, 225)), (inner.left, y))
-            bar = pygame.Rect(bar_left, y + (stat_height - bar_height) // 2 - 1, bar_width, bar_height)
-            pygame.draw.rect(screen, (30, 30, 40), bar, border_radius=3)
-            share = max(0.05, min(1.0, (value - low) / (high - low)))
-            pygame.draw.rect(screen, colour, (bar.x, bar.y, round(bar.width * share), bar.height), border_radius=3)
-            number = small_font.render(str(round(value * 100)), True, (255, 255, 255))
-            screen.blit(number, number.get_rect(topright=(inner.right, y)))
-            y += stat_height
-
     def _fitted_preview(self, character_name, max_width, max_height):
-        """The preview, shrunk if needed to fit in its card (Broly's sprite
-        is twice the size of the others). Cached per size."""
+        """The standing sprite, shrunk if needed to fit (a character without
+        a portrait). Cached per size."""
         key = (character_name, max_width, max_height)
         fitted = self._fitted_previews.get(key)
         if fitted is None:
             preview = self.character_previews[character_name]
             ratio = min(1, max_width / preview.get_width(), max_height / preview.get_height())
-            size = (int(preview.get_width() * ratio), int(preview.get_height() * ratio))
+            size = (max(1, int(preview.get_width() * ratio)), max(1, int(preview.get_height() * ratio)))
             fitted = self._fitted_previews[key] = (
                 preview if ratio == 1 else pygame.transform.scale(preview, size)
             )
         return fitted
 
-    SCREEN_TITLES = {
-        None: "Choose your character",
-        "allies": "Choose your allies (optional)",
-        "enemies": "Choose your opponents",
-        "online allies": "Your allies for team matches (optional)",
-    }
+    def _walk_frames(self, character_name, max_width, max_height):
+        """Its "Walk Down" frames, scaled up by a whole factor to fit (big
+        characters stay bigger), cached."""
+        key = ("walk", character_name, max_width, max_height)
+        frames = self._fitted_previews.get(key)
+        if frames is None:
+            animator = Animator(character_name)
+            raw = animator.frames("Walk Down") or [animator.image]
+            width = max(frame.get_width() for frame in raw)
+            height = max(frame.get_height() for frame in raw)
+            factor = max(1, min(max_width // max(1, width), max_height // max(1, height)))
+            frames = self._fitted_previews[key] = [
+                pygame.transform.scale(frame, (frame.get_width() * factor, frame.get_height() * factor))
+                for frame in raw]
+        return frames
+
+    def _technique_names(self, character_name):
+        key = ("techniques", character_name)
+        if key not in self._fitted_previews:
+            names = []
+            try:
+                with open(PathManager.character_json_path(character_name, "specials")) as file:
+                    names = [entry["name"] for entry in json.load(file).get("techniques", [])]
+            except (OSError, ValueError, KeyError):
+                pass
+            self._fitted_previews[key] = names
+        return self._fitted_previews[key]
+
+    def _fonts_for(self, height):
+        key = ("fonts", height)
+        fonts = self._fitted_previews.get(key)
+        if fonts is None:
+            fonts = self._fitted_previews[key] = (
+                pygame.font.Font(None, max(30, int(height * 0.075))),   # title, name
+                pygame.font.Font(None, max(18, int(height * 0.042))),   # stats, techniques
+                pygame.font.Font(None, max(20, int(height * 0.05))),    # hint, button
+            )
+        return fonts
 
     def _draw_character_select(self, screen, resolution, picking=None):
-        """The character cards. picking: None to choose the player's
-        character, "allies" or "enemies" to pick several (with a button to
-        go on)."""
         screen.blit(self.menu_image, (0, 0))
+        width, height = resolution
+        names = self.character_names
+        if picking is None and self.selected_character in names:
+            self.focus = names.index(self.selected_character)
+        big_font, small_font, hint_font = self._fonts_for(height)
         title_key = "online allies" if picking == "allies" and self.online else picking
-        title = self.character_title_font.render(self.SCREEN_TITLES[title_key], True, (255, 230, 120))
-        screen.blit(title, title.get_rect(center=(resolution[0] / 2, resolution[1] * 0.22)))
+        title = big_font.render(self.SCREEN_TITLES[title_key], True, (255, 230, 120))
+        screen.blit(title, title.get_rect(center=(width / 2, height * 0.07)))
+        self._draw_back_button(screen, resolution)
 
-        card_width = min(220, resolution[0] // (len(self.character_names) + 1))
-        # Cards fill 30-76% of the height, the hint sits below them
-        card_height = min(300, int(resolution[1] * 0.40))
-        spacing = (resolution[0] - card_width * len(self.character_names)) / (len(self.character_names) + 1)
-        top = resolution[1] * 0.36
-        self.character_rects.clear()
-        chosen = {None: [self.selected_character], "allies": self.selected_allies,
-                  "enemies": self.selected_enemies}[picking]
-
-        for index, character_name in enumerate(self.character_names):
-            rect = pygame.Rect(
-                spacing * (index + 1) + card_width * index,
-                top,
-                card_width,
-                card_height,
-            )
-            self.character_rects[character_name] = rect
-            selected = character_name in chosen
-            # The player's own character cannot be his ally
-            unavailable = picking == "allies" and character_name == self.selected_character
-            focused = picking is not None and index == self.focus
-            colour = (25, 45, 80) if selected and picking == "allies" else (80, 60, 25) if selected else (20, 20, 30)
-            pygame.draw.rect(screen, colour, rect, border_radius=12)
-            border = (120, 195, 255) if selected and picking == "allies" else (255, 220, 100) if selected \
-                else (255, 255, 255) if focused else (180, 180, 190)
-            pygame.draw.rect(screen, border, rect, width=4 if selected or focused else 2, border_radius=12)
-
-            self._draw_card_contents(screen, rect, character_name, picking)
-            if selected and picking is not None:
-                # Order of the pick, in the corner
-                number = self.difficulty_font.render(str(chosen.index(character_name) + 1), True, border)
-                screen.blit(number, number.get_rect(topright=(rect.right - 10, rect.top + 8)))
-            if unavailable:
-                shade = pygame.Surface(rect.size, pygame.SRCALPHA)
-                shade.fill((0, 0, 0, 150))
-                screen.blit(shade, rect.topleft)
-                you = self.difficulty_font.render("You", True, (255, 230, 120))
-                screen.blit(you, you.get_rect(center=rect.center))
+        margin = max(12, int(width * 0.02))
+        top = max(height * 0.14, self.back_rect.bottom + 6)
+        bottom = height * 0.88
+        split = width * 0.58
+        self._draw_grid(screen, pygame.Rect(margin, top, split - margin * 1.5, bottom - top), picking)
+        panel = pygame.Rect(split, top, width - split - margin, bottom - top)
+        self._draw_details(screen, panel, picking, big_font, small_font, hint_font)
 
         if picking is None:
             hint = ("A: choose   B: back" if self.gamepad_hints
-                    else "Tap a character, or use Left/Right and Enter")
-            self.continue_rect = None
+                    else "Tap to see a character, tap again to choose   (arrows + Enter)")
         else:
             limit = MAX_ALLIES if picking == "allies" else MAX_ENEMIES
             hint = (f"X: pick (up to {limit})   A: go on   B: back" if self.gamepad_hints
                     else f"Tap or Space to pick (up to {limit}), Enter to go on, Esc: back")
-            if picking == "allies" and self.online:
-                label = "To the lobby"
-            elif picking == "allies":
-                label = "Next" if chosen else "Fight alone"
+        text = hint_font.render(hint, True, (255, 255, 255))
+        screen.blit(text, text.get_rect(center=(width / 2, (bottom + height) / 2)))
+
+    def _draw_grid(self, screen, area, picking):
+        names = self.character_names
+        count = len(names)
+        # As many columns as give the biggest portraits
+        best = (0, 1)
+        for columns in range(1, count + 1):
+            rows = -(-count // columns)
+            size = min(area.width / columns, area.height / rows)
+            if size > best[0]:
+                best = (size, columns)
+        pitch, columns = best
+        self.grid_columns = columns
+        size = int(pitch * 0.9)
+        rows = -(-count // columns)
+        left = area.left + (area.width - pitch * columns) / 2
+        chosen = {None: [self.selected_character], "allies": self.selected_allies,
+                  "enemies": self.selected_enemies}[picking]
+        _, small_font, _ = self._fonts_for(screen.get_height())
+        self.character_rects.clear()
+        for index, name in enumerate(names):
+            row, column = divmod(index, columns)
+            rect = pygame.Rect(int(left + column * pitch), int(area.top + row * pitch), size, size)
+            self.character_rects[name] = rect
+            face = self._portrait(name, size)
+            if face is not None:
+                screen.blit(face, rect)
             else:
-                label = "Fight!" if chosen else "Pick at least one"
-            text = self.button_font.render(label, True, (255, 255, 255) if picking == "allies" or chosen
-                                           else (170, 170, 170))
-            self.continue_rect = text.get_rect(center=(resolution[0] / 2, top + card_height + resolution[1] * 0.08))
-            self.continue_rect.inflate_ip(40, 18)
-            pygame.draw.rect(screen, (40, 110, 60) if picking == "allies" or chosen else (60, 60, 70),
-                             self.continue_rect, border_radius=10)
-            pygame.draw.rect(screen, (245, 245, 245), self.continue_rect, 2, border_radius=10)
-            screen.blit(text, text.get_rect(center=self.continue_rect.center))
-        self._draw_back_button(screen, resolution)
-        instructions = self.character_font.render(hint, True, (255, 255, 255))
-        hint_y = resolution[1] * (0.85 if picking is None else 0.93)
-        screen.blit(instructions, instructions.get_rect(center=(resolution[0] / 2, hint_y)))
+                pygame.draw.rect(screen, (20, 20, 30), rect, border_radius=8)
+                preview = self._fitted_preview(name, size - 8, size - 8)
+                screen.blit(preview, preview.get_rect(center=rect.center))
+            picked = name in chosen
+            focused = index == self.focus % count
+            if picked:
+                colour = (120, 195, 255) if picking == "allies" else (255, 220, 100)
+                pygame.draw.rect(screen, colour, rect.inflate(6, 6), 4, border_radius=8)
+                if picking is not None:
+                    badge = small_font.render(str(chosen.index(name) + 1), True, (20, 20, 30))
+                    spot = pygame.Rect(0, 0, badge.get_width() + 10, badge.get_height() + 4)
+                    spot.topright = (rect.right + 3, rect.top - 3)
+                    pygame.draw.rect(screen, colour, spot, border_radius=6)
+                    screen.blit(badge, badge.get_rect(center=spot.center))
+            if focused:
+                pygame.draw.rect(screen, (255, 255, 255), rect.inflate(12, 12), 3, border_radius=10)
+            if picking == "allies" and name == self.selected_character:
+                # The player cannot also be his own ally
+                shade = pygame.Surface(rect.size, pygame.SRCALPHA)
+                shade.fill((0, 0, 0, 160))
+                screen.blit(shade, rect)
+                you = small_font.render("You", True, (255, 230, 120))
+                screen.blit(you, you.get_rect(center=rect.center))
+
+    def _draw_details(self, screen, panel, picking, big_font, small_font, hint_font):
+        """The character in focus: name, walking, stats, techniques; and
+        the button that goes on."""
+        shade = pygame.Surface(panel.size, pygame.SRCALPHA)
+        shade.fill((10, 12, 22, 200))
+        screen.blit(shade, panel.topleft)
+        pygame.draw.rect(screen, (235, 235, 235), panel, 2, border_radius=10)
+        name = self._focused()
+        inner = panel.inflate(-24, -20)
+        y = inner.top
+        label = big_font.render(roster.display_name(name), True, (255, 255, 255))
+        screen.blit(label, label.get_rect(midtop=(inner.centerx, y)))
+        y += label.get_height() + 2
+        if picking == "enemies":
+            difficulty = self.enemy_difficulties.get(name) or enemy_profile(name).difficulty
+            text = small_font.render(difficulty.label, True, difficulty.color)
+            screen.blit(text, text.get_rect(midtop=(inner.centerx, y)))
+            y += text.get_height() + 2
+
+        button_height = hint_font.get_linesize() + 14
+        line = small_font.get_linesize()
+        techniques = self._technique_names(name)
+        stats_height = line * len(self.STAT_ROWS)
+        techniques_height = line * (1 + len(techniques)) if techniques else 0
+        walk_height = inner.bottom - y - stats_height - techniques_height - button_height - 24
+        frames = self._walk_frames(name, inner.width, max(32, walk_height))
+        frame = frames[(pygame.time.get_ticks() // self.WALK_FRAME_MS) % len(frames)]
+        screen.blit(frame, frame.get_rect(midbottom=(inner.centerx, y + max(32, walk_height))))
+        y += max(32, walk_height) + 6
+
+        stats = character_stats(name)
+        low, high = self.STAT_RANGE
+        label_width = small_font.size("POW ")[0]
+        value_width = small_font.size("130")[0] + 6
+        bar_height = max(5, line // 2)
+        for stat_label, field, colour in self.STAT_ROWS:
+            value = getattr(stats, field)
+            screen.blit(small_font.render(stat_label, True, (215, 215, 225)), (inner.left, y))
+            bar = pygame.Rect(inner.left + label_width, y + (line - bar_height) // 2 - 1,
+                              max(10, inner.width - label_width - value_width), bar_height)
+            pygame.draw.rect(screen, (30, 30, 40), bar, border_radius=3)
+            share = max(0.05, min(1.0, (value - low) / (high - low)))
+            pygame.draw.rect(screen, colour, (bar.x, bar.y, round(bar.width * share), bar.height), border_radius=3)
+            number = small_font.render(str(round(value * 100)), True, (255, 255, 255))
+            screen.blit(number, number.get_rect(topright=(inner.right, y)))
+            y += line
+        if techniques:
+            y += 4
+            for technique in techniques:
+                text = small_font.render(f"- {technique}", True, (200, 215, 255))
+                screen.blit(text, (inner.left, y))
+                y += line
+
+        # The button that goes on
+        if picking is None:
+            label, active = f"Choose {roster.display_name(name)}", True
+        elif picking == "allies":
+            label = "To the lobby" if self.online else ("Next" if self.selected_allies else "Fight alone")
+            active = True
+        else:
+            active = bool(self.selected_enemies)
+            label = "Fight!" if active else "Pick at least one"
+        text = hint_font.render(label, True, (255, 255, 255) if active else (170, 170, 170))
+        self.continue_rect = pygame.Rect(0, 0, min(inner.width, text.get_width() + 40), button_height)
+        self.continue_rect.midbottom = (inner.centerx, panel.bottom - 10)
+        pygame.draw.rect(screen, (40, 110, 60) if active else (60, 60, 70), self.continue_rect, border_radius=10)
+        pygame.draw.rect(screen, (245, 245, 245), self.continue_rect, 2, border_radius=10)
+        screen.blit(text, text.get_rect(center=self.continue_rect.center))
 
     def controls_guide(self):
         """The control guide's lines, with the keys and buttons in use

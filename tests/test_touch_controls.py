@@ -228,6 +228,12 @@ class TouchControlsTests(unittest.TestCase):
         )
         self.assertEqual(menu.selected_character, "vegeta")
         self.assertFalse(menu.isPlaying)
+        # A first tap shows Vegeta on the right; a second one chooses him
+        self.assertEqual(menu.state, State.CHARACTER_SELECT)
+        menu.launch_menu(screen, resolution, [])
+        menu.launch_menu(screen, resolution, [pygame.event.Event(
+            pygame.FINGERDOWN, finger_id=7, x=vegeta_rect.centerx / resolution[0],
+            y=vegeta_rect.centery / resolution[1])])
 
         def tap(rect):
             menu.launch_menu(screen, resolution, [])  # lays the screen out
@@ -342,6 +348,8 @@ class TouchControlsTests(unittest.TestCase):
                 menu.state = State.CHARACTER_SELECT
                 tap = lambda rect: self.android_tap(menu, screen, resolution, rect, copy_next_frame)
                 menu.launch_menu(screen, resolution, [])
+                tap(menu.character_rects["goku"])
+                self.assertEqual(menu.state, State.CHARACTER_SELECT)  # shown, not chosen yet
                 tap(menu.character_rects["goku"])
                 self.assertEqual(menu.state, State.ALLY_SELECT)
                 self.assertEqual(menu.selected_allies, [])  # the copy did not land on a card
@@ -548,13 +556,38 @@ class TouchControlsTests(unittest.TestCase):
             def __getattr__(self, name):
                 return getattr(self.font, name)
 
-        card_height = min(300, int(resolution[1] * 0.40))
-        menu._fitted_previews[("fonts", card_height)] = tuple(Recording(font)
-                                                             for font in menu._card_fonts(card_height))
+        menu._fitted_previews[("fonts", resolution[1])] = tuple(Recording(font)
+                                                                for font in menu._fonts_for(resolution[1]))
         menu.state = State.CHARACTER_SELECT
-        menu.launch_menu(pygame.Surface(resolution), resolution, [])
+        for name in ("broly", "trunks"):  # the focused one's stats on the right
+            menu.selected_character = name
+            menu.launch_menu(pygame.Surface(resolution), resolution, [])
+        self.assertIn("Broly", drawn)
+        self.assertIn("Choose Trunks", drawn)
         for label in ("POW", "HP", "DEF", "SPD", "130", "95"):
             self.assertIn(label, drawn)
+
+    def test_the_portrait_grid_is_walked_with_the_arrows_and_the_mouse(self):
+        resolution = (1200, 540)
+        screen = pygame.Surface(resolution)
+        key = lambda code: pygame.event.Event(pygame.KEYDOWN, key=code)
+        menu = Menu(resolution)
+        menu.state = State.ENEMY_SELECT
+        menu.focus = 0
+        menu.launch_menu(screen, resolution, [])
+        columns = menu.grid_columns
+        self.assertGreater(columns, 1)
+        self.assertEqual(len(menu.character_rects), len(menu.character_names))
+        menu.launch_menu(screen, resolution, [key(pygame.K_DOWN), key(pygame.K_RIGHT)])
+        self.assertEqual(menu.focus, columns + 1)
+        menu.launch_menu(screen, resolution, [key(pygame.K_UP)])
+        self.assertEqual(menu.focus, 1)
+        # The mouse pointing at a portrait shows it
+        target = menu.character_names[-1]
+        menu.launch_menu(screen, resolution, [pygame.event.Event(
+            pygame.MOUSEMOTION, pos=menu.character_rects[target].center, rel=(0, 0), buttons=(0, 0, 0))])
+        self.assertEqual(menu._focused(), target)
+        self.assertEqual(menu.selected_enemies, ["gohan"])  # looking does not pick
 
     def test_opponent_screen_shows_each_enemys_difficulty(self):
         resolution = (1200, 1000)
