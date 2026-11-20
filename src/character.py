@@ -78,26 +78,13 @@ class Character(pygame.sprite.Sprite):
         self.speed = 0
         self.position = [pos_x, pos_y]
         self.old_position = self.position.copy()
-        self.rect = self.image.get_rect()
-        # What bumps into walls; capped so that a big sprite (Broly) still
-        # fits through the passages everyone else uses
-        self.feet = pygame.Rect(0, 0, min(self.rect.width / 4, self.MAX_FEET_WIDTH), 4)
-        self.body_width = self._measure_body_width()
-        # A big body is deeper too, or others could stand right in it
-        self.body_depth = max(self.BODY_DEPTH, round(self.body_width * self.BODY_DEPTH_SHARE))
+        self._measure_body()
         self.facing = AnimationDirection.DOWN.value
 
-        # The character's own strength (Config/stats.json)
-        self.stats = character_stats(self.character_name)
-        self.power = self.stats.power
-        # Its speeds (WALK_SPEED and RUN_SPEED are everyone's base)
-        self.walk_speed = self.WALK_SPEED * self.stats.speed
-        self.run_speed = self.RUN_SPEED * self.stats.speed
-        self.max_hp = round(self.MAX_HP * self.stats.hp)
+        self._apply_stats()
         self.hp = self.max_hp
         self.max_ki = self.MAX_KI
         self.ki = self.max_ki
-        self.damage_taken = self.DAMAGE_TAKEN / self.stats.defense
         self.last_flinch_ms = None
         self._powered_up = False
         self.blocking = False
@@ -114,6 +101,51 @@ class Character(pygame.sprite.Sprite):
         self.faint_index = 0
         self.faint_clock = 0
         self.faint_finished = False
+
+    def _measure_body(self):
+        self.rect = self.image.get_rect()
+        # What bumps into walls; capped so that a big sprite (Broly) still
+        # fits through the passages everyone else uses
+        self.feet = pygame.Rect(0, 0, min(self.rect.width / 4, self.MAX_FEET_WIDTH), 4)
+        self.body_width = self._measure_body_width()
+        # A big body is deeper too, or others could stand right in it
+        self.body_depth = max(self.BODY_DEPTH, round(self.body_width * self.BODY_DEPTH_SHARE))
+
+    def _apply_stats(self):
+        """The character's own strength (Config/stats.json)."""
+        self.stats = character_stats(self.character_name)
+        self.power = self.stats.power
+        # Its speeds (WALK_SPEED and RUN_SPEED are everyone's base)
+        self.walk_speed = self.WALK_SPEED * self.stats.speed
+        self.run_speed = self.RUN_SPEED * self.stats.speed
+        self.max_hp = round(self.MAX_HP * self.stats.hp)
+        # base_damage_taken: a mode's own share (online play), else the class's
+        self.damage_taken = getattr(self, "base_damage_taken", self.DAMAGE_TAKEN) / self.stats.defense
+
+    def become(self, name):
+        """Turn into another character on the spot (a Potara fusion, Cell
+        absorbing an android): its looks, stats and techniques, with the
+        same share of HP, standing where this one stood."""
+        share = self.hp / self.max_hp if self.max_hp else 1.0
+        ground = self.rect.midbottom
+        self.animator = Animator(name)
+        self.action = None
+        self.blocking = False
+        self.knockback = None
+        self._powered_up = False
+        self.selected_level = 0
+        self.faint_frames = None
+        self.faint_index = 0
+        self.faint_finished = False
+        self._measure_body()
+        self.rect.midbottom = ground
+        self.position = [float(self.rect.x), float(self.rect.y)]
+        self.update()
+        self.save_location()
+        self._apply_stats()
+        self.hp = self.max_hp * share
+        self.techniques = load_techniques(self)
+        self.face_idle()
 
     # ---- Looks (the animator's) ---------------------------------------------------
     @property
@@ -179,6 +211,8 @@ class Character(pygame.sprite.Sprite):
             "ki": round(self.ki, 2),
             "blocking": self.blocking,
             "powered": self.powered_up,
+            # Who it is: a fusion or an absorption changes it
+            "character": self.character_name,
         }
         if self.faint_frames:
             state["faint"] = self.faint_index
@@ -302,6 +336,8 @@ class Character(pygame.sprite.Sprite):
     def take_damage(self, amount, source=None, push=1.0):
         """Lose health; source is the position the hit came from (it pushes
         the character away from there, push times the usual distance)."""
+        if self.action is not None and self.action["name"] == "evolve":
+            return 0  # untouchable while fusing or absorbing
         amount *= self.damage_taken
         if self.powered_up:
             amount *= self.SUPER_DAMAGE_TAKEN

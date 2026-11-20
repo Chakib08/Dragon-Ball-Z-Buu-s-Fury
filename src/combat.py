@@ -12,6 +12,7 @@ import pygame
 
 from character import DIRECTION_VECTORS
 from effects import ChargeGlow, build_effect, effect_origin
+from evolution import Evolution
 from hud import CombatHud
 from movement import solid_bodies
 from npc import HEROES
@@ -183,6 +184,8 @@ class CombatSystem:
         techniques go off at three quarters of their power."""
         if user.hp <= 0 or user.action is not None:
             return False
+        if technique.kind == "evolve":
+            return self.start_evolution(user, technique)
         direction = user.facing if target is None else direction_to(user.feet.center, target.feet.center)
         user.facing = direction
         sprites = technique.form_for(user)
@@ -232,6 +235,8 @@ class CombatSystem:
             return False
         if player.ki < technique.cost:
             return False
+        if technique.kind == "evolve":
+            return self.start_evolution(player, technique)
         last = self.last_technique_ms.get(technique.id)
         if last is not None and now - last < technique.stats["cooldown_ms"]:
             return False
@@ -256,6 +261,25 @@ class CombatSystem:
         player.ki -= technique.cost
         self.last_technique_ms[technique.id] = now
         return True
+
+    # ---- Becoming another character (fusion, absorption) ---------------------------
+    def start_evolution(self, user, technique):
+        """The cutscene of an "evolve" technique (evolution.py); at its end
+        the user is someone else. Returns True if it started."""
+        if user.hp <= 0 or user.action is not None or user.ki < technique.cost:
+            return False
+        user.ki -= technique.cost
+        self.charge = None if user is self.player else self.charge
+        self.add_effect(Evolution(user, technique, on_done=self._evolved))
+        return True
+
+    def _evolved(self, user):
+        if user is self.player:
+            self.selected_technique = 0  # the new character's techniques
+        if self.on_evolve is not None:
+            self.on_evolve(user)
+
+    on_evolve = None
 
     # ---- Charging (beams and ki balls) ------------------------------------------
     CHARGEABLE = ("beam", "ball")
@@ -380,6 +404,8 @@ class CombatSystem:
         """End every effect at once (the player went to another map: a blast
         left behind must not fly on there, nor stay drawn on the old map)."""
         for effect in self.effects:
+            if hasattr(effect, "finish") and not effect.done:
+                effect.finish()  # a fusion is not left half done
             effect.done = True
         self.effects.clear()
         self.new_effects.clear()

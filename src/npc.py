@@ -119,6 +119,13 @@ class NPC(Character):
         self.block_chance = difficulty.block_chance
         self.tactics = difficulty.tactics
 
+    def become(self, name):
+        """As Character.become, with its difficulty on top of its new stats."""
+        share = self.hp / self.max_hp if self.max_hp else 1.0
+        super().become(name)
+        self.apply_difficulty(self.difficulty)
+        self.hp = self.max_hp * share
+
     def update_ai(self):
         """Decisions the NPC takes on its own during a fight."""
 

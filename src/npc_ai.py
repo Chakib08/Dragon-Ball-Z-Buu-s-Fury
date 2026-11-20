@@ -59,6 +59,8 @@ class NpcBrain:
     STUCK_FRAMES = 4
     # A path is dropped when its target moved this many cells away
     PATH_STALE_CELLS = 3
+    # An NPC uses a fusion or an absorption at this share of its HP
+    EVOLVE_AT_HP = 0.6
     # Techniques that fly straight need the target roughly in line
     AIM_TOLERANCE = 12
     # An effect closer than this (or than the distance it covers in
@@ -366,6 +368,9 @@ class NpcBrain:
             return distance <= stats["radius"] * 0.8
         if technique.kind == "teleport":
             return 60 <= distance <= stats["reach"]
+        if technique.kind == "evolve":
+            # Fuses or absorbs once the fight turns against it
+            return npc.hp <= npc.max_hp * self.EVOLVE_AT_HP
         return False
 
     def try_technique(self, npc, target, now):
@@ -374,7 +379,8 @@ class NpcBrain:
         if not npc.techniques or now < npc.next_technique_ms:
             return False
         options = [t for t in npc.techniques
-                   if npc.ki >= t.cost and t.form_for(npc) is not None and self.technique_fits(npc, t, target)]
+                   if npc.ki >= t.cost and (t.kind == "evolve" or t.form_for(npc) is not None)
+                   and self.technique_fits(npc, t, target)]
         if not options:
             return False  # tried again as soon as one fits
         npc.next_technique_ms = now + self.technique_delay(npc)

@@ -22,6 +22,7 @@ from saiyan import Saiyan
 import settings as user_settings
 from taps import tap_position
 from utils import timing
+import roster
 from roster import display_name
 
 
@@ -55,11 +56,21 @@ class RemoteFighter(Character):
         super().__init__(0, 0, character_name)
         self.player_name = player_name
         self.index = index
-        self.bar_label = (f"{player_name} ({display_name(character_name)})" if index == 0
-                          else f"{display_name(character_name)} ({player_name})")
+        self._label()
         self._send = send
         self.target_position = None
         self._remote_powered = False
+        self.changed = False
+
+    def _label(self):
+        name = display_name(self.character_name)
+        self.bar_label = f"{self.player_name} ({name})" if self.index == 0 else f"{name} ({self.player_name})"
+
+    def become(self, name):
+        target = self.target_position
+        super().become(name)
+        self.target_position = target
+        self._label()
 
     @property
     def powered_up(self):
@@ -76,6 +87,12 @@ class RemoteFighter(Character):
         x, y = _number(state.get("x")), _number(state.get("y"))
         if x is None or y is None:
             return
+        character = state.get("character")
+        if isinstance(character, str) and character != self.character_name and roster.installed(character) \
+                and character in roster.characters():
+            # The other player fused, or Cell absorbed an android
+            self.become(character)
+            self.changed = True
         if self.target_position is None:
             self.position = [x, y]
         self.target_position = [x, y]
@@ -211,6 +228,8 @@ class OnlineMatch:
 
         x, y, facing = self.SPAWNS[slot]
         self.player = Saiyan(x, y, False, game.menu.selected_character)
+        # Online share of each hit (kept if the player becomes someone else)
+        self.player.base_damage_taken = self.DAMAGE_TAKEN
         self.player.damage_taken = self.DAMAGE_TAKEN / self.player.stats.defense
         self.player.facing = facing
         self.player.face_idle()
@@ -292,6 +311,11 @@ class OnlineMatch:
                 for fighter, state in zip(self.opponents[1:], allies if isinstance(allies, list) else []):
                     if isinstance(state, dict):
                         fighter.apply_snapshot(state)
+                if any(getattr(fighter, "changed", False) for fighter in self.opponents):
+                    # Someone else now: what its hits can be changes too
+                    for fighter in self.opponents:
+                        fighter.changed = False
+                    self.hit_check = HitCheck(self.opponents)
             elif kind == "hit" and self.result is None and self.player.hp > 0:
                 target = message.get("target", 0)
                 if not isinstance(target, int) or not 0 <= target < len(self.fighters):

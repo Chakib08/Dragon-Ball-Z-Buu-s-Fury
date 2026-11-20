@@ -537,6 +537,8 @@ class CombatTests(unittest.TestCase):
         enemy = SaiyanNPC(self.player.position[0] + 10, self.player.position[1], False, "goku", 0, [])
         enemy.update()
         enemy.facing = "Left"
+        # Super Saiyan mechanics only: no Potara fusion (test_evolution.py)
+        enemy.techniques = [t for t in enemy.techniques if t.kind != "evolve"]
         return enemy
 
     def test_saiyan_npc_goes_super_saiyan_at_half_health_and_hits_harder(self):
