@@ -97,14 +97,14 @@ class NPC(Character):
         self.hp = self.max_hp
         self.attack_damage = self.ATTACK_DAMAGE * difficulty.damage
         self.damage_taken = self.DAMAGE_TAKEN * difficulty.damage_taken / stats.defense
-        self.REACTION_MS = difficulty.reaction_ms
+        self.reaction_ms = difficulty.reaction_ms
         self.attack_cooldown_ms = self.ATTACK_COOLDOWN_MS * difficulty.attack_cooldown
-        self.GUARD_AFTER_HITS = difficulty.guard_after_hits
-        if difficulty.guard_ms is not None:
-            self.GUARD_MS = difficulty.guard_ms
-        self.WALK_SPEED = self.WALK_SPEED * difficulty.speed
-        self.RUN_SPEED = self.RUN_SPEED * difficulty.speed
-        self.TRANSFORM_AT_HP = difficulty.power_up_at
+        self.guard_after_hits = difficulty.guard_after_hits
+        self.guard_ms = self.GUARD_MS if difficulty.guard_ms is None else difficulty.guard_ms
+        self.walk_speed = self.WALK_SPEED * stats.speed * difficulty.speed
+        self.run_speed = self.RUN_SPEED * stats.speed * difficulty.speed
+        # Share of HP left at which a Saiyan powers up (see SaiyanNPC)
+        self.transform_at_hp = difficulty.power_up_at
         self.technique_every_ms = difficulty.technique_every_ms
         self.technique_damage = difficulty.technique_damage
 
@@ -117,7 +117,7 @@ class NPC(Character):
             in_a_row = self.last_hit_ms is not None and now - self.last_hit_ms <= self.COMBO_WINDOW_MS
             self.hits_in_a_row = self.hits_in_a_row + 1 if in_a_row else 1
             self.last_hit_ms = now
-            if self.hits_in_a_row >= self.GUARD_AFTER_HITS:
+            if self.hits_in_a_row >= self.guard_after_hits:
                 # Guards once this hit's hurt animation is over
                 self.wants_guard = True
                 self.hits_in_a_row = 0
@@ -126,7 +126,7 @@ class NPC(Character):
     def start_guard(self, now):
         if self.start_block():
             self.wants_guard = False
-            self.guard_until_ms = now + self.GUARD_MS
+            self.guard_until_ms = now + self.guard_ms
             self.riposte_ready = True
 
     def update_guard(self, now):
@@ -237,11 +237,9 @@ class SaiyanNPC(SuperSaiyanMixin, NPC):
     Saiyan sheet he already looks the part and just gains the power.
     """
 
-    # Powers up when HP drops to this share of the maximum
-    TRANSFORM_AT_HP = 0.5
-
     def update_ai(self):
-        if self.powered_up or not 0 < self.hp <= self.max_hp * self.TRANSFORM_AT_HP:
+        # Powers up when HP drops to transform_at_hp of the maximum
+        if self.powered_up or not 0 < self.hp <= self.max_hp * self.transform_at_hp:
             return
         if self.has_form(self.BASE_FORM) and self.has_form(self.SUPER_FORM):
             self.transform()

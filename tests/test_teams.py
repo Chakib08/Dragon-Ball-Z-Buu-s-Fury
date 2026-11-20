@@ -105,8 +105,8 @@ class TeamFightTests(unittest.TestCase):
         ally = SaiyanNPC(0, 0, False, "gohan", 0, [], team=HEROES)
         enemy = SaiyanNPC(0, 0, False, "gohan", 0, [], difficulty="normal")
         self.assertEqual(ally.difficulty.name, "ally")
-        for stat in ("max_hp", "attack_damage", "damage_taken", "REACTION_MS", "attack_cooldown_ms",
-                     "WALK_SPEED", "technique_damage", "technique_every_ms", "TRANSFORM_AT_HP"):
+        for stat in ("max_hp", "attack_damage", "damage_taken", "reaction_ms", "attack_cooldown_ms",
+                     "walk_speed", "technique_damage", "technique_every_ms", "transform_at_hp"):
             with self.subTest(stat=stat):
                 self.assertEqual(getattr(ally, stat), getattr(enemy, stat))
 

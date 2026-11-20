@@ -187,7 +187,7 @@ class NpcBrain:
             npc.riposte_ready = False
             return True
         return (
-            now - npc.in_reach_since >= npc.REACTION_MS
+            now - npc.in_reach_since >= npc.reaction_ms
             and now - npc.last_attack_ms >= npc.attack_cooldown_ms
         )
 

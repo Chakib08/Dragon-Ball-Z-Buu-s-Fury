@@ -98,14 +98,14 @@ class StatsTests(unittest.TestCase):
         self.assertEqual(broly.difficulty.name, "hard")
         self.assertEqual(broly.max_hp, round(NPC.MAX_HP * 1.3 * 1.8))
         self.assertAlmostEqual(broly.damage_taken, NPC.DAMAGE_TAKEN * 0.6 / 1.15)
-        self.assertAlmostEqual(broly.WALK_SPEED, NPC.WALK_SPEED * 0.9 * 1.25)
+        self.assertAlmostEqual(broly.walk_speed, NPC.WALK_SPEED * 0.9 * 1.25)
 
     def test_allies_keep_their_characters_strength(self):
         goku = SaiyanNPC(0, 0, False, "goku", 0, [], team=HEROES)
         trunks = SaiyanNPC(0, 0, False, "trunks", 0, [], team=HEROES)
         self.assertGreater(goku.max_hp, trunks.max_hp)
         self.assertGreater(goku.power, trunks.power)
-        self.assertGreater(trunks.WALK_SPEED, goku.WALK_SPEED)
+        self.assertGreater(trunks.walk_speed, goku.walk_speed)
 
     def test_goku_usually_beats_trunks_in_a_duel(self):
         """Same AI and difficulty on both sides: the stats decide."""

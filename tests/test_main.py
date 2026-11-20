@@ -129,3 +129,13 @@ class IosTests(unittest.TestCase):
         with open(os.path.join(project, "requirements.txt")) as file:
             self.assertIn("pygame==2.6.1", file.read())  # the same pygame as on desktop
 
+
+
+class ConfigTests(unittest.TestCase):
+    def test_settings_are_there_without_calling_init_first(self):
+        """Any module can read Config, whatever was imported before it."""
+        import subprocess
+        src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
+        code = "from utils.config import Config; print(Config.FPS, Config.CLOCK_LIMIT, bool(Config.MAP_DIR))"
+        output = subprocess.run([sys.executable, "-c", code], cwd=src, capture_output=True, text=True, check=True)
+        self.assertEqual(output.stdout.split(), ["60", "100", "True"])

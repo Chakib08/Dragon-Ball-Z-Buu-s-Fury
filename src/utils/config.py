@@ -3,6 +3,10 @@ import sys
 import json
 
 class Config:
+    """The game's settings (Config/config.json), read once when this module
+    is imported: any module can use them, in any import order. init()
+    reads the file again (tests, or after it changed)."""
+
     CONFIG_FILE = 'Config/config.json'
     
     @classmethod
@@ -46,18 +50,18 @@ class Config:
         
         # Media paths
         cls.ROOT_DIR = cls.root_dir()        
-        cls.MAP_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("MAP_DIR"))
-        cls.CONFIG_DIR = os.path.join(cls.ROOT_DIR,cls.get_config_value("CONFIG_DIR"))
-        cls.MENU_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("MENU_DIR"))
-        cls.SOUNDS_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("SOUNDS_DIR"))
-        cls.DIALOG_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("DIALOG_DIR"))
+        cls.MAP_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("MAP_DIR", default_value="Graphics/maps/"))
+        cls.CONFIG_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("CONFIG_DIR", default_value="Config/characters/"))
+        cls.MENU_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("MENU_DIR", default_value="Graphics/menu/"))
+        cls.SOUNDS_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("SOUNDS_DIR", default_value="Sounds/"))
+        cls.DIALOG_DIR = os.path.join(cls.ROOT_DIR, cls.get_config_value("DIALOG_DIR", default_value="Graphics/dialog/"))
         
         # Game Settings
         # Animations
-        cls.CLOCK_SPEED = cls.get_config_value("CLOCK_SPEED")  
-        cls.CLOCK_LIMIT = cls.get_config_value("CLOCK_LIMIT")
+        cls.CLOCK_SPEED = cls.get_config_value("CLOCK_SPEED", default_value=14)
+        cls.CLOCK_LIMIT = cls.get_config_value("CLOCK_LIMIT", default_value=100)
         # Main
-        cls.FPS = cls.get_config_value("FPS")
+        cls.FPS = cls.get_config_value("FPS", default_value=60)
         
     
     @staticmethod
@@ -85,3 +89,6 @@ class Config:
         current_file_path = os.path.abspath(__file__)
         return os.path.dirname(os.path.dirname(os.path.dirname(current_file_path)))
 
+
+# Loaded on import (see the class docstring)
+Config.init()

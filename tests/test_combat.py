@@ -133,7 +133,7 @@ class CombatTests(unittest.TestCase):
             self.combat.update([self.enemy], [])
         # Just stepped into reach: the enemy reacts a moment later
         self.assertEqual(self.player.hp, self.player.max_hp)
-        with patch("combat.pygame.time.get_ticks", return_value=reached + self.enemy.REACTION_MS):
+        with patch("combat.pygame.time.get_ticks", return_value=reached + self.enemy.reaction_ms):
             self.combat.update([self.enemy], [])
         self.assertEqual(self.player.hp, self.player.max_hp - self.enemy.attack_damage)
 
@@ -264,7 +264,7 @@ class CombatTests(unittest.TestCase):
                 self.assertFalse(player.is_super)
 
     def test_super_saiyan_walks_and_runs_faster(self):
-        for macro, base in (("Walk Right", self.player.WALK_SPEED), ("Run Right", self.player.RUN_SPEED)):
+        for macro, base in (("Walk Right", self.player.walk_speed), ("Run Right", self.player.run_speed)):
             with self.subTest(move=macro):
                 fighter = Saiyan(100, 100, False, "goku")
                 start = fighter.position[0]
@@ -478,7 +478,7 @@ class CombatTests(unittest.TestCase):
         self.assertIsNone(self.enemy.action)
         # Guard drops after GUARD_MS and the riposte lands at once
         hp = self.player.hp
-        guard_end = now + self.enemy.GUARD_MS
+        guard_end = now + self.enemy.guard_ms
         while now <= guard_end + 17:
             now += 17
             self.enemy.knockback = None
@@ -501,7 +501,7 @@ class CombatTests(unittest.TestCase):
         self.enemy.update()
         self.assertEqual(self.enemy.in_reach_since, reach_start)
         hp = self.player.hp
-        self.tick(now + self.enemy.REACTION_MS + 1, [self.enemy])
+        self.tick(now + self.enemy.reaction_ms + 1, [self.enemy])
         self.assertLess(self.player.hp, hp)
 
     def test_npc_turns_to_face_a_player_beside_or_behind_it(self):
@@ -546,7 +546,7 @@ class CombatTests(unittest.TestCase):
             self.assertFalse(enemy.is_super)
             self.assertIsNone(enemy.action)
 
-            enemy.hp = enemy.max_hp * enemy.TRANSFORM_AT_HP
+            enemy.hp = enemy.max_hp * enemy.transform_at_hp
             enemy.last_flinch_ms = 1000
             self.combat.update([enemy], [])
             self.assertEqual(enemy.action["name"], "transform")
@@ -591,7 +591,7 @@ class CombatTests(unittest.TestCase):
         with patch("combat.pygame.time.get_ticks", return_value=1000 + enemy.attack_cooldown_ms):
             self.combat.update([enemy], [])
         self.assertEqual(hp - self.player.hp, enemy.attack_damage)
-        enemy.hp = enemy.max_hp * enemy.TRANSFORM_AT_HP
+        enemy.hp = enemy.max_hp * enemy.transform_at_hp
         with patch("combat.pygame.time.get_ticks", return_value=1000):
             for _ in range(50):
                 self.combat.update([enemy], [])
@@ -630,16 +630,16 @@ class CombatTests(unittest.TestCase):
         self.assertEqual(normal.max_hp, NPC.MAX_HP)
         self.assertEqual(normal.attack_damage, NPC.ATTACK_DAMAGE)
         self.assertEqual(normal.damage_taken, NPC.DAMAGE_TAKEN)
-        self.assertEqual(normal.REACTION_MS, NPC.REACTION_MS)
+        self.assertEqual(normal.reaction_ms, NPC.REACTION_MS)
         for weaker, stronger in ((easy, normal), (normal, hard)):
             self.assertLess(weaker.max_hp, stronger.max_hp)
             self.assertLess(weaker.attack_damage, stronger.attack_damage)
             self.assertGreater(weaker.damage_taken, stronger.damage_taken)
-            self.assertGreater(weaker.REACTION_MS, stronger.REACTION_MS)
+            self.assertGreater(weaker.reaction_ms, stronger.reaction_ms)
             self.assertGreater(weaker.attack_cooldown_ms, stronger.attack_cooldown_ms)
-            self.assertLess(weaker.WALK_SPEED, stronger.WALK_SPEED)
+            self.assertLess(weaker.walk_speed, stronger.walk_speed)
         # The class keeps its own numbers
-        self.assertEqual(NPC.WALK_SPEED, normal.WALK_SPEED)
+        self.assertEqual(NPC.WALK_SPEED, normal.walk_speed)
 
     def test_broly_is_a_hard_enemy_by_default(self):
         broly = SaiyanNPC(0, 0, False, "broly", 0, [])
@@ -649,7 +649,7 @@ class CombatTests(unittest.TestCase):
         self.assertGreater(broly.max_hp, gohan.max_hp)
         self.assertGreater(broly.attack_damage, gohan.attack_damage)
         # Gets angry sooner: powers up with more HP left
-        self.assertGreater(broly.TRANSFORM_AT_HP, gohan.TRANSFORM_AT_HP)
+        self.assertGreater(broly.transform_at_hp, gohan.transform_at_hp)
 
     def test_a_big_body_is_reached_where_it_is_touched(self):
         """Broly is twice as wide: fighters touching his body can hit him,
@@ -725,7 +725,7 @@ class CombatTests(unittest.TestCase):
     def test_a_chasing_enemy_stops_at_the_players_body(self):
         self.place(self.enemy, 40)
         self.enemy.attack_damage = 0
-        self.enemy.REACTION_MS = 10 ** 9
+        self.enemy.reaction_ms = 10 ** 9
         with patch("combat.pygame.time.get_ticks", return_value=1000):
             for _ in range(80):
                 self.combat.update([self.enemy], [])

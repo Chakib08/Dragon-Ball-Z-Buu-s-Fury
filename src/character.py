@@ -90,8 +90,9 @@ class Character(pygame.sprite.Sprite):
         # The character's own strength (Config/stats.json)
         self.stats = character_stats(self.character_name)
         self.power = self.stats.power
-        self.WALK_SPEED = self.WALK_SPEED * self.stats.speed
-        self.RUN_SPEED = self.RUN_SPEED * self.stats.speed
+        # Its speeds (WALK_SPEED and RUN_SPEED are everyone's base)
+        self.walk_speed = self.WALK_SPEED * self.stats.speed
+        self.run_speed = self.RUN_SPEED * self.stats.speed
         self.max_hp = round(self.MAX_HP * self.stats.hp)
         self.hp = self.max_hp
         self.max_ki = self.MAX_KI
@@ -238,7 +239,7 @@ class Character(pygame.sprite.Sprite):
     def move(self, animation_macro, animation_count, movement=None):
         macro, side = animation_macro.split()
         self.facing = side
-        self.speed = self.RUN_SPEED if macro == AnimationType.RUN.value else self.WALK_SPEED
+        self.speed = self.run_speed if macro == AnimationType.RUN.value else self.walk_speed
         if self.powered_up:
             self.speed *= self.SUPER_SPEED_MULTIPLIER
 
