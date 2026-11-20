@@ -7,7 +7,7 @@
     "goku": ["bf", 33, 54],
     "vegeta": ["bf", 33, 607],
     "gohan": ["bf", 33, 192],
-    "trunks": ["log2", 128, 191],
+    "trunks": ["log2", 192, 191],
     "piccolo": ["log2", 384, 191],
     "goten": ["bf", 33, 538],
     "kid_trunks": ["bf", 33, 745],
