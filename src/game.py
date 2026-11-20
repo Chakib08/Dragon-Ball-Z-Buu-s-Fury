@@ -9,7 +9,9 @@ from constants import (
     C_WALK_ANIMATION_COUNT,
 )
 from dialog.dialogbox import DialogBox
+from controls import Controls
 from gamepad import Gamepad
+import settings as user_settings
 from map import DEFAULT_ENEMY, MapManager
 from npc import HEROES
 import smoke
@@ -115,6 +117,9 @@ class Game:
         self.dialogBox = DialogBox(self.resolution)
         # A game controller (the ROG Ally's controls, or any gamepad)
         self.gamepad = Gamepad()
+        # Which keys and buttons do what in a fight (the player may change
+        # them in user_settings.json)
+        self.controls = Controls(user_settings.load().get("controls"))
         self.touch_controls = TouchControls(self.resolution)
         self.quit_prompt = QuitPrompt(self.resolution)
         # When the attack button was last pressed (None once it was used)
@@ -183,51 +188,35 @@ class Game:
 
     # ---- Input ------------------------------------------------------------------
     def handle_input(self, events: List[pygame.event.Event]):
-        """Turn this frame's keyboard and touch input into player actions."""
+        """Turn this frame's keyboard, touch and controller input into player
+        actions (see controls.py)."""
         for event in events:
             self.touch_controls.handle_event(event)
-        touch = self.touch_controls
-        keys = pygame.key.get_pressed()
-        pressed_keys = {event.key for event in events if event.type == pygame.KEYDOWN}
-
-        # The analog stick wins over the controller, the controller over the
-        # arrow keys
-        gamepad = self.gamepad
-        dx, dy = touch.stick_vector
-        if not (dx or dy):
-            dx, dy = gamepad.move_vector
-        if not (dx or dy):
-            dx = int(keys[pygame.K_RIGHT]) - int(keys[pygame.K_LEFT])
-            dy = int(keys[pygame.K_DOWN]) - int(keys[pygame.K_UP])
-        # Every one-shot button is consumed each frame, even if unused
-        # Talking has no on-screen button for now (keyboard T only)
-        interact_pressed = pygame.K_t in pressed_keys
-        attack_pressed = touch.consume_action("attack") or pygame.K_a in pressed_keys
-        super_pressed = touch.consume_action("super") or pygame.K_s in pressed_keys
-        special_pressed = touch.consume_action("special") or pygame.K_d in pressed_keys
-        # Choose the technique: arrows on top of the ki button, or Q / E
+        intent = self.controls.read(events, self.touch_controls, self.gamepad)
+        dx, dy = intent.move
         combat = self.map_manager.combat
-        if touch.consume_action("tech_prev") or pygame.K_q in pressed_keys:
+        # Choose the technique (arrows on top of the ki button, or Q / E)
+        # and the Super Saiyan level (arrows on top of the transform button)
+        if "tech_prev" in intent:
             combat.cycle_technique(-1)
-        if touch.consume_action("tech_next") or pygame.K_e in pressed_keys:
+        if "tech_next" in intent:
             combat.cycle_technique(1)
-        # Choose the Super Saiyan level: arrows on top of the transform
-        # button, or Z / X
-        if touch.consume_action("form_prev") or pygame.K_z in pressed_keys:
+        if "form_prev" in intent:
             self.character.cycle_level(-1)
-        if touch.consume_action("form_next") or pygame.K_x in pressed_keys:
+        if "form_next" in intent:
             self.character.cycle_level(1)
         # One attack per press: holding the button does not repeat
-        if attack_pressed:
+        if "attack" in intent:
             self.attack_pressed_ms = pygame.time.get_ticks()
-
-        if interact_pressed:
+        if "talk" in intent:
             self.map_manager.check_npc_collisions(self.dialogBox)
+        super_pressed = "super" in intent
+        special_pressed = "special" in intent
 
         character = self.character
-        guard_held = keys[pygame.K_f] or touch.blocking or "b" in gamepad.held
+        guard_held = intent.holds("guard")
         # A charging technique goes off when its button is released
-        if combat.charging and not (keys[pygame.K_d] or touch.special_held or "x" in gamepad.held):
+        if combat.charging and not intent.holds("special"):
             combat.release_charge()
         # Every hit plays the hurt animation, but acting cancels it: the
         # player is never stuck in a flinch
@@ -254,7 +243,7 @@ class Game:
         character.stop_block()
 
         if dx or dy:
-            running = keys[pygame.K_SPACE] or touch.running or gamepad.running
+            running = intent.holds("run")
             animation = AnimationType.RUN.value if running else AnimationType.WALK.value
             count = C_RUN_ANIMATION_COUNT if running else C_WALK_ANIMATION_COUNT
             if abs(dx) > abs(dy):
@@ -432,7 +421,7 @@ class Game:
 
     def run(self):
         clock = pygame.time.Clock()
-        self.menu = Menu(self.resolution)
+        self.menu = Menu(self.resolution, self.controls)
         self.play_music(PathManager.soundtrack(MENU_MUSIC))
         if getattr(self, "start_in", None) == "arcade":
             # Straight into a fight with the default team (build checks)

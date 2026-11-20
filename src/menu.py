@@ -4,6 +4,7 @@ from enum import Enum
 
 from pathmanager import PathManager
 from animation import Animator
+from controls import Controls
 from difficulty import enemy_profile
 from taps import tap_position
 from version import __version__
@@ -35,7 +36,9 @@ class Menu:
     # Show the controller's buttons in the hints (set by the game)
     gamepad_hints = False
 
-    def __init__(self, resolution) -> None:
+    def __init__(self, resolution, controls=None) -> None:
+        # The fight's keys and buttons, for the control guide
+        self.controls = controls if controls is not None else Controls()
         self._artwork = pygame.image.load(PathManager.menu_image_path(BACKGROUND_IMAGE))
         # Highlighted entry (Arcade: the one most players want)
         self.selected_item = 1
@@ -529,25 +532,40 @@ class Menu:
         hint_y = resolution[1] * (0.85 if picking is None else 0.93)
         screen.blit(instructions, instructions.get_rect(center=(resolution[0] / 2, hint_y)))
 
-    def _draw_options(self, screen, resolution):
-        screen.blit(self.menu_image, (0, 0))
-        lines = [
-            "Controls",
+    def controls_guide(self):
+        """The control guide's lines, with the keys and buttons in use
+        (see controls.py: the player may have changed them)."""
+        controls = self.controls
+
+        def keys(*actions):
+            return " / ".join(name for action in actions for name in controls.key_names(action))
+
+        def buttons(*actions):
+            return "/".join(button.upper() for action in actions for button in controls.pad_buttons.get(action, ()))
+
+        pad_line = ", ".join(f"{buttons(*actions)} {label}" for actions, label in (
+            (("run",), "run"), (("attack",), "attack"), (("guard",), "guard"), (("special",), "special"),
+            (("super",), "transform"), (("tech_prev", "tech_next"), "technique"),
+            (("form_prev", "form_next"), "level")) if buttons(*actions))
+        return [
             "Move: Arrow keys or the on-screen stick",
-            "Run: Hold Space or push the stick to the edge",
-            "Attack: A key or the AUTO button (one punch or kick per press)",
-            "Guard: hold F or the DEFENSE button",
-            "Special technique: D key or the blast button",
-            "Choose technique: Q / E or the arrows above it",
-            "Super Saiyan: S key or the transform button",
-            "Super Saiyan level (Goku): Z / X or the arrows above it",
-            "Talk: T key",
+            f"Run: hold {keys('run')} or push the stick to the edge",
+            f"Attack: {keys('attack')} or the AUTO button (one punch or kick per press)",
+            f"Guard: hold {keys('guard')} or the DEFENSE button",
+            f"Special technique: {keys('special')} or the blast button",
+            f"Choose technique: {keys('tech_prev', 'tech_next')} or the arrows above it",
+            f"Super Saiyan: {keys('super')} or the transform button",
+            f"Super Saiyan level (Goku): {keys('form_prev', 'form_next')} or the arrows above it",
+            f"Talk: {keys('talk')}",
             "Quit or main menu: Esc key or the X button (top right)",
             "Online 1v1: O key or Online Mode in the main menu",
-            "Controller (ROG Ally, Xbox...): stick move, LT run, A attack, B guard,",
-            "X special, Y transform, LB/RB technique, RT level, Menu pause",
-            "Press Esc or tap to return",
+            "Controller (ROG Ally, Xbox...): stick move, Menu pause,",
+            pad_line,
         ]
+
+    def _draw_options(self, screen, resolution):
+        screen.blit(self.menu_image, (0, 0))
+        lines = ["Controls", *self.controls_guide(), "Press Esc or tap to return"]
         line_height = int(self.options_font_size * 1.25)
         title_height = int(line_height * 1.3)
         block_height = title_height + line_height * (len(lines) - 1)

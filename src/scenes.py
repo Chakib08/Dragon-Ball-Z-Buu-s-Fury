@@ -17,8 +17,9 @@ from result_screen import ResultScreen
 
 # What the controller's buttons stand for on each kind of screen (see
 # gamepad.py): presses become the keys the screens already understand
-FIGHT_KEYS = {"a": pygame.K_a, "y": pygame.K_s, "x": pygame.K_d, "lb": pygame.K_q,
-              "rb": pygame.K_e, "rt": pygame.K_x, "view": pygame.K_t, "menu": pygame.K_ESCAPE}
+# In a fight the controller is read as actions (controls.py); only Menu is a
+# key, Escape, which pauses
+FIGHT_KEYS = {"menu": pygame.K_ESCAPE}
 MENU_KEYS = {"up": pygame.K_UP, "down": pygame.K_DOWN, "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
              "a": pygame.K_RETURN, "menu": pygame.K_RETURN, "b": pygame.K_ESCAPE, "x": pygame.K_SPACE}
 LOBBY_KEYS = {**MENU_KEYS, "a": pygame.K_1, "b": pygame.K_ESCAPE, "x": pygame.K_c, "y": pygame.K_r}
