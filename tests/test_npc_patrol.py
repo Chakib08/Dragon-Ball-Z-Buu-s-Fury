@@ -11,6 +11,12 @@ from map import MapManager
 from saiyan import Saiyan
 from utils.config import Config
 
+from average_stats import steady_module_fixtures
+
+# Repeatable NPCs: no lucky dodges or blocks (see average_stats.py)
+setUpModule, tearDownModule = steady_module_fixtures()
+
+
 
 class NpcPatrolTests(unittest.TestCase):
     @classmethod

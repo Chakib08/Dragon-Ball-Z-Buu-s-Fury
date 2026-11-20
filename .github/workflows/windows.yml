@@ -6,7 +6,8 @@ name: Build Windows game
 #   assets   downloads the sprite sheets (setup.sh, on Linux)
 #   build    on Windows: runs the tests, builds the game, starts it once in
 #            smoke-test mode (a short fight, then it quits by itself), zips it
-#   release  on a v* tag, attaches the zip to the GitHub release
+#   release  on a v* tag, attaches the zip (and the lobby server of this
+#            version) to the GitHub release
 #
 # Run it by hand on any branch: Actions > this workflow > Run workflow.
 
@@ -131,14 +132,25 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Download the game
         uses: actions/download-artifact@v4
         with:
           name: windows-game
           path: dist/
 
-      - name: Attach it to the GitHub Release
+      # The online lobby server of this version, one file (Python 3.8+)
+      - name: Add the lobby server
+        run: |
+          version=$(python3 -c "import sys; sys.path.insert(0, 'src'); import version; print(version.__version__)")
+          cp server/lobby_server.py "dist/lobby_server-v${version}.py"
+
+      - name: Attach them to the GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.zip
+          files: |
+            dist/*.zip
+            dist/lobby_server-*.py
           generate_release_notes: true

@@ -11,6 +11,12 @@ import game
 from game import Game
 from utils.config import Config
 
+from average_stats import steady_module_fixtures
+
+# Repeatable NPCs: no lucky dodges or blocks (see average_stats.py)
+setUpModule, tearDownModule = steady_module_fixtures()
+
+
 
 def key_down(code):
     return pygame.event.Event(pygame.KEYDOWN, key=code)

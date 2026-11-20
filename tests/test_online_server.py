@@ -134,6 +134,14 @@ class LobbyServerTests(unittest.TestCase):
         import net
         self.assertEqual(net.PROTOCOL_VERSION, lobby_server.PROTOCOL_VERSION)
 
+    def test_the_server_says_its_version_which_is_the_games(self):
+        import version
+        self.assertEqual(lobby_server.SERVER_VERSION, version.__version__)
+        client = NetClient()
+        client.connect("127.0.0.1", self.server.port)
+        self.clients.append(client)
+        self.assertEqual(wait_for(client, "welcome")["server_version"], version.__version__)
+
     def test_a_flooding_client_gets_rate_limited(self):
         player = lobby_server.Player(1, writer=None)
         clock = [100.0]

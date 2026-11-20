@@ -15,6 +15,7 @@ more messages than a game does has the excess dropped.
 
 Usage:
     python3 server/lobby_server.py [--host 0.0.0.0] [--port 5050]
+    python3 server/lobby_server.py --version
 
 Open the port for TCP and UDP (a box's port forwarding, a firewall).
 
@@ -36,7 +37,7 @@ Client -> server, UDP (the token of its "start" message in "tok")
                                         it said udp_hello too, else TCP)
 
 Server -> client
-    {"t": "welcome", "id": int, "version": int}
+    {"t": "welcome", "id": int, "version": int, "server_version": str}
     {"t": "rooms", "rooms": [{"id", "host", "character", "mode", "allies"}]}
     {"t": "waiting", "room": int}       room created, waiting for an opponent
     {"t": "start", "room": int, "slot": 0 | 1, "mode": "1v1" | "team",
@@ -55,6 +56,9 @@ import logging
 import secrets
 import time
 
+# The server's own version: the game's it ships with (src/version.py; a
+# test keeps them in step). The release page has this file for each version
+SERVER_VERSION = "0.0.13"
 # 2: names, team matches (allies in the states, hits for any fighter)
 PROTOCOL_VERSION = 2
 DEFAULT_PORT = 5050
@@ -154,7 +158,8 @@ class LobbyServer:
         peer = writer.get_extra_info("peername")
         log.info("player %s connected from %s", player.id, peer)
         try:
-            player.send({"t": "welcome", "id": player.id, "version": PROTOCOL_VERSION})
+            player.send({"t": "welcome", "id": player.id, "version": PROTOCOL_VERSION,
+                         "server_version": SERVER_VERSION})
             while True:
                 try:
                     line = await reader.readline()
@@ -327,7 +332,8 @@ class UdpRelay(asyncio.DatagramProtocol):
 async def serve(host, port, ready=None):
     lobby = LobbyServer()
     server = await asyncio.start_server(lobby.handle, host, port, limit=MAX_LINE)
-    log.info("lobby listening on %s", ", ".join(str(s.getsockname()) for s in server.sockets))
+    log.info("lobby server v%s (online protocol %s) listening on %s", SERVER_VERSION, PROTOCOL_VERSION,
+             ", ".join(str(s.getsockname()) for s in server.sockets))
     # The same port number for UDP (the one TCP got, when port is 0)
     udp_port = server.sockets[0].getsockname()[1]
     try:
@@ -347,6 +353,8 @@ def main():
     parser = argparse.ArgumentParser(description="Lobby server for online 1v1 matches")
     parser.add_argument("--host", default="0.0.0.0", help="address to listen on (default: all)")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help=f"port (default {DEFAULT_PORT})")
+    parser.add_argument("--version", action="version",
+                        version=f"lobby server {SERVER_VERSION} (online protocol {PROTOCOL_VERSION})")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
     try:

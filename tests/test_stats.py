@@ -15,6 +15,12 @@ from saiyan import Saiyan
 from stats import AVERAGE, character_stats
 from utils.config import Config
 
+from average_stats import steady_module_fixtures
+
+# Repeatable NPCs: no lucky dodges or blocks (see average_stats.py)
+setUpModule, tearDownModule = steady_module_fixtures()
+
+
 ROSTER = ("goku", "vegeta", "gohan", "trunks", "broly")
 
 

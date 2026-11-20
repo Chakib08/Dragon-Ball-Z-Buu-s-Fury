@@ -14,6 +14,12 @@ from menu import Menu, State
 from result_screen import ResultScreen
 from utils.config import Config
 
+from average_stats import steady_module_fixtures
+
+# Repeatable NPCs: no lucky dodges or blocks (see average_stats.py)
+setUpModule, tearDownModule = steady_module_fixtures()
+
+
 
 class DisplayTests(unittest.TestCase):
     @classmethod

@@ -29,6 +29,12 @@ from saiyan import Saiyan
 from touch_controls import TouchControls
 from utils.config import Config
 
+from average_stats import steady_module_fixtures
+
+# Repeatable NPCs: no lucky dodges or blocks (see average_stats.py)
+setUpModule, tearDownModule = steady_module_fixtures()
+
+
 
 class EffectsAcrossMapsTests(unittest.TestCase):
     @classmethod

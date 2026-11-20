@@ -16,6 +16,12 @@ from gamepad import AXIS_MAX, BUTTONS, Gamepad
 from menu import Menu, State
 from utils.config import Config
 
+from average_stats import steady_module_fixtures
+
+# Repeatable NPCs: no lucky dodges or blocks (see average_stats.py)
+setUpModule, tearDownModule = steady_module_fixtures()
+
+
 
 class FakeController:
     """Stands for pygame._sdl2.controller.Controller."""

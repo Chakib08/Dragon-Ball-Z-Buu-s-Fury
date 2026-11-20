@@ -23,3 +23,10 @@ def steady_npcs(test):
     patcher = patch("npc_ai.random.random", return_value=1.0)
     patcher.start()
     test.addCleanup(patcher.stop)
+
+
+def steady_module_fixtures():
+    """setUpModule and tearDownModule for a test file whose NPCs must not
+    roll dodges or blocks: setUpModule, tearDownModule = steady_module_fixtures()"""
+    patcher = patch("npc_ai.random.random", return_value=1.0)
+    return patcher.start, patcher.stop

@@ -393,6 +393,7 @@ class LobbyScreen:
         self.rooms = []
         self.room_id = None  # our room while waiting in it
         self.room_mode = "1v1"
+        self.server_version = None  # said by the server when we connect
         self.notice = ""
         self.editing = None  # text being typed for the server address
         self.buttons = {}
@@ -440,6 +441,7 @@ class LobbyScreen:
                     self.net.close()
                     continue
                 self._said_hello = True
+                self.server_version = message.get("server_version")
                 self.net.send({"t": "hello", "name": self.name, "character": self.character,
                                "allies": self.allies, "version": PROTOCOL_VERSION})
             elif kind == "rooms":
@@ -628,7 +630,9 @@ class LobbyScreen:
 
         status = {
             "connecting": ("Connecting...", self.DIM),
-            "connected": (f"Connected as {self.name} ({self.team_label()})", (140, 230, 140)),
+            "connected": (f"Connected as {self.name} ({self.team_label()})"
+                          + (f"  -  server v{self.server_version}" if self.server_version else ""),
+                          (140, 230, 140)),
             "error": (self.net.error or "Not connected", (255, 140, 120)),
             "offline": ("Not connected", self.DIM),
         }[self.net.status]

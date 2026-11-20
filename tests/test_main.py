@@ -8,6 +8,12 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import importlib.util
 
+from average_stats import steady_module_fixtures
+
+# Repeatable NPCs: no lucky dodges or blocks (see average_stats.py)
+setUpModule, tearDownModule = steady_module_fixtures()
+
+
 # src/main.py, not the launcher main.py at the project root
 _spec = importlib.util.spec_from_file_location(
     "game_main", os.path.join(os.path.dirname(__file__), "..", "src", "main.py")
