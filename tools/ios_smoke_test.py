@@ -21,6 +21,7 @@ import sys
 import time
 
 TIMEOUT = 240
+LAUNCH_TIMEOUT = 240
 PASSED = "smoke test passed"
 
 
@@ -58,14 +59,19 @@ def main():
     work = os.path.abspath("smoke")
     os.makedirs(work, exist_ok=True)
     out, err = os.path.join(work, "stdout.txt"), os.path.join(work, "stderr.txt")
-    started = time.time()
-    launch = run("xcrun", "simctl", "launch", "--terminate-running-process",
-                 f"--stdout={out}", f"--stderr={err}", device, bundle)
-    print("launch:", launch.strip())
+    # A busy runner's simulator can take minutes to launch an app: wait
+    # longer, and try once more
+    for attempt in (1, 2):
+        launch = run("xcrun", "simctl", "launch", "--terminate-running-process",
+                     f"--stdout={out}", f"--stderr={err}", device, bundle, timeout=LAUNCH_TIMEOUT)
+        print(f"launch (attempt {attempt}):", launch.strip())
+        if not launch.startswith("(xcrun"):
+            break
     try:
         pid = int(launch.strip().rsplit(":", 1)[1])
     except (IndexError, ValueError):
         pid = None
+    started = time.time()  # the game's time starts once it is launched
     data = run("xcrun", "simctl", "get_app_container", device, bundle, "data").strip()
     progress_file = os.path.join(data, "Documents", "smoke_test.log")
 
@@ -74,7 +80,9 @@ def main():
         if PASSED in read(progress_file) or PASSED in read(out):
             state = "passed"
             break
-        if not alive(pid):
+        # Without a pid (the launch command gave up but the app may run),
+        # only the progress file tells
+        if pid is not None and not alive(pid):
             time.sleep(2)  # the last notes
             state = "passed" if PASSED in read(progress_file) + read(out) else "exited"
             break
