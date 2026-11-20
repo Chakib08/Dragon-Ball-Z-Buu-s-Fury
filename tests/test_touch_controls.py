@@ -519,6 +519,42 @@ class TouchControlsTests(unittest.TestCase):
             menu.confirm_name()
         self.assertEqual(menu.player_name, "Goku")
 
+    def test_every_character_card_has_a_portrait_and_its_stats(self):
+        import portraits
+        from stats import character_stats
+        resolution = (1200, 540)
+        menu = Menu(resolution)
+        for name in menu.character_names:
+            with self.subTest(character=name):
+                face = portraits.portrait(name)
+                self.assertIsNotNone(face)
+                self.assertEqual(face.get_size(), (64, 64))
+                self.assertIsNotNone(face.get_colorkey())
+        self.assertIsNone(portraits.portrait("no such character"))
+        # Broly hits harder than Trunks, and the card says so
+        self.assertGreater(character_stats("broly").power, character_stats("trunks").power)
+        drawn = []
+
+        class Recording:
+            """A font that notes what it writes."""
+            def __init__(self, font):
+                self.font = font
+
+            def render(self, text, *rest):
+                drawn.append(text)
+                return self.font.render(text, *rest)
+
+            def __getattr__(self, name):
+                return getattr(self.font, name)
+
+        card_height = min(300, int(resolution[1] * 0.40))
+        menu._fitted_previews[("fonts", card_height)] = tuple(Recording(font)
+                                                             for font in menu._card_fonts(card_height))
+        menu.state = State.CHARACTER_SELECT
+        menu.launch_menu(pygame.Surface(resolution), resolution, [])
+        for label in ("POW", "HP", "DEF", "SPD", "130", "95"):
+            self.assertIn(label, drawn)
+
     def test_opponent_screen_shows_each_enemys_difficulty(self):
         resolution = (1200, 1000)
         menu = Menu(resolution)

@@ -9,6 +9,8 @@ from difficulty import enemy_profile
 from taps import tap_position
 from version import __version__
 from map import MAX_ALLIES, MAX_ENEMIES
+from portraits import portrait
+from stats import character_stats
 import settings as user_settings
 
 GAME_TITLE = "DRAGON BALL Z"
@@ -507,6 +509,77 @@ class Menu:
         current_index = self.character_names.index(self.selected_character)
         self.selected_character = self.character_names[(current_index + direction) % len(self.character_names)]
 
+    # The four stats on a card: label, Stats field, bar colour
+    STAT_ROWS = (("POW", "power", (235, 95, 70)), ("HP", "hp", (80, 200, 100)),
+                 ("DEF", "defense", (90, 160, 240)), ("SPD", "speed", (245, 205, 70)))
+    # Stats go from about 0.9 to 1.3 (1.0: average): a bar shows this range
+    STAT_RANGE = (0.7, 1.4)
+
+    def _card_fonts(self, card_height):
+        key = ("fonts", card_height)
+        fonts = self._fitted_previews.get(key)
+        if fonts is None:
+            fonts = self._fitted_previews[key] = (
+                pygame.font.Font(None, max(22, min(42, int(card_height * 0.12)))),
+                pygame.font.Font(None, max(15, min(26, int(card_height * 0.078)))),
+            )
+        return fonts
+
+    def _portrait(self, character_name, size):
+        """The character's portrait, scaled (pixel art: no smoothing), or None."""
+        key = ("portrait", character_name, size)
+        if key not in self._fitted_previews:
+            face = portrait(character_name)
+            self._fitted_previews[key] = None if face is None else pygame.transform.scale(face, (size, size))
+        return self._fitted_previews[key]
+
+    def _draw_card_contents(self, screen, rect, character_name, picking):
+        """A character card: the portrait, the name (an opponent's
+        difficulty under it) and the character's stats as bars."""
+        name_font, small_font = self._card_fonts(rect.height)
+        inner = rect.inflate(-14, -14)
+        stat_height = small_font.get_linesize()
+        stats_height = stat_height * len(self.STAT_ROWS)
+        difficulty_height = small_font.get_linesize() if picking == "enemies" else 0
+        space = inner.height - name_font.get_linesize() - difficulty_height - stats_height - 8
+        size = max(24, min(inner.width, space))
+        face = self._portrait(character_name, size)
+        if face is not None:
+            screen.blit(face, face.get_rect(midtop=(inner.centerx, inner.top)))
+        else:
+            # No portrait for this one: its sprite
+            preview = self._fitted_preview(character_name, inner.width, size)
+            if picking == "enemies":
+                preview = pygame.transform.flip(preview, True, False)  # facing the player
+            screen.blit(preview, preview.get_rect(midtop=(inner.centerx, inner.top)))
+        y = inner.top + size + 2
+        label = name_font.render(character_name.title(), True, (255, 255, 255))
+        screen.blit(label, label.get_rect(midtop=(inner.centerx, y)))
+        y += name_font.get_linesize()
+        if picking == "enemies":
+            difficulty = self.enemy_difficulties[character_name]
+            text = small_font.render(difficulty.label, True, difficulty.color)
+            screen.blit(text, text.get_rect(midtop=(inner.centerx, y)))
+            y += difficulty_height
+        y = max(y + 4, inner.bottom - stats_height)
+        stats = character_stats(character_name)
+        low, high = self.STAT_RANGE
+        label_width = small_font.size("POW ")[0]
+        value_width = small_font.size("130")[0] + 4
+        bar_left = inner.left + label_width
+        bar_width = max(10, inner.width - label_width - value_width)
+        bar_height = max(4, stat_height // 2)
+        for name, field, colour in self.STAT_ROWS:
+            value = getattr(stats, field)
+            screen.blit(small_font.render(name, True, (215, 215, 225)), (inner.left, y))
+            bar = pygame.Rect(bar_left, y + (stat_height - bar_height) // 2 - 1, bar_width, bar_height)
+            pygame.draw.rect(screen, (30, 30, 40), bar, border_radius=3)
+            share = max(0.05, min(1.0, (value - low) / (high - low)))
+            pygame.draw.rect(screen, colour, (bar.x, bar.y, round(bar.width * share), bar.height), border_radius=3)
+            number = small_font.render(str(round(value * 100)), True, (255, 255, 255))
+            screen.blit(number, number.get_rect(topright=(inner.right, y)))
+            y += stat_height
+
     def _fitted_preview(self, character_name, max_width, max_height):
         """The preview, shrunk if needed to fit in its card (Broly's sprite
         is twice the size of the others). Cached per size."""
@@ -564,19 +637,7 @@ class Menu:
                 else (255, 255, 255) if focused else (180, 180, 190)
             pygame.draw.rect(screen, border, rect, width=4 if selected or focused else 2, border_radius=12)
 
-            preview = self._fitted_preview(character_name, card_width - 16, int(card_height * 0.62))
-            if picking == "enemies":
-                # The opponents face the player's character
-                preview = pygame.transform.flip(preview, True, False)
-            preview_y = rect.top + card_height * (0.42 if picking == "enemies" else 0.48)
-            screen.blit(preview, preview.get_rect(center=(rect.centerx, preview_y)))
-            label = self.character_font.render(character_name.title(), True, (255, 255, 255))
-            label_y = rect.bottom - (58 if picking == "enemies" else 42)
-            screen.blit(label, label.get_rect(center=(rect.centerx, label_y)))
-            if picking == "enemies":
-                difficulty = self.enemy_difficulties[character_name]
-                text = self.difficulty_font.render(difficulty.label, True, difficulty.color)
-                screen.blit(text, text.get_rect(center=(rect.centerx, rect.bottom - 26)))
+            self._draw_card_contents(screen, rect, character_name, picking)
             if selected and picking is not None:
                 # Order of the pick, in the corner
                 number = self.difficulty_font.render(str(chosen.index(character_name) + 1), True, border)

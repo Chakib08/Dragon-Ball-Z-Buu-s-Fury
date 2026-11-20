@@ -1,0 +1,11 @@
+{
+  "sheet": "Graphics/dialog/portraits.png",
+  "size": 64,
+  "characters": {
+    "goku": [33, 54],
+    "vegeta": [33, 607],
+    "gohan": [33, 192],
+    "trunks": [33, 745],
+    "broly": [33, 2458]
+  }
+}
