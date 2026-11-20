@@ -15,8 +15,9 @@ import pygame
 
 from character import Character
 from combat import CombatSystem
-from map import MapManager
+from map import MAX_ALLIES, MapManager
 from net import PROTOCOL_VERSION
+from npc import HEROES
 from saiyan import Saiyan
 import settings as user_settings
 from taps import tap_position
@@ -39,17 +40,22 @@ def _tap_position(event, screen_size):
 
 
 class RemoteFighter(Character):
-    """The opponent, drawn from the snapshots its own game sends."""
+    """A fighter of the opponent's side (the other player, or one of its
+    allies in a team match), drawn from the snapshots its own game sends.
+    index: which of that side's fighters (0: the player, 1-3: its allies),
+    for the hits sent to its game."""
 
     # Share of the gap to the latest received position covered each frame
     SMOOTHING = 0.35
     # Further than this (a knockback, a late packet), jump straight there
     SNAP_DISTANCE = 48
 
-    def __init__(self, character_name, player_name, send):
+    def __init__(self, character_name, player_name, send, index=0):
         super().__init__(0, 0, character_name)
         self.player_name = player_name
-        self.bar_label = f"{player_name} ({character_name.capitalize()})"
+        self.index = index
+        self.bar_label = (f"{player_name} ({character_name.capitalize()})" if index == 0
+                          else f"{character_name.capitalize()} ({player_name})")
         self._send = send
         self.target_position = None
         self._remote_powered = False
@@ -114,6 +120,7 @@ class RemoteFighter(Character):
         """A hit landed on the opponent: its own game applies it."""
         self._send({
             "t": "hit",
+            "target": self.index,
             "damage": round(float(amount), 2),
             "source": [round(source[0], 2), round(source[1], 2)] if source else None,
             "push": round(float(push), 2),
@@ -139,15 +146,23 @@ class HitCheck:
     # Several effects can land in the same second (a punch, a ki blast...)
     MAX_HITS_PER_SECOND = 8
 
-    def __init__(self, attacker):
-        strongest = max([CombatSystem.PLAYER_ATTACK_DAMAGE, *(t.damage for t in attacker.techniques)])
-        self.max_damage = (strongest * getattr(attacker, "power", 1.0)
-                           * CombatSystem.SUPER_3_DAMAGE_MULTIPLIER * self.DAMAGE_SLACK)
-        reaches = [CombatSystem.ATTACK_RANGE + CombatSystem.body_reach(attacker) * 2]
-        for technique in attacker.techniques:
-            stats = technique.stats
-            reaches.append(stats.get("range") or stats.get("reach") or stats.get("radius") or 0)
+    def __init__(self, attackers):
+        """attackers: the opponent's fighters (the player and its allies)."""
+        if not isinstance(attackers, (list, tuple)):
+            attackers = [attackers]
+        self.max_damage = 0
+        reaches = []
+        for attacker in attackers:
+            strongest = max([CombatSystem.PLAYER_ATTACK_DAMAGE, *(t.damage for t in attacker.techniques)])
+            self.max_damage = max(self.max_damage, strongest * getattr(attacker, "power", 1.0)
+                                  * CombatSystem.SUPER_3_DAMAGE_MULTIPLIER * self.DAMAGE_SLACK)
+            reaches.append(CombatSystem.ATTACK_RANGE + CombatSystem.body_reach(attacker) * 2)
+            for technique in attacker.techniques:
+                stats = technique.stats
+                reaches.append(stats.get("range") or stats.get("reach") or stats.get("radius") or 0)
         self.max_reach = max(reaches) + self.REACH_MARGIN
+        # Each of its fighters can land hits
+        self.max_hits_per_second = self.MAX_HITS_PER_SECOND * len(attackers)
         self.recent_ms = deque()
         self.refused = 0
 
@@ -159,7 +174,7 @@ class HitCheck:
         plausible = (
             damage <= self.max_damage
             and (source is None or math.dist(source, target) <= self.max_reach)
-            and len(self.recent_ms) < self.MAX_HITS_PER_SECOND
+            and len(self.recent_ms) < self.max_hits_per_second
         )
         if plausible:
             self.recent_ms.append(now)
@@ -169,7 +184,9 @@ class HitCheck:
 
 
 class OnlineMatch:
-    """A 1v1 on the world map against a player from the lobby."""
+    """An online match on the world map against a player from the lobby:
+    1v1, or in a team match each player with the allies it chose (up to 3,
+    their AI run by its own game). Knocking out the other player wins."""
 
     SEND_INTERVAL_MS = 33
     RESULT_MS = 3500
@@ -196,13 +213,29 @@ class OnlineMatch:
         self.player.damage_taken = self.DAMAGE_TAKEN / self.player.stats.defense
         self.player.facing = facing
         self.player.face_idle()
+        names = game.menu.character_names
         character = opponent.get("character", "goku")
-        if character not in game.menu.character_names:
+        if character not in names:
             character = "goku"
-        self.opponent = RemoteFighter(character, str(opponent.get("name", "Opponent")), net.send)
+        opponent_name = str(opponent.get("name", "Opponent"))
+        self.mode = "team" if start.get("mode") == "team" else "1v1"
+        if self.mode == "team":
+            my_allies = [name for name in game.menu.selected_allies if name in names][:MAX_ALLIES]
+            their_allies = opponent.get("allies") if isinstance(opponent.get("allies"), list) else []
+            their_allies = [name for name in their_allies if name in names][:MAX_ALLIES]
+        else:
+            my_allies, their_allies = [], []
+        self.opponent = RemoteFighter(character, opponent_name, net.send)
+        # The other side: its player first, then its allies (their index in
+        # the hits and states)
+        self.opponents = [self.opponent] + [
+            RemoteFighter(name, opponent_name, net.send, index=index)
+            for index, name in enumerate(their_allies, start=1)
+        ]
         ox, oy, ofacing = self.SPAWNS[1 - slot]
-        self.opponent.place(ox, oy, ofacing)
-        self.hit_check = HitCheck(self.opponent)
+        for fighter, (dx, dy) in zip(self.opponents, ((0, 0), *MapManager.ALLY_SPOTS)):
+            fighter.place(ox + dx, oy + dy, ofacing)
+        self.hit_check = HitCheck(self.opponents)
         # The states go over UDP when the server offers it (see net.py);
         # numbered, so one arriving late never moves the opponent back
         udp = start.get("udp")
@@ -212,8 +245,12 @@ class OnlineMatch:
         self.last_state_seq = -1
 
         game.character = self.player
-        game.map_manager = MapManager(game.screen, self.player, versus=True, opponents=[self.opponent])
+        game.map_manager = MapManager(game.screen, self.player, versus=True, opponents=self.opponents,
+                                      allies=my_allies)
         game.map_manager.combat.on_technique = self._send_technique
+        # This side: the player, then its allies (run by this game's AI)
+        self.allies = [npc for npc in game.map_manager.get_map().npcs if npc.team == HEROES]
+        self.fighters = [self.player, *self.allies]
         self.result = None
         self.result_since = None
         self.last_sent_ms = -self.SEND_INTERVAL_MS
@@ -223,9 +260,13 @@ class OnlineMatch:
         self.banner_font = pygame.font.Font(None, max(48, resolution[1] // 7))
         self.info_font = pygame.font.Font(None, max(22, resolution[1] // 28))
 
-    def _send_technique(self, technique_id, direction, origin, power=None):
-        """Show the opponent the technique just released (its own sprites)."""
-        message = {"t": "tech", "id": technique_id, "dir": direction, "origin": origin}
+    def _send_technique(self, user, technique_id, direction, origin, power=None):
+        """Show the opponent the technique the player or an ally just
+        released (with its own sprites)."""
+        if user not in self.fighters:
+            return
+        message = {"t": "tech", "id": technique_id, "dir": direction, "origin": origin,
+                   "by": self.fighters.index(user)}
         if power is not None:
             message["power"] = round(power, 3)
         self.net.send(message)
@@ -246,7 +287,17 @@ class OnlineMatch:
                         continue  # an older state, overtaken by a newer one
                     self.last_state_seq = seq
                 self.opponent.apply_snapshot(message)
+                allies = message.get("allies")
+                for fighter, state in zip(self.opponents[1:], allies if isinstance(allies, list) else []):
+                    if isinstance(state, dict):
+                        fighter.apply_snapshot(state)
             elif kind == "hit" and self.result is None and self.player.hp > 0:
+                target = message.get("target", 0)
+                if not isinstance(target, int) or not 0 <= target < len(self.fighters):
+                    continue
+                fighter = self.fighters[target]
+                if fighter.hp <= 0:
+                    continue
                 source = message.get("source")
                 try:
                     damage = max(0.0, _number(message.get("damage", 0), 0.0))
@@ -256,8 +307,8 @@ class OnlineMatch:
                     continue
                 if source is not None and None in source:
                     source = None
-                if self.hit_check.allows(damage, source, self.player.feet.center, pygame.time.get_ticks()):
-                    self.player.take_damage(damage, source, push)
+                if self.hit_check.allows(damage, source, fighter.feet.center, pygame.time.get_ticks()):
+                    fighter.take_damage(damage, source, push)
             elif kind == "tech":
                 try:
                     origin = (_number(message["origin"][0]), _number(message["origin"][1]))
@@ -265,8 +316,10 @@ class OnlineMatch:
                         continue
                     power = message.get("power")
                     power = None if power is None else max(0.0, min(1.0, _number(power, 1.0)))
-                    combat.show_opponent_technique(self.opponent, str(message["id"]),
-                                                   str(message["dir"]), origin, power)
+                    by = message.get("by", 0)
+                    user = self.opponents[by] if isinstance(by, int) and 0 <= by < len(self.opponents) \
+                        else self.opponent
+                    combat.show_opponent_technique(user, str(message["id"]), str(message["dir"]), origin, power)
                 except (KeyError, TypeError, ValueError, IndexError):
                     pass
             elif kind == "ko":
@@ -283,7 +336,10 @@ class OnlineMatch:
         if now - self.last_sent_ms >= self.SEND_INTERVAL_MS:
             self.last_sent_ms = now
             self.state_seq += 1
-            self.net.send_state({"t": "state", "seq": self.state_seq, **self.player.snapshot()})
+            state = {"t": "state", "seq": self.state_seq, **self.player.snapshot()}
+            if self.allies:
+                state["allies"] = [ally.snapshot() for ally in self.allies]
+            self.net.send_state(state)
         if self.player.hp <= 0 and self.result is None:
             self.net.send({"t": "ko"})
             self._finish("lose")
@@ -313,7 +369,8 @@ class OnlineMatch:
 
 
 class LobbyScreen:
-    """Connect to the server, list the rooms, create or join one."""
+    """Connect to the server, list the rooms, create one (1v1, or team: each
+    player with the allies it chose) or join one."""
 
     BACKGROUND = (12, 14, 24)
     PANEL = (25, 30, 45)
@@ -325,15 +382,17 @@ class LobbyScreen:
     ACCENT = (255, 220, 90)
     MAX_ROOMS_SHOWN = 5
 
-    def __init__(self, net, screen_size, character, background=None):
+    def __init__(self, net, screen_size, character, background=None, name=None, allies=()):
         self.net = net
         self.screen_size = screen_size
         self.character = character
+        self.allies = list(allies)[:MAX_ALLIES]
         self.background = background
         self.settings = user_settings.load()
-        self.name = f"{character.capitalize()} {random.randint(100, 999)}"
+        self.name = (name or "").strip() or f"{character.capitalize()} {random.randint(100, 999)}"
         self.rooms = []
         self.room_id = None  # our room while waiting in it
+        self.room_mode = "1v1"
         self.notice = ""
         self.editing = None  # text being typed for the server address
         self.buttons = {}
@@ -382,7 +441,7 @@ class LobbyScreen:
                     continue
                 self._said_hello = True
                 self.net.send({"t": "hello", "name": self.name, "character": self.character,
-                               "version": PROTOCOL_VERSION})
+                               "allies": self.allies, "version": PROTOCOL_VERSION})
             elif kind == "rooms":
                 self.rooms = [room for room in message.get("rooms", []) if isinstance(room, dict)]
             elif kind == "waiting":
@@ -395,9 +454,11 @@ class LobbyScreen:
         return None
 
     # ---- Actions --------------------------------------------------------------------
-    def create_room(self):
+    def create_room(self, mode="1v1"):
+        """mode: "1v1", or "team" (each player with its allies)."""
         if self.net.connected and self.room_id is None:
-            self.net.send({"t": "create"})
+            self.net.send({"t": "create", "mode": mode})
+            self.room_mode = mode
 
     def join_room(self, room_id):
         if self.net.connected and self.room_id is None:
@@ -464,7 +525,9 @@ class LobbyScreen:
                     return None
                 return "back"
             if event.key == pygame.K_c:
-                self.create_room()
+                self.create_room("1v1")
+            elif event.key == pygame.K_t:
+                self.create_room("team")
             elif event.key == pygame.K_r:
                 if self.net.status == "error":
                     self.connect()
@@ -493,7 +556,9 @@ class LobbyScreen:
         if name == "back":
             return "back"
         if name == "create":
-            self.create_room()
+            self.create_room("1v1")
+        elif name == "create_team":
+            self.create_room("team")
         elif name == "cancel":
             self.cancel_waiting()
         elif name == "refresh":
@@ -506,6 +571,23 @@ class LobbyScreen:
         return None
 
     # ---- Drawing --------------------------------------------------------------------
+    def team_label(self):
+        """The player's character, and its allies (used in team matches)."""
+        team = self.character.capitalize()
+        if self.allies:
+            team += " + " + ", ".join(name.capitalize() for name in self.allies)
+        return team
+
+    @staticmethod
+    def room_label(room):
+        host = str(room.get("host", "?"))
+        character = str(room.get("character", "?")).capitalize()
+        if room.get("mode") == "team":
+            allies = room.get("allies") if isinstance(room.get("allies"), list) else []
+            team = " + ".join([character, *(str(name).capitalize() for name in allies)])
+            return f"Team: {host} ({team})"
+        return f"1v1: {host} ({character})"
+
     def _button(self, screen, name, rect, label, color):
         pygame.draw.rect(screen, color, rect, border_radius=10)
         pygame.draw.rect(screen, (235, 235, 235), rect, 2, border_radius=10)
@@ -530,7 +612,7 @@ class LobbyScreen:
 
         line = self.font.get_linesize()
         y = panel.top + line * 0.5
-        title = self.title_font.render("ONLINE 1V1", True, self.ACCENT)
+        title = self.title_font.render("ONLINE", True, self.ACCENT)
         screen.blit(title, title.get_rect(midtop=(panel.centerx, y)))
         y += title.get_height() + line * 0.4
 
@@ -546,7 +628,7 @@ class LobbyScreen:
 
         status = {
             "connecting": ("Connecting...", self.DIM),
-            "connected": (f"Connected as {self.name}", (140, 230, 140)),
+            "connected": (f"Connected as {self.name} ({self.team_label()})", (140, 230, 140)),
             "error": (self.net.error or "Not connected", (255, 140, 120)),
             "offline": ("Not connected", self.DIM),
         }[self.net.status]
@@ -570,7 +652,8 @@ class LobbyScreen:
             return
 
         if self.room_id is not None:
-            text = self.font.render(f"Room {self.room_id}: waiting for an opponent...", True, self.TEXT)
+            mode = "team match" if self.room_mode == "team" else "1v1"
+            text = self.font.render(f"Room {self.room_id} ({mode}): waiting for an opponent...", True, self.TEXT)
             screen.blit(text, text.get_rect(midtop=(panel.centerx, y + line)))
             rect = pygame.Rect(0, 0, panel.width / 2, button_height)
             rect.midtop = (panel.centerx, bottom_y)
@@ -589,20 +672,22 @@ class LobbyScreen:
                     break
                 rect = pygame.Rect(panel.left + line, y, panel.width - line * 2, row_height)
                 pygame.draw.rect(screen, self.ROOM, rect, border_radius=8)
-                label = (f"{index + 1}. Room {room.get('id')}: {room.get('host', '?')} "
-                         f"({str(room.get('character', '?')).capitalize()})  -  Join")
+                label = f"{index + 1}. {self.room_label(room)}  -  Join"
                 text = self.font.render(label, True, self.TEXT)
                 screen.blit(text, text.get_rect(midleft=(rect.left + line / 2, rect.centery)))
                 self.room_buttons.append((room.get("id"), rect))
                 y += row_height + line * 0.3
 
-        third = (panel.width - line * 4) / 3
+        quarter = (panel.width - line * 5) / 4
         left = panel.left + line
-        create_label = "Create room" if self.net.connected else "-"
-        self._button(screen, "create", pygame.Rect(left, bottom_y, third, button_height), create_label,
-                     self.BUTTON if self.net.connected else self.BUTTON_ALT)
+        connected = self.net.connected
+        colour = self.BUTTON if connected else self.BUTTON_ALT
+        self._button(screen, "create", pygame.Rect(left, bottom_y, quarter, button_height),
+                     "New 1v1" if connected else "-", colour)
+        self._button(screen, "create_team", pygame.Rect(left + quarter + line, bottom_y, quarter, button_height),
+                     "New team" if connected else "-", colour)
         retry = self.net.status == "error"
-        self._button(screen, "refresh", pygame.Rect(left + third + line, bottom_y, third, button_height),
+        self._button(screen, "refresh", pygame.Rect(left + (quarter + line) * 2, bottom_y, quarter, button_height),
                      "Retry" if retry else "Refresh", self.BUTTON_ALT)
-        self._button(screen, "back", pygame.Rect(left + (third + line) * 2, bottom_y, third, button_height),
+        self._button(screen, "back", pygame.Rect(left + (quarter + line) * 3, bottom_y, quarter, button_height),
                      "Back", self.BUTTON_ALT)

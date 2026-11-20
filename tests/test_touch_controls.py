@@ -434,7 +434,7 @@ class TouchControlsTests(unittest.TestCase):
 
     def test_arcade_online_and_options_open_their_screens(self):
         for item, state, online in (("arcade", State.CHARACTER_SELECT, False),
-                                    ("online", State.CHARACTER_SELECT, True),
+                                    ("online", State.NAME_ENTRY, True),
                                     ("options", State.OPTIONS, False)):
             with self.subTest(item=item):
                 menu, run = self.main_menu()
@@ -481,14 +481,43 @@ class TouchControlsTests(unittest.TestCase):
             found = re.search(spec.get("app", "version.regex"), file.read())
         self.assertEqual(found.group(1), __version__)
 
-    def test_online_skips_the_opponent_choice(self):
+    def test_online_asks_the_name_then_the_character_and_allies_but_no_opponents(self):
         resolution = (1200, 1000)
         screen = pygame.Surface(resolution)
-        menu = Menu(resolution)
-        menu.open_online()
-        menu.launch_menu(screen, resolution, [pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)])
+        key = lambda code: pygame.event.Event(pygame.KEYDOWN, key=code)
+        saved = {}
+        with patch("menu.user_settings.load", return_value={}), \
+                patch("menu.user_settings.save", side_effect=saved.update):
+            menu = Menu(resolution)
+            menu.open_online()
+            self.assertEqual(menu.state, State.NAME_ENTRY)
+            typed = [pygame.event.Event(pygame.TEXTINPUT, text=part) for part in ("Chak", "ib!", "\x07")]
+            menu.launch_menu(screen, resolution, typed + [key(pygame.K_BACKSPACE), key(pygame.K_RETURN)])
+            self.assertEqual(menu.player_name, "Chakib")
+            self.assertEqual(saved["player_name"], "Chakib")  # remembered for next time
+            self.assertEqual(menu.state, State.CHARACTER_SELECT)
+            menu.launch_menu(screen, resolution, [key(pygame.K_RETURN)])  # Goku
+            self.assertEqual(menu.state, State.ALLY_SELECT)
+            menu.focus = menu.character_names.index("vegeta")
+            menu.launch_menu(screen, resolution, [key(pygame.K_SPACE), key(pygame.K_RETURN)])
         self.assertTrue(menu.isPlaying)
         self.assertTrue(menu.online)
+        self.assertEqual(menu.selected_allies, ["vegeta"])
+
+        # Back goes the same way in reverse
+        menu.isPlaying = False
+        for expected in (State.CHARACTER_SELECT, State.NAME_ENTRY, State.START):
+            menu.go_back()
+            self.assertEqual(menu.state, expected)
+        self.assertFalse(menu.online)
+
+    def test_an_empty_name_becomes_the_characters(self):
+        with patch("menu.user_settings.load", return_value={}), patch("menu.user_settings.save"):
+            menu = Menu((1200, 1000))
+            menu.open_online()
+            menu.player_name = "   "
+            menu.confirm_name()
+        self.assertEqual(menu.player_name, "Goku")
 
     def test_opponent_screen_shows_each_enemys_difficulty(self):
         resolution = (1200, 1000)

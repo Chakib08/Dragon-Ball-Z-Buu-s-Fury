@@ -328,7 +328,8 @@ class Game:
         self.menu.isPlaying = False
         self.menu.online = False
         self.lobby = LobbyScreen(
-            self.net, self.resolution, self.menu.selected_character, self.menu.menu_image
+            self.net, self.resolution, self.menu.selected_character, self.menu.menu_image,
+            name=self.menu.player_name, allies=self.menu.selected_allies,
         )
         self.scene = "lobby"
 

@@ -22,7 +22,9 @@ from result_screen import ResultScreen
 FIGHT_KEYS = {"menu": pygame.K_ESCAPE}
 MENU_KEYS = {"up": pygame.K_UP, "down": pygame.K_DOWN, "left": pygame.K_LEFT, "right": pygame.K_RIGHT,
              "a": pygame.K_RETURN, "menu": pygame.K_RETURN, "b": pygame.K_ESCAPE, "x": pygame.K_SPACE}
-LOBBY_KEYS = {**MENU_KEYS, "a": pygame.K_1, "b": pygame.K_ESCAPE, "x": pygame.K_c, "y": pygame.K_r}
+# X: new 1v1 room, RB: new team room, Y: refresh, A: join the first room
+LOBBY_KEYS = {**MENU_KEYS, "a": pygame.K_1, "b": pygame.K_ESCAPE, "x": pygame.K_c, "rb": pygame.K_t,
+              "y": pygame.K_r}
 RESULT_KEYS = {"a": pygame.K_RETURN, "b": pygame.K_ESCAPE, "menu": pygame.K_RETURN}
 # Pause (Quit / Main menu / No): no button quits by accident
 PAUSE_KEYS = {"x": pygame.K_RETURN, "y": pygame.K_m, "b": pygame.K_ESCAPE, "menu": pygame.K_ESCAPE}

@@ -56,8 +56,9 @@ class CombatSystem:
         self.last_technique_ms = {}
         self.effects = []
         self.new_effects = []
-        # Called with (technique id, direction, origin) when the player
-        # releases one (online play shows it to the opponent)
+        # Called with (user, technique id, direction, origin, power) when the
+        # player or one of his allies releases one (online play shows it to
+        # the opponent)
         self.on_technique = None
         # A technique being charged (button held), see start_special
         self.charge = None
@@ -335,9 +336,7 @@ class CombatSystem:
 
     def _release(self, technique, direction, power=None):
         """The player's pose reached its firing frame (see _release_by)."""
-        effect = self._release_by(self.player, technique, direction, power)
-        if effect is not None and self.on_technique is not None:
-            self.on_technique(technique.id, direction, effect_origin(effect, self.player, direction), power)
+        self._release_by(self.player, technique, direction, power)
 
     def _release_by(self, user, technique, direction, power=None):
         """The pose reached its firing frame: the effect leaves user's hands,
@@ -356,18 +355,21 @@ class CombatSystem:
         if effect is not None:
             effect.team = user.team
             self.add_effect(effect)
+            if self.on_technique is not None and user.team == HEROES:
+                self.on_technique(user, technique.id, direction, effect_origin(effect, user, direction), power)
         return effect
 
     def show_opponent_technique(self, opponent, technique_id, direction, origin, power=None):
-        """Draw a technique the online opponent used. It stops on the player
-        but does no damage here: the opponent's game sends the hit."""
+        """Draw a technique the online opponent (or one of its allies) used.
+        It stops on the player's side but does no damage here: the
+        opponent's game sends the hit."""
         technique = next((t for t in opponent.techniques if t.id == technique_id), None)
         if technique is None or technique.kind == "teleport" or direction not in DIRECTION_VECTORS:
             return
         effect = build_effect(technique, technique.form_for(opponent), opponent, direction,
                               0, None, self.add_effect, origin=origin, power=power)
         if effect is not None:
-            effect.hits_player = True
+            effect.from_opponent = True
             self.add_effect(effect)
 
     def add_effect(self, effect):
@@ -384,8 +386,8 @@ class CombatSystem:
 
     def _update_effects(self):
         for effect in tuple(self.effects):
-            if getattr(effect, "hits_player", False):
-                victims = [self.player]  # drawn for the online opponent
+            if getattr(effect, "from_opponent", False):
+                victims = self.heroes  # drawn for the online opponent
             elif getattr(effect, "team", HEROES) == HEROES:
                 victims = self.targets
             else:

@@ -19,11 +19,13 @@ Usage:
 Open the port for TCP and UDP (a box's port forwarding, a firewall).
 
 Client -> server
-    {"t": "hello", "name": str, "character": str, "version": int}
+    {"t": "hello", "name": str, "character": str, "version": int,
+     "allies": [str]}                   up to 3, for team matches
                                         a game of another version gets an
                                         error and may not create or join
     {"t": "list"}                       ask for the room list
-    {"t": "create"}                     open a room and wait in it
+    {"t": "create", "mode": "1v1" | "team"}   open a room and wait in it (in a
+                                        team match each player brings its allies)
     {"t": "join", "room": int}          join a waiting room
     {"t": "leave"}                      leave the room (cancel or quit a match)
     {"t": "state" | "hit" | "tech" | "ko", ...}   relayed to the opponent
@@ -35,10 +37,10 @@ Client -> server, UDP (the token of its "start" message in "tok")
 
 Server -> client
     {"t": "welcome", "id": int, "version": int}
-    {"t": "rooms", "rooms": [{"id", "host", "character"}]}
+    {"t": "rooms", "rooms": [{"id", "host", "character", "mode", "allies"}]}
     {"t": "waiting", "room": int}       room created, waiting for an opponent
-    {"t": "start", "room": int, "slot": 0 | 1,
-     "opponent": {"name", "character"},
+    {"t": "start", "room": int, "slot": 0 | 1, "mode": "1v1" | "team",
+     "opponent": {"name", "character", "allies"},   (allies: team matches)
      "udp": {"token": str, "port": int}}   (no "udp" if UDP is not open)
     {"t": "opponent_left"}
     {"t": "error", "message": str}
@@ -53,7 +55,8 @@ import logging
 import secrets
 import time
 
-PROTOCOL_VERSION = 1
+# 2: names, team matches (allies in the states, hits for any fighter)
+PROTOCOL_VERSION = 2
 DEFAULT_PORT = 5050
 # Messages forwarded as they are from one player of a match to the other
 RELAYED = {"state", "hit", "tech", "ko"}
@@ -63,6 +66,8 @@ MAX_LINE = 64 * 1024
 # instead of the server keeping its messages forever
 MAX_PENDING_BYTES = 256 * 1024
 NAME_LENGTH = 24
+MAX_ALLIES = 3
+MODES = ("1v1", "team")
 # A game sends about 30 states a second plus a few hits and techniques: a
 # client sending far more is flooding, and what it sends over this pace
 # (with room for bursts) is dropped
@@ -80,6 +85,7 @@ class Player:
         self.writer = writer
         self.name = f"Player {player_id}"
         self.character = "goku"
+        self.allies = []
         self.room = None
         # Games that speak another version may not play (see "hello")
         self.compatible = True
@@ -113,9 +119,10 @@ class Player:
 
 
 class Room:
-    def __init__(self, room_id, host):
+    def __init__(self, room_id, host, mode="1v1"):
         self.id = room_id
         self.players = [host]
+        self.mode = mode if mode in MODES else "1v1"
 
     @property
     def waiting(self):
@@ -176,6 +183,9 @@ class LobbyServer:
         if kind == "hello":
             player.name = str(message.get("name") or player.name)[:NAME_LENGTH]
             player.character = str(message.get("character") or player.character)[:NAME_LENGTH]
+            allies = message.get("allies")
+            player.allies = [str(name)[:NAME_LENGTH] for name in allies[:MAX_ALLIES]] \
+                if isinstance(allies, list) else []
             # Games from before the handshake say nothing: they speak 1
             version = message.get("version", 1)
             player.compatible = version == PROTOCOL_VERSION
@@ -188,7 +198,7 @@ class LobbyServer:
         elif kind == "list":
             player.send(self.room_list())
         elif kind == "create":
-            self.create_room(player)
+            self.create_room(player, message.get("mode"))
         elif kind == "join":
             self.join_room(player, message.get("room"))
         elif kind == "leave":
@@ -236,7 +246,8 @@ class LobbyServer:
         return {
             "t": "rooms",
             "rooms": [
-                {"id": room.id, "host": room.players[0].name, "character": room.players[0].character}
+                {"id": room.id, "host": room.players[0].name, "character": room.players[0].character,
+                 "mode": room.mode, "allies": room.players[0].allies if room.mode == "team" else []}
                 for room in self.rooms.values()
                 if room.waiting
             ],
@@ -249,9 +260,9 @@ class LobbyServer:
             if player.room is None:
                 player.send(rooms)
 
-    def create_room(self, player):
+    def create_room(self, player, mode=None):
         self.leave_room(player)
-        room = Room(next(self._room_ids), player)
+        room = Room(next(self._room_ids), player, mode)
         self.rooms[room.id] = room
         player.room = room
         player.send({"t": "waiting", "room": room.id})
@@ -274,7 +285,9 @@ class LobbyServer:
                 "t": "start",
                 "room": room.id,
                 "slot": slot,
-                "opponent": {"name": opponent.name, "character": opponent.character},
+                "mode": room.mode,
+                "opponent": {"name": opponent.name, "character": opponent.character,
+                             "allies": opponent.allies if room.mode == "team" else []},
             }
             if self.udp is not None:
                 self._end_udp(member)

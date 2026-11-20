@@ -68,11 +68,12 @@ class LobbyServerTests(unittest.TestCase):
             client.close()
         self.server.stop()
 
-    def client(self, name, character):
+    def client(self, name, character, allies=()):
         client = NetClient()
         client.connect("127.0.0.1", self.server.port)
         wait_for(client, "welcome")
-        client.send({"t": "hello", "name": name, "character": character})
+        client.send({"t": "hello", "name": name, "character": character, "allies": list(allies),
+                     "version": lobby_server.PROTOCOL_VERSION})
         wait_for(client, "rooms")
         self.clients.append(client)
         return client
@@ -84,13 +85,14 @@ class LobbyServerTests(unittest.TestCase):
         host.send({"t": "create"})
         room = wait_for(host, "waiting")["room"]
         rooms = wait_for(guest, "rooms", where=lambda message: message["rooms"])["rooms"]
-        self.assertEqual(rooms, [{"id": room, "host": "Alice", "character": "goku"}])
+        self.assertEqual(rooms, [{"id": room, "host": "Alice", "character": "goku", "mode": "1v1", "allies": []}])
 
         guest.send({"t": "join", "room": room})
         host_start, guest_start = wait_for(host, "start"), wait_for(guest, "start")
         self.assertEqual((host_start["slot"], guest_start["slot"]), (0, 1))
-        self.assertEqual(host_start["opponent"], {"name": "Bob", "character": "vegeta"})
-        self.assertEqual(guest_start["opponent"], {"name": "Alice", "character": "goku"})
+        self.assertEqual(host_start["opponent"], {"name": "Bob", "character": "vegeta", "allies": []})
+        self.assertEqual(host_start["mode"], "1v1")
+        self.assertEqual(guest_start["opponent"], {"name": "Alice", "character": "goku", "allies": []})
 
         # Match messages go to the other player only
         host.send({"t": "hit", "damage": 15, "source": [1, 2]})
@@ -209,6 +211,29 @@ class LobbyServerTests(unittest.TestCase):
         time.sleep(0.4)
         guest.send_state({"t": "state", "seq": 1})
         self.assertFalse(guest.udp_ready)
+
+    def test_a_team_room_brings_each_players_allies(self):
+        host = self.client("Alice", "goku", ["gohan", "trunks"])
+        guest = self.client("Bob", "vegeta", ["broly"])
+        host.send({"t": "create", "mode": "team"})
+        room = wait_for(host, "waiting")["room"]
+        rooms = wait_for(guest, "rooms", where=lambda message: message["rooms"])["rooms"]
+        self.assertEqual(rooms[0]["mode"], "team")
+        self.assertEqual(rooms[0]["allies"], ["gohan", "trunks"])
+        guest.send({"t": "join", "room": room})
+        host_start, guest_start = wait_for(host, "start"), wait_for(guest, "start")
+        self.assertEqual((host_start["mode"], guest_start["mode"]), ("team", "team"))
+        self.assertEqual(host_start["opponent"]["allies"], ["broly"])
+        self.assertEqual(guest_start["opponent"]["allies"], ["gohan", "trunks"])
+
+    def test_a_1v1_room_says_nothing_of_the_allies_and_bad_modes_are_1v1(self):
+        host = self.client("Alice", "goku", ["gohan"])
+        guest = self.client("Bob", "vegeta", ["broly"])
+        host.send({"t": "create", "mode": "free for all"})
+        room = wait_for(host, "waiting")["room"]
+        guest.send({"t": "join", "room": room})
+        start = wait_for(guest, "start")
+        self.assertEqual((start["mode"], start["opponent"]["allies"]), ("1v1", []))
 
     def test_unreachable_server_reports_an_error(self):
         client = NetClient()

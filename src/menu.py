@@ -9,6 +9,7 @@ from difficulty import enemy_profile
 from taps import tap_position
 from version import __version__
 from map import MAX_ALLIES, MAX_ENEMIES
+import settings as user_settings
 
 GAME_TITLE = "DRAGON BALL Z"
 GAME_SUBTITLE = "TRUNKS HOPE"
@@ -21,6 +22,8 @@ class State(Enum):
     CHARACTER_SELECT = 3
     ENEMY_SELECT = 4
     ALLY_SELECT = 5
+    # Online: the player's name, before the character
+    NAME_ENTRY = 6
 
 class Menu:
     # The main menu's entries: id, label, and the line shown under the list
@@ -32,6 +35,7 @@ class Menu:
         ("options", "Options", "Controls and settings"),
     )
     GOLD = (255, 205, 60)
+    NAME_LENGTH = 16
     NOTICE_MS = 2600
     # Show the controller's buttons in the hints (set by the game)
     gamepad_hints = False
@@ -50,6 +54,10 @@ class Menu:
         self.state = State.START
         self.character_names = ("goku", "vegeta", "gohan", "trunks", "broly")
         self.selected_character = "goku"
+        # The name other players see online (saved between sessions)
+        self.player_name = str(user_settings.load().get("player_name") or "")[:self.NAME_LENGTH]
+        self.name_ok_rect = None
+        self.name_field_rect = None
         # The team of the story mode, chosen after the character: his allies
         # (none to fight alone) and the enemies (at least one)
         self.selected_allies = []
@@ -100,6 +108,31 @@ class Menu:
         
 
     def launch_menu(self, screen: pygame.Surface, resolution: tuple, events: List[pygame.event.Event]) -> None:
+        if self.state == State.NAME_ENTRY:
+            self._draw_name_entry(screen, resolution)
+            for event in events:
+                if event.type == pygame.TEXTINPUT:
+                    typed = "".join(ch for ch in event.text if ch.isprintable())
+                    self.player_name = (self.player_name + typed)[:self.NAME_LENGTH]
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_BACKSPACE:
+                        self.player_name = self.player_name[:-1]
+                    elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        self.confirm_name()
+                    elif event.key in (pygame.K_ESCAPE, pygame.K_AC_BACK):
+                        self.go_back()
+                elif self._is_tap(event, resolution):
+                    position = self._event_position(event, resolution)
+                    if self.back_rect is not None and self.back_rect.collidepoint(position):
+                        self.go_back()
+                    elif self.name_ok_rect is not None and self.name_ok_rect.collidepoint(position):
+                        self.confirm_name()
+                    elif self.name_field_rect is not None and self.name_field_rect.collidepoint(position):
+                        pygame.key.start_text_input()  # the phone's keyboard again
+                if self.state != State.NAME_ENTRY:
+                    break
+            return
+
         if self.state == State.OPTIONS:
             self._draw_options(screen, resolution)
             for event in events:
@@ -348,9 +381,50 @@ class Menu:
         screen.blit(self._version_label, (margin, resolution[1] - margin - self._version_label.get_height()))
 
     def open_online(self):
-        """Pick a character, then go to the online lobby."""
+        """Online: the player's name, the character, the allies (for team
+        matches), then the lobby."""
         self.online = True
+        self.state = State.NAME_ENTRY
+        pygame.key.start_text_input()  # shows the keyboard on a phone
+
+    def confirm_name(self):
+        self.player_name = self.player_name.strip()[:self.NAME_LENGTH] or self.selected_character.capitalize()
+        settings = user_settings.load()
+        if settings.get("player_name") != self.player_name:
+            settings["player_name"] = self.player_name
+            user_settings.save(settings)
+        pygame.key.stop_text_input()
         self.state = State.CHARACTER_SELECT
+
+    def _draw_name_entry(self, screen, resolution):
+        screen.blit(self.menu_image, (0, 0))
+        width, height = resolution
+        title = self.character_title_font.render("Your name", True, (255, 230, 120))
+        screen.blit(title, title.get_rect(center=(width / 2, height * 0.26)))
+        under = self.difficulty_font.render("What the other players see online", True, (220, 220, 230))
+        screen.blit(under, under.get_rect(center=(width / 2, height * 0.26 + title.get_height())))
+        field = pygame.Rect(0, 0, min(width - 80, 520), self.character_font.get_linesize() + 24)
+        field.center = (width / 2, height * 0.46)
+        pygame.draw.rect(screen, (245, 245, 250), field, border_radius=10)
+        pygame.draw.rect(screen, self.GOLD, field, 3, border_radius=10)
+        caret = "|" if (pygame.time.get_ticks() // 500) % 2 == 0 else " "
+        shown = self.player_name or ""
+        text = self.character_font.render(shown + caret, True, (20, 20, 30))
+        screen.blit(text, text.get_rect(midleft=(field.left + 16, field.centery)))
+        if not shown:
+            placeholder = self.character_font.render(self.selected_character.capitalize(), True, (160, 160, 170))
+            screen.blit(placeholder, placeholder.get_rect(midleft=(field.left + 16 + text.get_width(), field.centery)))
+        self.name_field_rect = field
+        label = self.button_font.render("OK", True, (255, 255, 255))
+        self.name_ok_rect = label.get_rect(center=(width / 2, field.bottom + height * 0.1)).inflate(80, 18)
+        pygame.draw.rect(screen, (40, 110, 60), self.name_ok_rect, border_radius=10)
+        pygame.draw.rect(screen, (245, 245, 245), self.name_ok_rect, 2, border_radius=10)
+        screen.blit(label, label.get_rect(center=self.name_ok_rect.center))
+        hint = ("A: OK   B: back" if self.gamepad_hints
+                else "Type your name, then Enter or OK  (Esc: back)")
+        instructions = self.character_font.render(hint, True, (255, 255, 255))
+        screen.blit(instructions, instructions.get_rect(center=(width / 2, height * 0.85)))
+        self._draw_back_button(screen, resolution)
 
     def go_back(self):
         """One screen back (Esc or the Back button): opponents -> allies ->
@@ -359,7 +433,12 @@ class Menu:
             self.state = State.ALLY_SELECT
         elif self.state == State.ALLY_SELECT:
             self.state = State.CHARACTER_SELECT
+        elif self.state == State.CHARACTER_SELECT and self.online:
+            self.state = State.NAME_ENTRY
+            pygame.key.start_text_input()
         else:
+            if self.state == State.NAME_ENTRY:
+                pygame.key.stop_text_input()
             self.state = State.START
             self.online = False
 
@@ -388,17 +467,14 @@ class Menu:
         return None
 
     def _choose_character(self, character_name):
-        """The player chose his character: then his allies, except online
-        where the opponent is another player."""
+        """The player chose his character: then his allies (online: for
+        team matches)."""
         self.selected_character = character_name
         # He cannot also be his own ally
         if character_name in self.selected_allies:
             self.selected_allies.remove(character_name)
-        if self.online:
-            self.isPlaying = True
-        else:
-            self.focus = self.character_names.index(character_name)
-            self.state = State.ALLY_SELECT
+        self.focus = self.character_names.index(character_name)
+        self.state = State.ALLY_SELECT
 
     def _toggle(self, character_name, enemies):
         """Pick or unpick a card. Past the most a side can have, the first
@@ -417,8 +493,11 @@ class Menu:
                 chosen.pop(0)
 
     def _continue(self, enemies):
-        """Allies chosen (or none): the enemies. Enemies chosen: fight."""
-        if not enemies:
+        """Allies chosen (or none): the enemies (online: the lobby). Enemies
+        chosen: fight."""
+        if not enemies and self.online:
+            self.isPlaying = True
+        elif not enemies:
             self.focus = self.character_names.index(self.selected_enemy or self.character_names[0])
             self.state = State.ENEMY_SELECT
         elif self.selected_enemies:
@@ -446,6 +525,7 @@ class Menu:
         None: "Choose your character",
         "allies": "Choose your allies (optional)",
         "enemies": "Choose your opponents",
+        "online allies": "Your allies for team matches (optional)",
     }
 
     def _draw_character_select(self, screen, resolution, picking=None):
@@ -453,7 +533,8 @@ class Menu:
         character, "allies" or "enemies" to pick several (with a button to
         go on)."""
         screen.blit(self.menu_image, (0, 0))
-        title = self.character_title_font.render(self.SCREEN_TITLES[picking], True, (255, 230, 120))
+        title_key = "online allies" if picking == "allies" and self.online else picking
+        title = self.character_title_font.render(self.SCREEN_TITLES[title_key], True, (255, 230, 120))
         screen.blit(title, title.get_rect(center=(resolution[0] / 2, resolution[1] * 0.22)))
 
         card_width = min(220, resolution[0] // (len(self.character_names) + 1))
@@ -515,7 +596,9 @@ class Menu:
             limit = MAX_ALLIES if picking == "allies" else MAX_ENEMIES
             hint = (f"X: pick (up to {limit})   A: go on   B: back" if self.gamepad_hints
                     else f"Tap or Space to pick (up to {limit}), Enter to go on, Esc: back")
-            if picking == "allies":
+            if picking == "allies" and self.online:
+                label = "To the lobby"
+            elif picking == "allies":
                 label = "Next" if chosen else "Fight alone"
             else:
                 label = "Fight!" if chosen else "Pick at least one"

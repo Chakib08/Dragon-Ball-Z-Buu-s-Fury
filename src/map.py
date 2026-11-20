@@ -147,10 +147,10 @@ class MapManager:
 
     def __init__(self, screen, character, default_map="map", versus=False, opponents=(),
                  enemies=(DEFAULT_ENEMY,), allies=()) -> None:
-        """versus: an online match on this map, without NPCs or doors, the
-        opponents (remote players) drawn alongside the player. enemies: the
-        characters the player fights on the world map; allies: the ones who
-        fight on his side."""
+        """versus: an online match on this map, without enemies or doors, the
+        opponents (the remote player and its allies) drawn alongside the
+        player. enemies: the characters the player fights on the world map;
+        allies: the ones who fight on his side (online too)."""
         self.screen = screen
         self.character = character
         self.versus = versus
@@ -213,7 +213,10 @@ class MapManager:
             for obj in tmx_data.objects
             if obj.type == "collision"
         ]
-        npcs = definition.make_npcs() if definition.make_npcs and not self.versus else []
+        if self.versus:
+            npcs = _world_npcs((), self.allies)  # the player's allies only
+        else:
+            npcs = definition.make_npcs() if definition.make_npcs else []
         portals = [] if self.versus else definition.portals
         group = CharacterGroup(map_layer=map_layer, default_layer=1)
         group.add(self.character, *npcs, *self.opponents)
