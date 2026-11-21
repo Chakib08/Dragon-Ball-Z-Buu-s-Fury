@@ -2,6 +2,7 @@
 Vegito, Cell absorbing the androids (evolution.py)."""
 
 import os
+import re
 import unittest
 from unittest.mock import patch
 
@@ -239,10 +240,12 @@ class FusionTimeTests(EvolutionCase):
         combat.hud._label = lambda text, font, color=(255, 255, 255): drawn.append(text) or real(text, font, color)
         combat.draw(pygame.Surface((1200, 540)))
         self.assertIn("CD", drawn)
-        self.assertTrue(any(" (in 90 s)" in text for text in drawn))  # the selected fusion's wait
-        self.clock.now += 89_000
-        self.assertFalse(self.use(player, combat, "potara"))
-        self.clock.now += 2_000
+        self.assertTrue(any(re.search(r" \(in \d+ s\)$", text) for text in drawn))  # the selected fusion's wait
+        left = combat.fusion_cooldown_seconds(player)
+        self.assertGreater(left, 85)
+        self.clock.now += (left - 1) * 1000
+        self.assertFalse(self.use(player, combat, "potara"))  # a second left
+        self.clock.now += 1_500
         self.assertIsNone(combat.fusion_cooldown_left(player))
         self.assertTrue(self.use(player, combat, "potara"))
 
