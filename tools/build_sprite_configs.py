@@ -354,6 +354,12 @@ VEGITO_FX = f"{EFFECTS}/vegito_fx.gif"
 GOTENKS_FX = f"{EFFECTS}/gotenks_fx.gif"
 BUU_FX = f"{EFFECTS}/buu_fx.gif"
 BF_BLUE = (13, 107, 247)
+# Vegito's second effects sheet (its own transparency), drawn at about twice
+# the game's size: its beam pieces are shrunk ("scale")
+VEGITO_FX2 = f"{EFFECTS}/vegito_fx2.png"
+VEGITO_FINAL_KAMEHAMEHA = {"beam": {"bodies": [[183, 1462, 66, 135], [567, 1473, 65, 135]],
+                                    "head": [[284, 1453, 93, 157], [653, 1466, 103, 154]], "tile": True},
+                           "scale": 0.22}
 BUU_BLUE = (0, 6, 254)
 VEGITO_EFFECTS = {
     "energy_blast": {"projectile": [[312, 303, 16, 16]],
@@ -470,9 +476,11 @@ NEW_CHARACTER_SPECIALS = {
                        "ki_burst": ("Ki Burst", "burst", ("borrow", "gohan_burst"))},
     "vegito": {"energy_blast": ("Energy Blast", "projectile",
                                 ("sheet", VEGITO_FX, BF_BLUE, VEGITO_EFFECTS["energy_blast"])),
-               # A thick blue Kamehameha (the thin lines of his sheet looked
-               # nothing like one), from his own pose (VEGITO_KAMEHAMEHA)
-               "final_kamehameha": ("Final Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+               # His Final Kamehameha (blue Kamehameha and yellow Final Flash
+               # in one beam, from his second effects sheet), from his own
+               # pose (VEGITO_KAMEHAMEHA)
+               "final_kamehameha": ("Final Kamehameha", "beam",
+                                    ("sheet", VEGITO_FX2, "alpha", VEGITO_FINAL_KAMEHAMEHA), SIGNATURE),
                # The blade is in his poses (VEGITO_SWORD): the cut itself
                # shows nothing more (blank cells of his sheet), it only hits
                "spirit_sword": ("Spirit Sword", "burst",
@@ -557,7 +565,8 @@ def build_character_specials(character, form_poses):
         extra = entry[3] if len(entry) > 3 else {}
         if isinstance(effects, tuple) and effects[0] == "sheet":
             # Effects on a sheet of their own: ("sheet", path, background, frames)
-            effects = {**effects[3], "sheet": effects[1], "background": list(effects[2])}
+            background = effects[2] if isinstance(effects[2], str) else list(effects[2])
+            effects = {**effects[3], "sheet": effects[1], "background": background}
         elif isinstance(effects, tuple):
             effects = borrowed_effects(effects[1])  # with its own "sheet" and "background"
         else:

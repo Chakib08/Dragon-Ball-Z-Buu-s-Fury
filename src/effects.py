@@ -286,8 +286,16 @@ class Beam(Effect):
         if start is not None:
             image.blit(start, (0, (height - start.get_height()) // 2))
             x = start_width
-        image.blit(pygame.transform.scale(body, (body_width, body.get_height())),
-                   (x, (height - body.get_height()) // 2))
+        body_y = (height - body.get_height()) // 2
+        if self.pieces.get("tile"):
+            # A body drawn with its own detail (bolts of energy): repeated
+            # along the beam, not stretched into streaks
+            image.set_clip(pygame.Rect(x, 0, body_width, height))
+            for tile_x in range(x, x + body_width, max(1, body.get_width())):
+                image.blit(body, (tile_x, body_y))
+            image.set_clip(None)
+        else:
+            image.blit(pygame.transform.scale(body, (body_width, body.get_height())), (x, body_y))
         image.blit(head, (x + body_width, (height - head.get_height()) // 2))
         self.image = self.orient(image, self.direction_name)
         # Anchor the beam's tail on the hands
@@ -399,9 +407,12 @@ def beam_pieces(sprites):
         flip = data.get("points_left", False)
         pieces = {
             "start": sprites.cut(data["start"], flip) if "start" in data else None,
-            "bodies": [sprites.cut(data["body"], flip)],
+            # One body, or several (animated)
+            "bodies": [sprites.cut(box, flip) for box in data.get("bodies", [data.get("body")])],
             "heads": [sprites.cut(box, flip) for box in data["head"]],
             "impacts": [sprites.cut(box, flip) for box in data.get("impact", [])] or None,
+            # Bodies repeated along the beam instead of stretched
+            "tile": data.get("tile", False),
         }
     sprites._beam_pieces = pieces
     return pieces
@@ -440,6 +451,7 @@ def build_effect(technique, sprites, caster, direction, damage, on_hit, spawn, o
                 "bodies": [scale_frame(piece, scale) for piece in pieces["bodies"]],
                 "heads": [scale_frame(piece, scale) for piece in pieces["heads"]],
                 "impacts": [scale_frame(piece, scale) for piece in pieces["impacts"]] if pieces["impacts"] else None,
+                "tile": pieces.get("tile", False),
             }
         reach = stats["range"] * (1.0 if power is None else 0.6 + 0.4 * power)
         effect = Beam(pieces, origin, direction, stats["speed"], reach,

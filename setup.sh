@@ -82,6 +82,7 @@ REPO_ASSETS=(
     "effects/effects.png               Graphics/assets/effects/sfx.png"
     # Buu's Fury sheets with the techniques' effects (and the Fusion Dance)
     "vegito/effects.gif                Graphics/assets/effects/vegito_fx.gif"
+    "vegito/effects2.png               Graphics/assets/effects/vegito_fx2.png"
     "gotenks/effects.gif               Graphics/assets/effects/gotenks_fx.gif"
     "buu/effects.gif                   Graphics/assets/effects/buu_fx.gif"
     "goku/fusion_effects.png           Graphics/assets/effects/fusion_dance.png"

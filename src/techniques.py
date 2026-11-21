@@ -98,8 +98,11 @@ class TechniqueForm:
         if self.own_sheet:
             self.sheet = load_sheet(data["sheet"])
             # "auto": each frame on a cell of its own colour (the cells of
-            # the sheet alternate two shades)
-            self.background = None if data["background"] == "auto" else tuple(data["background"])
+            # the sheet alternate two shades); "alpha": a sheet with its own
+            # transparency (no background colour)
+            background = data["background"]
+            self.background = None if background == "auto" else background if background == "alpha" else tuple(
+                background)
         else:
             self.sheet = sprite_form.sheet
             background = sprite_form.animations[0]["Background"]
@@ -165,9 +168,13 @@ class TechniqueForm:
         image = self._cache.get(key)
         if image is None:
             x, y, width, height = box
-            image = pygame.Surface((width, height))
-            image.blit(self.sheet, (0, 0), (x, y, width, height))
-            image.set_colorkey(self.background or self._cell_colour(image))
+            if self.background == "alpha":
+                image = pygame.Surface((width, height), pygame.SRCALPHA)
+                image.blit(self.sheet, (0, 0), (x, y, width, height))
+            else:
+                image = pygame.Surface((width, height))
+                image.blit(self.sheet, (0, 0), (x, y, width, height))
+                image.set_colorkey(self.background or self._cell_colour(image))
             if flip:
                 image = pygame.transform.flip(image, True, False)
             self._cache[key] = image

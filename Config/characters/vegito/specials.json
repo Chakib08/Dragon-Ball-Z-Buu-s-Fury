@@ -214,43 +214,39 @@
       "forms": {
         "base": {
           "beam": {
-            "full": [
+            "bodies": [
               [
-                235,
-                408,
-                38,
-                14
+                183,
+                1462,
+                66,
+                135
               ],
               [
-                235,
-                429,
-                38,
-                14
+                567,
+                1473,
+                65,
+                135
               ]
             ],
-            "tail": 8,
-            "head": 14
-          },
-          "charge": [
-            [
-              116,
-              415,
-              10,
-              10
+            "head": [
+              [
+                284,
+                1453,
+                93,
+                157
+              ],
+              [
+                653,
+                1466,
+                103,
+                154
+              ]
             ],
-            [
-              129,
-              413,
-              14,
-              14
-            ]
-          ],
-          "sheet": "Graphics/assets/effects/gohan_base.png",
-          "background": [
-            0,
-            156,
-            255
-          ],
+            "tile": true
+          },
+          "scale": 0.22,
+          "sheet": "Graphics/assets/effects/vegito_fx2.png",
+          "background": "alpha",
           "pose": {
             "Down": [
               [
@@ -469,43 +465,39 @@
         },
         "ssj": {
           "beam": {
-            "full": [
+            "bodies": [
               [
-                235,
-                408,
-                38,
-                14
+                183,
+                1462,
+                66,
+                135
               ],
               [
-                235,
-                429,
-                38,
-                14
+                567,
+                1473,
+                65,
+                135
               ]
             ],
-            "tail": 8,
-            "head": 14
-          },
-          "charge": [
-            [
-              116,
-              415,
-              10,
-              10
+            "head": [
+              [
+                284,
+                1453,
+                93,
+                157
+              ],
+              [
+                653,
+                1466,
+                103,
+                154
+              ]
             ],
-            [
-              129,
-              413,
-              14,
-              14
-            ]
-          ],
-          "sheet": "Graphics/assets/effects/gohan_base.png",
-          "background": [
-            0,
-            156,
-            255
-          ],
+            "tile": true
+          },
+          "scale": 0.22,
+          "sheet": "Graphics/assets/effects/vegito_fx2.png",
+          "background": "alpha",
           "pose": {
             "Down": [
               [
