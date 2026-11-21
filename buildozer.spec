@@ -5,7 +5,7 @@ package.name = dragonballzbuusfury
 package.domain = org.chakib08
 source.dir = .
 source.include_exts = py,png,jpg,ttf,tmx,tsx,json,wav
-source.exclude_dirs = .git,.github,.buildozer,.p4a,bin,__pycache__,.venv,server,tools,tests,rips
+source.exclude_dirs = .git,.github,.buildozer,.p4a,bin,__pycache__,.venv,.setup-env,server,tools,tests,rips
 # The full-size icon picture (the launcher uses Graphics/android/icon.png)
 source.exclude_patterns = Graphics/android_icon.png
 # Read from src/version.py (the version shown on the main menu)

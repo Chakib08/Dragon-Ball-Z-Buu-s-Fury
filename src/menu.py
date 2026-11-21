@@ -14,6 +14,7 @@ from portraits import portrait
 from stats import character_stats
 import settings as user_settings
 import roster
+import arenas
 
 GAME_TITLE = "DRAGON BALL Z"
 GAME_SUBTITLE = "TRUNKS HOPE"
@@ -28,6 +29,8 @@ class State(Enum):
     ALLY_SELECT = 5
     # Online: the player's name, before the character
     NAME_ENTRY = 6
+    # The arena, after the teams (arcade) or the allies (online)
+    MAP_SELECT = 7
 
 class Menu:
     # The main menu's entries: id, label, and the line shown under the list
@@ -67,6 +70,10 @@ class Menu:
         # (none to fight alone) and the enemies (at least one)
         self.selected_allies = []
         self.selected_enemies = ["gohan"]
+        # Where the fight happens (arenas.py), and the one in focus
+        self.selected_arena = arenas.DEFAULT
+        self.arena_rects = {}
+        self._arena_shown = False
         # Card the keyboard is on, in the ally and enemy screens
         self.focus = 0
         self.continue_rect = None
@@ -113,6 +120,13 @@ class Menu:
         
 
     def launch_menu(self, screen: pygame.Surface, resolution: tuple, events: List[pygame.event.Event]) -> None:
+        if self.state == State.MAP_SELECT:
+            self._draw_map_select(screen, resolution)
+            for event in events:
+                self._map_event(event, resolution)
+                if self.isPlaying or self.state != State.MAP_SELECT:
+                    break
+            return
         if self.state == State.NAME_ENTRY:
             self._draw_name_entry(screen, resolution)
             for event in events:
@@ -387,7 +401,9 @@ class Menu:
     def go_back(self):
         """One screen back (Esc or the Back button): opponents -> allies ->
         character -> main menu."""
-        if self.state == State.ENEMY_SELECT:
+        if self.state == State.MAP_SELECT:
+            self.state = State.ALLY_SELECT if self.online else State.ENEMY_SELECT
+        elif self.state == State.ENEMY_SELECT:
             self.state = State.ALLY_SELECT
         elif self.state == State.ALLY_SELECT:
             self.state = State.CHARACTER_SELECT
@@ -454,12 +470,12 @@ class Menu:
         """Allies chosen (or none): the enemies (online: the lobby). Enemies
         chosen: fight."""
         if not enemies and self.online:
-            self.isPlaying = True
+            self.state = State.MAP_SELECT  # the arena of the rooms it creates
         elif not enemies:
             self.focus = self.character_names.index(self.selected_enemy or self.character_names[0])
             self.state = State.ENEMY_SELECT
         elif self.selected_enemies:
-            self.isPlaying = True
+            self.state = State.MAP_SELECT
 
     def _cycle_character(self, direction):
         current_index = self.character_names.index(self.selected_character)
@@ -764,6 +780,134 @@ class Menu:
         pygame.draw.rect(screen, (40, 110, 60) if active else (60, 60, 70), self.continue_rect, border_radius=10)
         pygame.draw.rect(screen, (245, 245, 245), self.continue_rect, 2, border_radius=10)
         screen.blit(text, text.get_rect(center=self.continue_rect.center))
+
+    # ---- Arena screen -------------------------------------------------------------
+    def _arena_list(self):
+        return arenas.available()
+
+    def _set_arena(self, arena):
+        self.selected_arena = arena
+
+    def _confirm_arena(self):
+        self.isPlaying = True
+
+    def _map_event(self, event, resolution):
+        names = self._arena_list()
+        index = names.index(self.selected_arena) if self.selected_arena in names else 0
+        columns = max(1, getattr(self, "arena_columns", 1))
+        if event.type == pygame.KEYDOWN:
+            moves = {pygame.K_LEFT: -1, pygame.K_a: -1, pygame.K_RIGHT: 1, pygame.K_d: 1,
+                     pygame.K_UP: -columns, pygame.K_w: -columns, pygame.K_DOWN: columns, pygame.K_s: columns}
+            if event.key in moves:
+                self._set_arena(names[(index + moves[event.key]) % len(names)])
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                self._confirm_arena()
+            elif event.key == pygame.K_ESCAPE:
+                self.go_back()
+            return
+        if event.type == pygame.MOUSEMOTION and not getattr(event, "touch", False):
+            for arena, rect in self.arena_rects.items():
+                if rect.collidepoint(event.pos):
+                    self._set_arena(arena)
+            return
+        if not self._is_tap(event, resolution):
+            return
+        position = self._event_position(event, resolution)
+        if self.back_rect is not None and self.back_rect.collidepoint(position):
+            self.go_back()
+        elif self.continue_rect is not None and self.continue_rect.collidepoint(position):
+            self._confirm_arena()
+        else:
+            for arena, rect in self.arena_rects.items():
+                if rect.collidepoint(position):
+                    # A first tap shows it on the right, a second chooses it
+                    if arena == self.selected_arena and self._arena_shown:
+                        self._confirm_arena()
+                    else:
+                        self._set_arena(arena)
+                        self._arena_shown = True
+
+    def _arena_picture(self, arena, width, height):
+        key = ("arena", arena, width, height)
+        if key not in self._fitted_previews:
+            picture = arenas.thumbnail(arena)
+            if picture is not None:
+                ratio = min(width / picture.get_width(), height / picture.get_height())
+                picture = pygame.transform.smoothscale(picture, (max(1, int(picture.get_width() * ratio)),
+                                                                 max(1, int(picture.get_height() * ratio))))
+            self._fitted_previews[key] = picture
+        return self._fitted_previews[key]
+
+    def _draw_map_select(self, screen, resolution):
+        screen.blit(self.menu_image, (0, 0))
+        width, height = resolution
+        names = self._arena_list()
+        if self.selected_arena not in names:
+            self.selected_arena = names[0]
+        big_font, small_font, hint_font = self._fonts_for(height)
+        title = big_font.render("Choose the arena", True, (255, 230, 120))
+        screen.blit(title, title.get_rect(center=(width / 2, height * 0.07)))
+        self._draw_back_button(screen, resolution)
+        margin = max(12, int(width * 0.02))
+        top = max(height * 0.14, self.back_rect.bottom + 6)
+        bottom = height * 0.88
+        split = width * 0.55
+        area = pygame.Rect(margin, top, split - margin * 1.5, bottom - top)
+        # The grid: the most columns that keep the pictures biggest
+        line = small_font.get_linesize()
+        best = (0, 1)
+        for columns in range(1, len(names) + 1):
+            rows = -(-len(names) // columns)
+            cell_w = area.width / columns
+            cell_h = area.height / rows
+            size = min(cell_w, (cell_h - line) * 1.5)
+            if size > best[0]:
+                best = (size, columns)
+        cell_w, columns = best
+        self.arena_columns = columns
+        cell_h = cell_w / 1.5 + line
+        self.arena_rects = {}
+        for index, arena in enumerate(names):
+            row, column = divmod(index, columns)
+            rect = pygame.Rect(int(area.left + column * cell_w), int(area.top + row * cell_h),
+                               int(cell_w * 0.92), int(cell_w / 1.5 * 0.92))
+            self.arena_rects[arena] = rect
+            pygame.draw.rect(screen, (15, 18, 30), rect)
+            picture = self._arena_picture(arena, rect.width, rect.height)
+            if picture is not None:
+                screen.blit(picture, picture.get_rect(center=rect.center))
+            selected = arena == self.selected_arena
+            pygame.draw.rect(screen, (255, 220, 100) if selected else (150, 150, 165), rect,
+                             3 if selected else 1, border_radius=4)
+            label = small_font.render(arenas.name(arena), True, (255, 255, 255) if selected else (205, 205, 215))
+            if label.get_width() > rect.width:
+                label = pygame.transform.smoothscale(label, (rect.width, label.get_height()))
+            screen.blit(label, label.get_rect(midtop=(rect.centerx, rect.bottom + 1)))
+
+        panel = pygame.Rect(split, top, width - split - margin, bottom - top)
+        shade = pygame.Surface(panel.size, pygame.SRCALPHA)
+        shade.fill((10, 12, 22, 200))
+        screen.blit(shade, panel.topleft)
+        pygame.draw.rect(screen, (235, 235, 235), panel, 2, border_radius=10)
+        inner = panel.inflate(-24, -20)
+        label = big_font.render(arenas.name(self.selected_arena), True, (255, 255, 255))
+        screen.blit(label, label.get_rect(midtop=(inner.centerx, inner.top)))
+        button_height = hint_font.get_linesize() + 14
+        picture_area = pygame.Rect(inner.left, inner.top + label.get_height() + 8, inner.width,
+                                   inner.height - label.get_height() - button_height - 24)
+        picture = self._arena_picture(self.selected_arena, picture_area.width, picture_area.height)
+        if picture is not None:
+            screen.blit(picture, picture.get_rect(center=picture_area.center))
+        text = hint_font.render("To the lobby" if self.online else "Fight!", True, (255, 255, 255))
+        self.continue_rect = pygame.Rect(0, 0, min(inner.width, text.get_width() + 40), button_height)
+        self.continue_rect.midbottom = (inner.centerx, panel.bottom - 10)
+        pygame.draw.rect(screen, (40, 110, 60), self.continue_rect, border_radius=10)
+        pygame.draw.rect(screen, (245, 245, 245), self.continue_rect, 2, border_radius=10)
+        screen.blit(text, text.get_rect(center=self.continue_rect.center))
+        hint = ("A: choose   B: back" if self.gamepad_hints
+                else "Tap to see an arena, tap again to choose   (arrows + Enter)")
+        text = hint_font.render(hint, True, (255, 255, 255))
+        screen.blit(text, text.get_rect(center=(width / 2, (bottom + height) / 2)))
 
     def controls_guide(self):
         """The control guide's lines, with the keys and buttons in use

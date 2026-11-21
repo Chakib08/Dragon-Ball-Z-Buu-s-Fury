@@ -193,7 +193,8 @@ class GamepadInGameTests(unittest.TestCase):
         self.tap("a")                     # Arcade -> character
         self.tap("a")                     # Goku -> allies
         self.tap("a")                     # (none) -> opponents
-        self.tap("a")                     # Gohan -> fight
+        self.tap("a")                     # Gohan -> arena
+        self.tap("a")                     # Goku's home -> fight
         self.assertEqual(self.game.scene, "story")
         npc = self.game.map_manager.get_map().npcs[0]
         npc.attack_damage = 0
@@ -218,6 +219,13 @@ class GamepadInGameTests(unittest.TestCase):
         self.assertEqual(menu.selected_allies, ["gohan"])
         self.tap("a")
         self.assertEqual(menu.state, State.ENEMY_SELECT)
+        self.tap("a")
+        self.assertEqual(menu.state, State.MAP_SELECT)
+        self.tap("right")                          # the next arena
+        self.assertNotEqual(menu.selected_arena, "map")
+        self.tap("b")
+        self.assertEqual(menu.state, State.ENEMY_SELECT)  # B goes back
+        self.tap("a")
         self.tap("a")
         self.assertEqual(self.game.scene, "story")
 

@@ -22,6 +22,7 @@ from saiyan import Saiyan
 import settings as user_settings
 from taps import tap_position
 from utils import timing
+import arenas
 import roster
 from roster import display_name
 
@@ -265,8 +266,13 @@ class OnlineMatch:
         self.last_state_seq = -1
 
         game.character = self.player
+        # The room's arena (its host chose it), if this game has it too
+        arena = start.get("map")
+        self.arena = arena if isinstance(arena, str) and arena in arenas.available() else arenas.DEFAULT
         game.map_manager = MapManager(game.screen, self.player, versus=True, opponents=self.opponents,
-                                      allies=my_allies)
+                                      allies=my_allies, arena_name=self.arena)
+        if self.arena != arenas.DEFAULT:
+            self._place_on_arena(game.map_manager.get_map(), slot)
         game.map_manager.combat.on_technique = self._send_technique
         # This side: the player, then its allies (run by this game's AI)
         self.allies = [npc for npc in game.map_manager.get_map().npcs if npc.team == HEROES]
@@ -275,6 +281,26 @@ class OnlineMatch:
         self.result_since = None
         self.last_sent_ms = -self.SEND_INTERVAL_MS
         self.resize(game.resolution)
+
+    def _place_on_arena(self, game_map, slot):
+        """On an arena, the two players start on its spawn points (the
+        host on spawn_world, facing each other)."""
+        try:
+            spots = [game_map.get_object("spawn_world"), game_map.get_object("spawn_rival")]
+        except (KeyError, ValueError):
+            return
+        mine, theirs = (spots[0], spots[1]) if slot == 0 else (spots[1], spots[0])
+        facing = "Right" if mine.x <= theirs.x else "Left"
+        other_facing = "Left" if facing == "Right" else "Right"
+        player = self.player
+        player.position = [mine.x - player.rect.width / 2, mine.y - player.rect.height]
+        player.facing = facing
+        player.face_idle()
+        player.update()
+        player.save_location()
+        for index, fighter in enumerate(self.opponents):
+            dx, dy = ((0, 0), *MapManager.ALLY_SPOTS)[index]
+            fighter.place(theirs.x - fighter.rect.width / 2 + dx, theirs.y - fighter.rect.height + dy, other_facing)
 
     def resize(self, resolution):
         self.banner_font = pygame.font.Font(None, max(48, resolution[1] // 7))
@@ -407,11 +433,13 @@ class LobbyScreen:
     ACCENT = (255, 220, 90)
     MAX_ROOMS_SHOWN = 5
 
-    def __init__(self, net, screen_size, character, background=None, name=None, allies=()):
+    def __init__(self, net, screen_size, character, background=None, name=None, allies=(), arena=None):
         self.net = net
         self.screen_size = screen_size
         self.character = character
         self.allies = list(allies)[:MAX_ALLIES]
+        # Where the rooms this player creates fight
+        self.arena = arena or arenas.DEFAULT
         self.background = background
         self.settings = user_settings.load()
         self.name = (name or "").strip() or f"{display_name(character)} {random.randint(100, 999)}"
@@ -484,7 +512,7 @@ class LobbyScreen:
     def create_room(self, mode="1v1"):
         """mode: "1v1", or "team" (each player with its allies)."""
         if self.net.connected and self.room_id is None:
-            self.net.send({"t": "create", "mode": mode})
+            self.net.send({"t": "create", "mode": mode, "map": self.arena})
             self.room_mode = mode
 
     def join_room(self, room_id):
@@ -607,6 +635,14 @@ class LobbyScreen:
 
     @staticmethod
     def room_label(room):
+        label = LobbyScreen._room_players(room)
+        arena = room.get("map")
+        if isinstance(arena, str) and arena != arenas.DEFAULT:
+            label += f" - {arenas.name(arena)}"
+        return label
+
+    @staticmethod
+    def _room_players(room):
         host = str(room.get("host", "?"))
         character = display_name(str(room.get("character", "?")))
         if room.get("mode") == "team":

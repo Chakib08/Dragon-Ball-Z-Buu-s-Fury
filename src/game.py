@@ -176,13 +176,14 @@ class Game:
             scene.resize(self.resolution)
         self.release_input()
 
-    def select_character(self, name, enemies=(DEFAULT_ENEMY,), allies=()):
+    def select_character(self, name, enemies=(DEFAULT_ENEMY,), allies=(), arena=None):
         """Start the world over with the given playable character, the
         enemies to fight and the allies fighting on his side."""
         if isinstance(enemies, str):
             enemies = (enemies,)
         self.character = Saiyan(*PLAYER_SPAWN, False, name)
-        self.map_manager = MapManager(self.screen, self.character, enemies=enemies, allies=allies)
+        self.map_manager = MapManager(self.screen, self.character, enemies=enemies, allies=allies,
+                                      arena_name=arena)
 
     def play_music(self, music):
         pygame.mixer.music.stop()
@@ -327,7 +328,7 @@ class Game:
         self.result = None
         self.release_input()
         self.select_character(self.menu.selected_character, tuple(self.menu.selected_enemies),
-                              tuple(self.menu.selected_allies))
+                              tuple(self.menu.selected_allies), self.menu.selected_arena)
         self.play_music(self.map_manager.current_music)
         self.scene = "story"
         smoke.report("fight started")
@@ -337,7 +338,7 @@ class Game:
         self.menu.online = False
         self.lobby = LobbyScreen(
             self.net, self.resolution, self.menu.selected_character, self.menu.menu_image,
-            name=self.menu.player_name, allies=self.menu.selected_allies,
+            name=self.menu.player_name, allies=self.menu.selected_allies, arena=self.menu.selected_arena,
         )
         self.scene = "lobby"
 

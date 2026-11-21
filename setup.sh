@@ -79,6 +79,20 @@ REPO_ASSETS=(
     # Character portraits (character screens, dialog box)
     "portraits/bf/portraits-bf.png     Graphics/assets/portraits/bf.png"
     "portraits/log2/portrait-log2.png  Graphics/assets/portraits/log2.png"
+    # Map pictures the arenas are cut from (tools/build_arenas.py)
+    "maps/roshis-island.png               Graphics/assets/maps/roshis-island.png"
+    "maps/papaya-island.png               Graphics/assets/maps/papaya-island.png"
+    "maps/grand-kais-planet.png           Graphics/assets/maps/grand-kais-planet.png"
+    "maps/kamis-lookout.png               Graphics/assets/maps/kamis-lookout.png"
+    "maps/planet-of-the-kais.png          Graphics/assets/maps/planet-of-the-kais.png"
+    "maps/diablo-desert.png               Graphics/assets/maps/diablo-desert.png"
+    "maps/volcano.png                     Graphics/assets/maps/volcano.png"
+    "maps/nataday-village.png             Graphics/assets/maps/nataday-village.png"
+    "maps/southwest-forest.png            Graphics/assets/maps/southwest-forest.png"
+    "maps/thieves-den.png                 Graphics/assets/maps/thieves-den.png"
+    "maps/hfil.png                        Graphics/assets/maps/hfil.png"
+    "maps/west-city.png                   Graphics/assets/maps/west-city.png"
+    "maps/hercule-city.png                Graphics/assets/maps/hercule-city.png"
 )
 # Written once the repository sheets are installed: older setups put other
 # images at some of these paths, so their presence alone proves nothing
@@ -218,6 +232,29 @@ else
         if [[ "$repo_failed" -eq 0 ]]; then
             date -u +%Y-%m-%dT%H:%M:%SZ > "$ROOT/$REPO_STAMP"
         fi
+    fi
+fi
+
+# ---- Arenas: maps built from the map pictures ---------------------------------------
+# tools/build_arenas.py needs pygame: the project's Python if it has it,
+# else a small environment of its own (.setup-env)
+PYTHON="${PYTHON:-python3}"
+if [[ -d "$ROOT/Graphics/assets/maps" ]]; then
+    if ! "$PYTHON" -c "import pygame" >/dev/null 2>&1; then
+        if [[ ! -x "$ROOT/.setup-env/bin/python" ]]; then
+            echo "Installing pygame for building the arenas (.setup-env)"
+            python3 -m venv "$ROOT/.setup-env" && "$ROOT/.setup-env/bin/python" -m pip install -q pygame==2.6.1 \
+                || rm -rf "$ROOT/.setup-env"
+        fi
+        PYTHON="$ROOT/.setup-env/bin/python"
+    fi
+    arena_force=""
+    [[ "$force" == true ]] && arena_force="--force"
+    if SDL_VIDEODRIVER=dummy "$PYTHON" "$ROOT/tools/build_arenas.py" $arena_force; then
+        echo "Arenas built in Graphics/assets/arenas"
+    else
+        echo "  failed: building the arenas" >&2
+        failed=$((failed + 1))
     fi
 fi
 

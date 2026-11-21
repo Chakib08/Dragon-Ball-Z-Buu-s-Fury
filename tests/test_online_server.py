@@ -85,7 +85,8 @@ class LobbyServerTests(unittest.TestCase):
         host.send({"t": "create"})
         room = wait_for(host, "waiting")["room"]
         rooms = wait_for(guest, "rooms", where=lambda message: message["rooms"])["rooms"]
-        self.assertEqual(rooms, [{"id": room, "host": "Alice", "character": "goku", "mode": "1v1", "allies": []}])
+        self.assertEqual(rooms, [{"id": room, "host": "Alice", "character": "goku", "mode": "1v1", "allies": [],
+                                  "map": "map"}])
 
         guest.send({"t": "join", "room": room})
         host_start, guest_start = wait_for(host, "start"), wait_for(guest, "start")

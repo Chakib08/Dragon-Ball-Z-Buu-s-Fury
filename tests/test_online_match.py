@@ -355,7 +355,7 @@ class LobbyVersionTests(unittest.TestCase):
         hello = net.sent[-1]
         self.assertEqual((hello["name"], hello["allies"]), ("Chakib", ["gohan", "vegeta"]))
         lobby.create_room("team")
-        self.assertEqual(net.sent[-1], {"t": "create", "mode": "team"})
+        self.assertEqual(net.sent[-1], {"t": "create", "mode": "team", "map": "map"})
         self.assertEqual(lobby.room_label({"host": "Bob", "character": "vegeta", "mode": "team",
                                            "allies": ["broly"]}), "Team: Bob (Vegeta + Broly)")
         self.assertEqual(lobby.room_label({"host": "Bob", "character": "vegeta", "mode": "1v1"}),

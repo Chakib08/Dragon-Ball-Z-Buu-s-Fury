@@ -25,7 +25,8 @@ Client -> server
                                         a game of another version gets an
                                         error and may not create or join
     {"t": "list"}                       ask for the room list
-    {"t": "create", "mode": "1v1" | "team"}   open a room and wait in it (in a
+    {"t": "create", "mode": "1v1" | "team", "map": str}   open a room and wait
+                                        in it, on that arena (in a
                                         team match each player brings its allies)
     {"t": "join", "room": int}          join a waiting room
     {"t": "leave"}                      leave the room (cancel or quit a match)
@@ -38,9 +39,9 @@ Client -> server, UDP (the token of its "start" message in "tok")
 
 Server -> client
     {"t": "welcome", "id": int, "version": int, "server_version": str}
-    {"t": "rooms", "rooms": [{"id", "host", "character", "mode", "allies"}]}
+    {"t": "rooms", "rooms": [{"id", "host", "character", "mode", "allies", "map"}]}
     {"t": "waiting", "room": int}       room created, waiting for an opponent
-    {"t": "start", "room": int, "slot": 0 | 1, "mode": "1v1" | "team",
+    {"t": "start", "room": int, "slot": 0 | 1, "mode": "1v1" | "team", "map": str,
      "opponent": {"name", "character", "allies"},   (allies: team matches)
      "udp": {"token": str, "port": int}}   (no "udp" if UDP is not open)
     {"t": "opponent_left"}
@@ -60,7 +61,8 @@ import time
 # test keeps them in step). The release page has this file for each version
 SERVER_VERSION = "0.0.13"
 # 2: names, team matches (allies in the states, hits for any fighter)
-PROTOCOL_VERSION = 2
+# 3: the room's arena ("map")
+PROTOCOL_VERSION = 3
 DEFAULT_PORT = 5050
 # Messages forwarded as they are from one player of a match to the other
 RELAYED = {"state", "hit", "tech", "ko"}
@@ -123,10 +125,13 @@ class Player:
 
 
 class Room:
-    def __init__(self, room_id, host, mode="1v1"):
+    def __init__(self, room_id, host, mode="1v1", arena="map"):
         self.id = room_id
         self.players = [host]
         self.mode = mode if mode in MODES else "1v1"
+        # An arena id: letters, digits and _ only (the games look it up)
+        arena = str(arena or "map")[:40]
+        self.map = arena if arena.replace("_", "").isalnum() else "map"
 
     @property
     def waiting(self):
@@ -203,7 +208,7 @@ class LobbyServer:
         elif kind == "list":
             player.send(self.room_list())
         elif kind == "create":
-            self.create_room(player, message.get("mode"))
+            self.create_room(player, message.get("mode"), message.get("map"))
         elif kind == "join":
             self.join_room(player, message.get("room"))
         elif kind == "leave":
@@ -252,7 +257,8 @@ class LobbyServer:
             "t": "rooms",
             "rooms": [
                 {"id": room.id, "host": room.players[0].name, "character": room.players[0].character,
-                 "mode": room.mode, "allies": room.players[0].allies if room.mode == "team" else []}
+                 "mode": room.mode, "allies": room.players[0].allies if room.mode == "team" else [],
+                 "map": room.map}
                 for room in self.rooms.values()
                 if room.waiting
             ],
@@ -265,9 +271,9 @@ class LobbyServer:
             if player.room is None:
                 player.send(rooms)
 
-    def create_room(self, player, mode=None):
+    def create_room(self, player, mode=None, arena=None):
         self.leave_room(player)
-        room = Room(next(self._room_ids), player, mode)
+        room = Room(next(self._room_ids), player, mode, arena)
         self.rooms[room.id] = room
         player.room = room
         player.send({"t": "waiting", "room": room.id})
@@ -291,6 +297,7 @@ class LobbyServer:
                 "room": room.id,
                 "slot": slot,
                 "mode": room.mode,
+                "map": room.map,
                 "opponent": {"name": opponent.name, "character": opponent.character,
                              "allies": opponent.allies if room.mode == "team" else []},
             }

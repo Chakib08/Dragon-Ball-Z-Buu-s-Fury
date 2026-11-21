@@ -257,6 +257,8 @@ class TouchControlsTests(unittest.TestCase):
         self.assertEqual(menu.selected_enemies, ["broly", "vegeta"])
         self.assertFalse(menu.isPlaying)
         tap(menu.continue_rect)
+        self.assertEqual(menu.state, State.MAP_SELECT)
+        tap(menu.continue_rect)  # Fight! on the arena screen
         self.assertTrue(menu.isPlaying)
         self.assertEqual(menu.selected_character, "vegeta")
 
@@ -322,6 +324,8 @@ class TouchControlsTests(unittest.TestCase):
         menu.focus = menu.character_names.index("broly")
         key(pygame.K_RETURN)
         self.assertEqual(menu.selected_enemies, ["broly"])
+        self.assertEqual(menu.state, State.MAP_SELECT)  # then the arena
+        key(pygame.K_RETURN)
         self.assertTrue(menu.isPlaying)
         self.assertEqual(menu.selected_character, "vegeta")
         self.assertEqual(menu.selected_allies, ["gohan"])
@@ -364,6 +368,9 @@ class TouchControlsTests(unittest.TestCase):
                 self.assertEqual(menu.selected_enemies, ["gohan", "broly"])
                 tap(menu.character_rects["gohan"])
                 self.assertEqual(menu.selected_enemies, ["broly"])
+                tap(menu.continue_rect)
+                self.assertEqual(menu.state, State.MAP_SELECT)
+                self.assertFalse(menu.isPlaying)  # the copy did not press Fight!
                 tap(menu.continue_rect)
                 self.assertTrue(menu.isPlaying)
 
@@ -508,13 +515,15 @@ class TouchControlsTests(unittest.TestCase):
             self.assertEqual(menu.state, State.ALLY_SELECT)
             menu.focus = menu.character_names.index("vegeta")
             menu.launch_menu(screen, resolution, [key(pygame.K_SPACE), key(pygame.K_RETURN)])
+            self.assertEqual(menu.state, State.MAP_SELECT)  # the arena of its rooms
+            menu.launch_menu(screen, resolution, [key(pygame.K_RETURN)])
         self.assertTrue(menu.isPlaying)
         self.assertTrue(menu.online)
         self.assertEqual(menu.selected_allies, ["vegeta"])
 
         # Back goes the same way in reverse
         menu.isPlaying = False
-        for expected in (State.CHARACTER_SELECT, State.NAME_ENTRY, State.START):
+        for expected in (State.ALLY_SELECT, State.CHARACTER_SELECT, State.NAME_ENTRY, State.START):
             menu.go_back()
             self.assertEqual(menu.state, expected)
         self.assertFalse(menu.online)

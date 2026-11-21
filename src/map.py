@@ -124,6 +124,13 @@ def _has_object(tmx_data, name):
         return False
 
 
+def _map_exists(name):
+    try:
+        return os.path.exists(PathManager.map_path(name))
+    except ValueError:
+        return False
+
+
 def arena():
     """The map arcade fights happen on: "map" (Goku's home), or a map made
     with tools/png_to_map.py, named in Config/config.json ("arena")."""
@@ -169,7 +176,7 @@ class MapManager:
     FADE_SPEED = 10
 
     def __init__(self, screen, character, default_map="map", versus=False, opponents=(),
-                 enemies=(DEFAULT_ENEMY,), allies=()) -> None:
+                 enemies=(DEFAULT_ENEMY,), allies=(), arena_name=None) -> None:
         """versus: an online match on this map, without enemies or doors, the
         opponents (the remote player and its allies) drawn alongside the
         player. enemies: the characters the player fights on the world map;
@@ -181,8 +188,12 @@ class MapManager:
         self.combat = CombatSystem(character, screen.get_size())
         self.enemies = tuple(enemies)
         self.allies = tuple(allies)
-        # Online matches stay on Goku's home: both players need the same map
-        self.world_file = "map" if versus else arena()
+        # The arena chosen on the map screen, else Config's (online: the
+        # room's, else Goku's home)
+        if arena_name and _map_exists(arena_name):
+            self.world_file = arena_name
+        else:
+            self.world_file = "map" if versus else arena()
         self.definitions = {definition.name: definition
                             for definition in map_definitions(self.enemies, self.allies, self.world_file)}
         self.maps = {}
