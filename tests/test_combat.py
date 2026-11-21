@@ -1,3 +1,4 @@
+import json
 import os
 import unittest
 from unittest.mock import patch
@@ -692,15 +693,20 @@ class CombatTests(unittest.TestCase):
         # The class keeps its own numbers
         self.assertEqual(NPC.WALK_SPEED, normal.walk_speed)
 
-    def test_broly_is_a_hard_enemy_by_default(self):
+    def test_no_enemy_is_hard_by_default(self):
+        # Hard was too hard to beat: the strongest are normal (their own
+        # stats, Config/stats.json, still make them stronger)
         broly = SaiyanNPC(0, 0, False, "broly", 0, [])
-        gohan = SaiyanNPC(0, 0, False, "gohan", 0, [])
-        self.assertEqual(broly.difficulty.name, "hard")
-        self.assertEqual(gohan.difficulty.name, "normal")
-        self.assertGreater(broly.max_hp, gohan.max_hp)
-        self.assertGreater(broly.attack_damage, gohan.attack_damage)
-        # Gets angry sooner: powers up with more HP left
-        self.assertGreater(broly.transform_at_hp, gohan.transform_at_hp)
+        self.assertEqual(broly.difficulty.name, "normal")
+        with open(os.path.join(Config.ROOT_DIR, "Config", "enemies.json")) as file:
+            enemies = json.load(file)["enemies"]
+        self.assertNotIn("hard", {enemy.get("difficulty") for enemy in enemies.values()})
+
+    def test_a_hard_enemy_gets_angry_sooner(self):
+        hard = SaiyanNPC(0, 0, False, "broly", 0, [], difficulty="hard")
+        normal = SaiyanNPC(0, 0, False, "broly", 0, [])
+        # Powers up with more HP left
+        self.assertGreater(hard.transform_at_hp, normal.transform_at_hp)
 
     def test_a_big_body_is_reached_where_it_is_touched(self):
         """Broly is twice as wide: fighters touching his body can hit him,

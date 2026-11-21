@@ -100,7 +100,7 @@ class StatsTests(unittest.TestCase):
         self.assertAlmostEqual(damage["trunks"], 0.95)
 
     def test_an_enemys_difficulty_comes_on_top_of_its_stats(self):
-        broly = SaiyanNPC(0, 0, False, "broly", 0, [])  # Hard
+        broly = SaiyanNPC(0, 0, False, "broly", 0, [], difficulty="hard")
         self.assertEqual(broly.difficulty.name, "hard")
         self.assertEqual(broly.max_hp, round(NPC.MAX_HP * 1.3 * 1.8))
         self.assertAlmostEqual(broly.damage_taken, NPC.DAMAGE_TAKEN * 0.6 / 1.15)

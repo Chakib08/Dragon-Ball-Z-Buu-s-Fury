@@ -601,8 +601,8 @@ class TouchControlsTests(unittest.TestCase):
     def test_opponent_screen_shows_each_enemys_difficulty(self):
         resolution = (1200, 1000)
         menu = Menu(resolution)
-        self.assertEqual(menu.enemy_difficulties["broly"].name, "hard")
-        self.assertEqual(menu.enemy_difficulties["gohan"].name, "normal")
+        self.assertEqual(menu.enemy_difficulties["broly"].name, "normal")
+        self.assertEqual(menu.enemy_difficulties["goten"].name, "easy")
         menu.state = State.ENEMY_SELECT
         menu.launch_menu(pygame.Surface(resolution), resolution, [])
         self.assertEqual(set(menu.character_rects), set(menu.character_names))

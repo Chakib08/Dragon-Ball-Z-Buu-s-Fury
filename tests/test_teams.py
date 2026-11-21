@@ -383,7 +383,7 @@ class WorldTeamsTests(unittest.TestCase):
         real = combat.hud._label
         combat.hud._label = lambda text, font, color=(255, 255, 255): rendered.append((text, color)) or real(text, font, color)
         combat.draw_team_panels(self.screen)
-        self.assertIn(("Broly", (235, 80, 70)), rendered)  # Hard: red
+        self.assertIn(("Broly", (240, 210, 90)), rendered)  # Normal: yellow
         broly.hp = 0
         rendered.clear()
         combat.draw_team_panels(self.screen)

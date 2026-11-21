@@ -116,7 +116,7 @@
       ]
     },
     "broly": {
-      "difficulty": "hard",
+      "difficulty": "normal",
       "dialog": [
         "Kakarot...",
         "I am the Legendary Super Saiyan! Nothing can stop me!"
@@ -163,7 +163,7 @@
       ]
     },
     "android13": {
-      "difficulty": "hard",
+      "difficulty": "normal",
       "dialog": [
         "Mission: kill Goku.",
         "You are in the way."
@@ -195,7 +195,7 @@
       ]
     },
     "vegito": {
-      "difficulty": "hard",
+      "difficulty": "normal",
       "dialog": [
         "You're fighting the strongest warrior in the universe.",
         "Kakarot and Vegeta, together!"
@@ -215,7 +215,7 @@
       ]
     },
     "cell_perfect": {
-      "difficulty": "hard",
+      "difficulty": "normal",
       "dialog": [
         "Behold, perfection!",
         "Let the Cell Games begin."
@@ -228,31 +228,31 @@
       ]
     },
     "super_buu": {
-      "difficulty": "hard",
+      "difficulty": "normal",
       "dialog": [
         "Now I'll have some fun."
       ]
     },
     "super_buu_gotenks": {
-      "difficulty": "hard",
+      "difficulty": "normal",
       "dialog": [
         "Gotenks' power is mine now!"
       ]
     },
     "super_buu_gohan": {
-      "difficulty": "hard",
+      "difficulty": "normal",
       "dialog": [
         "With Gohan's power, nothing can stop me!"
       ]
     },
     "kid_buu": {
-      "difficulty": "hard",
+      "difficulty": "normal",
       "dialog": [
         "Hehehehe!"
       ]
     },
     "gogeta": {
-      "difficulty": "hard",
+      "difficulty": "normal",
       "dialog": [
         "I am neither Goku nor Vegeta.",
         "I am the one who will defeat you!"
