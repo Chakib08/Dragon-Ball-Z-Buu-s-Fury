@@ -273,6 +273,8 @@ class CombatSystem:
         the user is someone else. Returns True if it started."""
         if user.hp <= 0 or user.action is not None or user.ki < technique.cost:
             return False
+        if technique.style == "fusion" and self.fusion_cooldown_left(user) is not None:
+            return False  # a fusion just ended: not again yet
         user.ki -= technique.cost
         self.charge = None if user is self.player else self.charge
         self.add_effect(Evolution(user, technique, on_done=self._evolved))
@@ -295,6 +297,24 @@ class CombatSystem:
             return None
         left = fusion["ends_ms"] - pygame.time.get_ticks()
         return max(0.0, min(1.0, left / fusion["total_ms"]))
+
+    def fusion_cooldown_left(self, fighter):
+        """Share of the wait before it can fuse again (1 to 0), or None if
+        it can."""
+        cooldown = getattr(fighter, "fusion_cooldown", None)
+        if cooldown is None:
+            return None
+        left = cooldown["ends_ms"] - pygame.time.get_ticks()
+        if left <= 0:
+            fighter.fusion_cooldown = None
+            return None
+        return max(0.0, min(1.0, left / cooldown["total_ms"]))
+
+    def fusion_cooldown_seconds(self, fighter):
+        cooldown = getattr(fighter, "fusion_cooldown", None)
+        if self.fusion_cooldown_left(fighter) is None:
+            return 0
+        return -(-(cooldown["ends_ms"] - pygame.time.get_ticks()) // 1000)
 
     def _evolved(self, user):
         if user is self.player:

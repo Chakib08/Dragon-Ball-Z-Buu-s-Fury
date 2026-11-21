@@ -620,7 +620,8 @@
       "style": "fusion",
       "partner": "goten",
       "becomes": "gotenks",
-      "lasts_s": 60
+      "lasts_s": 60,
+      "cooldown_s": 90
     }
   ]
 }

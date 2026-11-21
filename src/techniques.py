@@ -195,6 +195,8 @@ class Technique:
         self.becomes = data.get("becomes")
         # A fusion's duration in seconds (None: for good, an absorption)
         self.lasts_s = data.get("lasts_s")
+        # Seconds after a fusion splits before the fighter can fuse again
+        self.cooldown_s = data.get("cooldown_s")
 
     def form_for(self, character):
         """Sprites for the character's current form (or any form it has)."""

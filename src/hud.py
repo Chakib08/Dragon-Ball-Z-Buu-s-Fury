@@ -37,6 +37,7 @@ class CombatHud:
     KO_COLOR = (125, 125, 135)
     HP_COLOR = (70, 200, 90)
     FUSION_COLOR = (190, 110, 245)
+    COOLDOWN_COLOR = (150, 150, 165)
     KI_COLOR = (65, 145, 245)
     FRAME_COLOR = (235, 235, 235)
     BAR_BACKGROUND = (35, 35, 42)
@@ -80,11 +81,22 @@ class CombatHud:
             # A fusion's time: when the bar is empty, it splits again
             self._draw_bar(screen, "FU", left, 1.0, self.FUSION_COLOR, y, height=12, label_font=self.name_font)
             y += 20
+        waiting = self.combat.fusion_cooldown_left(player)
+        if waiting is not None:
+            # After a fusion: the wait before the next one
+            self._draw_bar(screen, "CD", waiting, 1.0, self.COOLDOWN_COLOR, y, height=12, label_font=self.name_font)
+            y += 20
         technique = self.combat.technique
         if technique is not None:
-            # Selected technique and its cost, dimmed while there is not enough ki
-            color = (255, 230, 120) if player.ki >= technique.cost else (150, 150, 160)
-            label = self._label(f"{technique.name} ({technique.cost} KI)", self.name_font, color)
+            # Selected technique and its cost, dimmed while it cannot be used
+            # (not enough ki, or a fusion still cooling down)
+            text = f"{technique.name} ({technique.cost} KI)"
+            usable = player.ki >= technique.cost
+            if technique.style == "fusion" and waiting is not None:
+                text = f"{technique.name} (in {self.combat.fusion_cooldown_seconds(player)} s)"
+                usable = False
+            color = (255, 230, 120) if usable else (150, 150, 160)
+            label = self._label(text, self.name_font, color)
             screen.blit(label, (62, y))
         self.draw_team_panels(screen)
 
@@ -117,8 +129,9 @@ class CombatHud:
     # ---- Team panels --------------------------------------------------------------
     def ally_panel_top(self):
         """Under the player's bars (and its fusion bar while fused)."""
-        fused = self.combat.fusion_left(self.combat.player) is not None
-        return self.ALLY_PANEL_TOP + (20 if fused else 0)
+        player = self.combat.player
+        bars = (self.combat.fusion_left(player) is not None) + (self.combat.fusion_cooldown_left(player) is not None)
+        return self.ALLY_PANEL_TOP + 20 * bars
 
     def _right_panel_top(self):
         """Just under the quit button (see quit_prompt.QuitPrompt)."""

@@ -118,7 +118,8 @@ class Evolution(Effect):
         if self.style == "fusion" and lasts:
             now = pygame.time.get_ticks()
             self.user.fusion = {"original": self.original, "partner": self.technique.partner,
-                                "ends_ms": now + lasts * 1000, "total_ms": lasts * 1000}
+                                "ends_ms": now + lasts * 1000, "total_ms": lasts * 1000,
+                                "cooldown_s": getattr(self.technique, "cooldown_s", None) or 0}
 
     def finish(self):
         """End at once (the map changed): the user is the new character."""
@@ -223,8 +224,13 @@ class Defusion(Effect):
 
     def _split(self):
         self.split = True
+        cooldown = self.user.fusion.get("cooldown_s", 0)
         self.user.become(self.original)
         self.user.fusion = None
+        if cooldown:
+            # No fusing again right away
+            now = pygame.time.get_ticks()
+            self.user.fusion_cooldown = {"ends_ms": now + cooldown * 1000, "total_ms": cooldown * 1000}
         self.user.action = None
         self.user._play("evolve", [self.user.image], 10, hold_ticks=10 ** 9)
 

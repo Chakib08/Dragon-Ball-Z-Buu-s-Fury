@@ -644,7 +644,8 @@
       "style": "fusion",
       "partner": "goku",
       "becomes": "vegito",
-      "lasts_s": 60
+      "lasts_s": 60,
+      "cooldown_s": 90
     },
     {
       "id": "fusion_gogeta",
@@ -653,7 +654,8 @@
       "style": "fusion",
       "partner": "goku",
       "becomes": "gogeta",
-      "lasts_s": 60
+      "lasts_s": 60,
+      "cooldown_s": 90
     }
   ]
 }

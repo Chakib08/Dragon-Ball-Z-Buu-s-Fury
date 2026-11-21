@@ -362,22 +362,29 @@ for _buu in ("super_buu", "super_buu_gotenks", "super_buu_gohan"):
 # Techniques that turn the user into another character (techniques.py
 # "evolve"): the partner who appears, how (a Potara fusion, or Cell
 # absorbing an android), the character it becomes
-# A fusion lasts lasts_s seconds, then the fighter is itself again; an
-# absorption is for good
+# A fusion lasts lasts_s seconds, then the fighter is itself again and
+# cannot fuse for cooldown_s seconds; an absorption is for good
 FUSION_SECONDS = 60
+FUSION_COOLDOWN_SECONDS = 90
 EVOLVE = {
     "goku": [{"id": "potara", "name": "Potara Fusion (Vegito)", "kind": "evolve", "style": "fusion",
-              "partner": "vegeta", "becomes": "vegito", "lasts_s": FUSION_SECONDS},
+              "partner": "vegeta", "becomes": "vegito", "lasts_s": FUSION_SECONDS,
+              "cooldown_s": FUSION_COOLDOWN_SECONDS},
              {"id": "fusion_gogeta", "name": "Fusion Dance (Gogeta)", "kind": "evolve", "style": "fusion",
-              "partner": "vegeta", "becomes": "gogeta", "lasts_s": FUSION_SECONDS}],
+              "partner": "vegeta", "becomes": "gogeta", "lasts_s": FUSION_SECONDS,
+              "cooldown_s": FUSION_COOLDOWN_SECONDS}],
     "vegeta": [{"id": "potara", "name": "Potara Fusion (Vegito)", "kind": "evolve", "style": "fusion",
-                "partner": "goku", "becomes": "vegito", "lasts_s": FUSION_SECONDS},
+                "partner": "goku", "becomes": "vegito", "lasts_s": FUSION_SECONDS,
+              "cooldown_s": FUSION_COOLDOWN_SECONDS},
                {"id": "fusion_gogeta", "name": "Fusion Dance (Gogeta)", "kind": "evolve", "style": "fusion",
-                "partner": "goku", "becomes": "gogeta", "lasts_s": FUSION_SECONDS}],
+                "partner": "goku", "becomes": "gogeta", "lasts_s": FUSION_SECONDS,
+              "cooldown_s": FUSION_COOLDOWN_SECONDS}],
     "goten": [{"id": "fusion_dance", "name": "Fusion Dance", "kind": "evolve", "style": "fusion",
-               "partner": "kid_trunks", "becomes": "gotenks", "lasts_s": FUSION_SECONDS}],
+               "partner": "kid_trunks", "becomes": "gotenks", "lasts_s": FUSION_SECONDS,
+              "cooldown_s": FUSION_COOLDOWN_SECONDS}],
     "kid_trunks": [{"id": "fusion_dance", "name": "Fusion Dance", "kind": "evolve", "style": "fusion",
-                    "partner": "goten", "becomes": "gotenks", "lasts_s": FUSION_SECONDS}],
+                    "partner": "goten", "becomes": "gotenks", "lasts_s": FUSION_SECONDS,
+              "cooldown_s": FUSION_COOLDOWN_SECONDS}],
     "cell_imperfect": [{"id": "absorb_17", "name": "Absorb Android 17", "kind": "evolve", "style": "absorb",
                         "partner": "android17", "becomes": "cell_semi_perfect"}],
     "cell_semi_perfect": [{"id": "absorb_18", "name": "Absorb Android 18", "kind": "evolve", "style": "absorb",

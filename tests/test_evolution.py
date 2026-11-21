@@ -225,6 +225,38 @@ class FusionTimeTests(EvolutionCase):
         self.assertEqual(goten.character_name, "goten")
         self.assertEqual(goten.difficulty.name, "normal")
 
+    def test_no_fusing_again_for_90_seconds_after_a_fusion_ends(self):
+        player, combat = self.fuse("goku", "potara")
+        self.clock.now += 61_000
+        self.run_frames(player, combat, 120)  # it splits
+        self.assertEqual(player.character_name, "goku")
+        player.ki = player.max_ki
+        for technique_id in ("potara", "fusion_gogeta"):
+            self.assertFalse(self.use(player, combat, technique_id))  # either fusion
+        self.assertAlmostEqual(combat.fusion_cooldown_left(player), 1.0, delta=0.05)
+        drawn = []
+        real = combat.hud._label
+        combat.hud._label = lambda text, font, color=(255, 255, 255): drawn.append(text) or real(text, font, color)
+        combat.draw(pygame.Surface((1200, 540)))
+        self.assertIn("CD", drawn)
+        self.assertTrue(any(" (in 90 s)" in text for text in drawn))  # the selected fusion's wait
+        self.clock.now += 89_000
+        self.assertFalse(self.use(player, combat, "potara"))
+        self.clock.now += 2_000
+        self.assertIsNone(combat.fusion_cooldown_left(player))
+        self.assertTrue(self.use(player, combat, "potara"))
+
+    def test_a_cooling_down_npc_does_not_try_to_fuse(self):
+        player, combat = self.fight("vegeta")
+        goten = SaiyanNPC(500, 500, False, "goten", 0, [], difficulty="normal")
+        goten.update()
+        goten.hp = goten.max_hp * 0.3
+        goten.fusion_cooldown = {"ends_ms": self.clock.now + 90_000, "total_ms": 90_000}
+        dance = technique(goten, "fusion_dance")
+        self.assertFalse(combat.ai.technique_fits(goten, dance, player))
+        goten.fusion_cooldown = None
+        self.assertTrue(combat.ai.technique_fits(goten, dance, player))
+
     def test_an_absorption_is_for_good(self):
         player, combat = self.fuse("cell_imperfect", "absorb_17")
         self.assertIsNone(player.fusion)

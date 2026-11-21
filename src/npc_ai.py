@@ -375,7 +375,10 @@ class NpcBrain:
         if technique.kind == "teleport":
             return 60 <= distance <= stats["reach"]
         if technique.kind == "evolve":
-            # Fuses or absorbs once the fight turns against it
+            # Fuses or absorbs once the fight turns against it (not again
+            # right after a fusion ended)
+            if technique.style == "fusion" and self.combat.fusion_cooldown_left(npc) is not None:
+                return False
             return npc.hp <= npc.max_hp * self.EVOLVE_AT_HP
         return False
 

@@ -885,7 +885,8 @@
       "style": "fusion",
       "partner": "vegeta",
       "becomes": "vegito",
-      "lasts_s": 60
+      "lasts_s": 60,
+      "cooldown_s": 90
     },
     {
       "id": "fusion_gogeta",
@@ -894,7 +895,8 @@
       "style": "fusion",
       "partner": "vegeta",
       "becomes": "gogeta",
-      "lasts_s": 60
+      "lasts_s": 60,
+      "cooldown_s": 90
     }
   ]
 }

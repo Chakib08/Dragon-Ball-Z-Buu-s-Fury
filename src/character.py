@@ -99,6 +99,8 @@ class Character(pygame.sprite.Sprite):
         self.action = None
         # While fused (evolution.py): who it was, its partner, when it ends
         self.fusion = None
+        # After a fusion: when it can fuse again ({"ends_ms", "total_ms"})
+        self.fusion_cooldown = None
         self.faint_frames = None
         self.faint_index = 0
         self.faint_clock = 0
