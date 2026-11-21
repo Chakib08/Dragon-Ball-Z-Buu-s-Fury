@@ -54,6 +54,10 @@ REPO_ASSETS=(
     "piccolo/no-weight.png             Graphics/assets/piccolo/ssj.png"
     "android17/base.png                Graphics/assets/android17/base.png"
     "android18/base.png                Graphics/assets/android18/base.png"
+    "android13/base.png                Graphics/assets/android13/base.png"
+    "android16/base.png                Graphics/assets/android16/base.png"
+    "android19/base.png                Graphics/assets/android19/base.png"
+    "android20/base.png                Graphics/assets/android20/base.png"
     "goten/base.png                    Graphics/assets/goten/base.png"
     "goten/ssj.png                     Graphics/assets/goten/ssj.png"
     "trunks-kid/base.png               Graphics/assets/kid_trunks/base.png"
@@ -93,6 +97,7 @@ REPO_ASSETS=(
     "maps/hfil.png                        Graphics/assets/maps/hfil.png"
     "maps/west-city.png                   Graphics/assets/maps/west-city.png"
     "maps/hercule-city.png                Graphics/assets/maps/hercule-city.png"
+    "maps/cell-game-arena.png          Graphics/assets/maps/cell-game-arena.png"
 )
 # Written once the repository sheets are installed: older setups put other
 # images at some of these paths, so their presence alone proves nothing
