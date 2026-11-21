@@ -12,6 +12,7 @@ import math
 import pygame
 
 from character import DIRECTION_VECTORS
+from contact import effect_touches
 from utils import timing
 
 EFFECT_LAYER = 2
@@ -144,7 +145,7 @@ class Projectile(Effect):
         index = self.frame_number() % len(self.frames)
         self._set_image(self.frames[index])
         for target in self._alive(targets):
-            if self.rect.colliderect(target.rect):
+            if effect_touches(self, target):
                 if self.on_hit is not None:
                     self.on_hit(target, self.damage, tuple(self.center), 1.5)
                 self._explode(target.rect.center)
@@ -223,7 +224,7 @@ class Beam(Effect):
         if not self.stopped:
             self.length = min(self.max_range, self.length + self.speed * timing.ticks())
             self._compose()
-            hits = [target for target in self._alive(targets) if self.rect.colliderect(target.rect)]
+            hits = [target for target in self._alive(targets) if effect_touches(self, target)]
             if hits:
                 target = min(hits, key=lambda t: math.dist(self.origin, t.rect.center))
                 if self.on_hit is not None:

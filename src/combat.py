@@ -11,6 +11,7 @@ import math
 import pygame
 
 from character import DIRECTION_VECTORS
+from contact import character_touches
 from effects import ChargeGlow, build_effect, effect_origin
 from evolution import Defusion, Evolution
 from hud import CombatHud
@@ -156,7 +157,10 @@ class CombatSystem:
         self.player_swung = True
         player.strike()
 
-        targets = [npc for npc in npcs if npc.hp > 0 and self._is_in_attack_range(npc)]
+        # Only one the punch or kick really reaches (contact.py)
+        reach = player.strike_frame()
+        targets = [npc for npc in npcs if npc.hp > 0 and self._is_in_attack_range(npc)
+                   and character_touches(player, npc, reach)]
         if not targets:
             return
         target = min(targets, key=lambda npc: math.dist(player.rect.center, npc.rect.center))

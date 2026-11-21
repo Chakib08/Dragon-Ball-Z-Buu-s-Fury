@@ -22,6 +22,7 @@ import pygame
 import pathfinding
 from animation import AnimationDirection
 from constants import C_RUN_ANIMATION_COUNT
+from contact import character_touches, reaching_frame
 from movement import resolve_movement_collisions, solid_bodies
 from npc import HEROES
 from utils import timing
@@ -183,7 +184,9 @@ class NpcBrain:
             if self.strike_due(npc, now):
                 npc.last_attack_ms = now
                 npc.strike()
-                target.take_damage(npc.attack_damage * combat.damage_multiplier(npc), npc.feet.center)
+                # It hurts only if the punch or kick really reaches (contact.py)
+                if character_touches(npc, target, npc.strike_frame()):
+                    target.take_damage(npc.attack_damage * combat.damage_multiplier(npc), npc.feet.center)
             elif not self.block(npc, target, now):
                 npc.face_idle()
         else:
@@ -214,7 +217,10 @@ class NpcBrain:
         foe = npc.target or combat.player
         forward, lateral = forward_lateral(npc.facing, npc.feet.center, foe.feet.center)
         tolerance = (foe.feet.width + npc.feet.width) / 2 + combat.ATTACK_LATERAL_TOLERANCE
-        return 0 <= forward <= combat.reach(npc, foe) and abs(lateral) <= tolerance
+        if not (0 <= forward <= combat.reach(npc, foe) and abs(lateral) <= tolerance):
+            return False
+        # Close enough for its punch to really land (else it steps closer)
+        return character_touches(npc, foe, reaching_frame(npc))
 
     def strike_due(self, npc, now):
         """In reach of its target and either riposting after a guard, or past

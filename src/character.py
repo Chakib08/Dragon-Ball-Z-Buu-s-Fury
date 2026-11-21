@@ -304,6 +304,16 @@ class Character(pygame.sprite.Sprite):
         self._play("attack", frames, self.ATTACK_CLOCK_SPEED)
         return True
 
+    def strike_frame(self):
+        """The frame of the current punch or kick that reaches out (the
+        widest towards where it faces), for contact (see contact.py); the
+        current frame when not striking."""
+        action = self.action
+        if action is None or action["name"] != "attack":
+            return self.image
+        horizontal = self.facing in (AnimationDirection.LEFT.value, AnimationDirection.RIGHT.value)
+        return max(action["frames"], key=lambda frame: frame.get_width() if horizontal else frame.get_height())
+
     # ---- Forms ------------------------------------------------------------------
     @property
     def is_super(self):

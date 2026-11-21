@@ -405,7 +405,56 @@ class CombatTests(unittest.TestCase):
                 self.player.facing = "Right"
                 self.assertEqual(self.combat._is_in_attack_range(enemy), lands)
                 enemy.facing = "Left"
-                self.assertEqual(self.combat.ai.in_attack_range(enemy), lands)
+                # The NPC also waits until its own punch frames really reach
+                # (Gohan's are shorter than Goku's: at 22 px it steps closer)
+                self.assertEqual(self.combat.ai.in_attack_range(enemy), lands and gap < 22)
+
+    def test_no_damage_without_contact(self):
+        """A swing that does not reach the body hurts nobody (the bug where
+        HP went down with nobody touching the fighter)."""
+        from contact import character_touches
+        self.player.facing = "Right"
+        enemy = NPC(0, 0, False, "gohan", 0, [])
+        enemy.position = [self.player.feet.centerx + 22 - enemy.rect.width / 2,
+                          self.player.feet.bottom - enemy.rect.height]
+        enemy.update()
+        enemy.facing = "Left"
+        enemy.target = self.player
+        hp = self.player.hp
+        enemy.strike()
+        self.assertFalse(character_touches(enemy, self.player, enemy.strike_frame()))
+        enemy.action = None
+        enemy.last_attack_ms = -10 ** 6
+        enemy.in_reach_since = -10 ** 6
+        with patch("combat.pygame.time.get_ticks", return_value=5000):
+            self.combat.update([enemy], [])
+        self.assertEqual(self.player.hp, hp)  # it stepped closer instead
+        # Pressed against the player, its punch lands
+        enemy.position[0] -= 10
+        enemy.update()
+        enemy.action = None
+        enemy.last_attack_ms = -10 ** 6
+        enemy.in_reach_since = -10 ** 6
+        with patch("combat.pygame.time.get_ticks", return_value=7000):
+            self.combat.update([enemy], [])
+        self.assertLess(self.player.hp, hp)
+
+    def test_a_blast_only_hits_what_it_touches(self):
+        from effects import Projectile
+        from contact import effect_touches
+        frame = pygame.Surface((8, 8), pygame.SRCALPHA)
+        pygame.draw.circle(frame, (255, 255, 0), (4, 4), 3)
+        target = self.enemy
+        target.update()
+        rect = target.rect
+        # Grazing the corner of its rectangle, far from its drawn pixels
+        blast = Projectile([frame], [], (rect.left - 2, rect.top - 2), "Right", speed=0, max_range=100,
+                           damage=10, on_hit=None)
+        blast.rect = frame.get_rect(center=(rect.left + 1, rect.top + 1))
+        self.assertTrue(blast.rect.colliderect(rect))
+        self.assertFalse(effect_touches(blast, target))
+        blast.rect = frame.get_rect(center=target.feet.center)
+        self.assertTrue(effect_touches(blast, target))
 
     def test_player_and_npc_attack_at_the_same_pace(self):
         self.assertEqual(self.player.ATTACK_COOLDOWN_MS, self.enemy.attack_cooldown_ms)
