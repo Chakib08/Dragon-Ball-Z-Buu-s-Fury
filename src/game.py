@@ -105,6 +105,9 @@ class Game:
         self.fullscreen = bool(self.screen.get_flags() & pygame.FULLSCREEN)
         # Everything is laid out from the size the display really has
         self.resolution = self.screen.get_size()
+        # The real size of the window (on a phone the picture is drawn smaller
+        # and scaled up, so this is not the surface's size)
+        self.window_pixels = tuple(pygame.display.get_window_size())
         self.menu = None
         # The screens (see scenes.py), and the one showing
         self.scenes = {scene.name: scene(self) for scene in SCENES}
@@ -167,6 +170,7 @@ class Game:
         self.screen = screen
         self.fullscreen = bool(screen.get_flags() & pygame.FULLSCREEN)
         self.resolution = screen.get_size()
+        self.window_pixels = tuple(pygame.display.get_window_size())
         self.map_manager.set_screen(screen)
         # Everything lays itself out again, keeping what it shows
         for part in (self.dialogBox, self.touch_controls, self.quit_prompt, self.menu):
@@ -402,10 +406,16 @@ class Game:
         Returns True if it was."""
         if not any(event.type in (pygame.WINDOWSIZECHANGED, pygame.VIDEORESIZE) for event in events):
             return False
-        size = pygame.display.get_window_size()
-        if tuple(size) == tuple(self.resolution) and not is_mobile():
+        # Compare with the window size we last laid out for. Never with the
+        # surface size: on a phone the surface is smaller than the window, so
+        # they always differ, and every resize event would rebuild the display.
+        # Rebuilding fires new resize events, which rebuilt it again, and so on:
+        # a new (black) frame every time = the screen blinking.
+        if tuple(pygame.display.get_window_size()) == self.window_pixels:
             return False
         self.set_screen(create_display(self.window_size, self.fullscreen))
+        # The events our own set_mode just queued are not news
+        pygame.event.clear([pygame.WINDOWSIZECHANGED, pygame.WINDOWRESIZED, pygame.VIDEORESIZE])
         return True
 
     def loop_once(self, events):
