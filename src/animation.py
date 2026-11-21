@@ -51,6 +51,8 @@ class SpriteForm:
         self.animations = data["Animations"]
         # The "Attack" frames are a combo of this many moves (punches, kicks)
         self.attack_moves = data.get("Attack moves", self.DEFAULT_ATTACK_MOVES)
+        # Sheets drawn bigger than the others: every frame is shrunk this much
+        self.scale = float(data.get("Scale", 1.0))
         # The first definition of a name wins, as it did with a list search
         self.frames_by_name = {}
         for frame in self.animations:
@@ -105,12 +107,23 @@ class SpriteForm:
         """(animation name, flipped) of a frame this form produced, else None."""
         return self._frame_keys.get(id(image))
 
-    def below_feet(self, image):
-        """How many pixels of a frame this form produced hang below the
-        feet (a blade held down: "Below" in its frame), else 0."""
+    def anchor_shift(self, image):
+        """(dx, dy) to draw a frame this form produced at, from its usual
+        place (centred, feet at the bottom): a pose from another sheet
+        whose feet are off its centre ("Anchor X": where they are) or with
+        a blade below them ("Below": how far it hangs). (0, 0) otherwise."""
         key = self._frame_keys.get(id(image))
         frame = self.frames_by_name.get(key[0]) if key else None
-        return frame.get("Below", 0) if frame else 0
+        if not frame:
+            return 0, 0
+        dx = 0
+        anchor = frame.get("Anchor X")
+        if anchor is not None:
+            width = frame["Area Width"]
+            mirrored = bool(frame.get("Flip")) != key[1]
+            feet = width - anchor if mirrored else anchor
+            dx = round((width / 2 - feet) * self.scale)
+        return dx, round(frame.get("Below", 0) * self.scale)
 
     def _cut(self, frame):
         size = (frame["Size"]["Width"], frame["Size"]["Height"])
@@ -130,6 +143,13 @@ class SpriteForm:
             (frame["x"], frame["y"], frame["Area Width"], frame["Area Height"]),
         )
         image.set_colorkey(colour)
+        if self.scale != 1.0:
+            # Smoothly, with see-through edges (not a fringe of the
+            # background colour)
+            clear = pygame.Surface(size, pygame.SRCALPHA)
+            clear.blit(image, (0, 0))
+            image = pygame.transform.smoothscale(
+                clear, (max(1, round(size[0] * self.scale)), max(1, round(size[1] * self.scale))))
         # Some sheets draw a pose facing the other way than the game needs
         if frame.get("Flip"):
             image = pygame.transform.flip(image, True, False)
@@ -209,9 +229,10 @@ class Animator:
         None for a frame made elsewhere (a padded knock-out pose)."""
         return self.sprites.frame_key(self.image if image is None else image)
 
-    def below_feet(self, image=None):
-        """Pixels of the frame shown (or of image) below the feet."""
-        return self.sprites.below_feet(self.image if image is None else image)
+    def anchor_shift(self, image=None):
+        """Where the frame shown (or image) is drawn from its usual place
+        (see SpriteForm.anchor_shift)."""
+        return self.sprites.anchor_shift(self.image if image is None else image)
 
     # ---- Forms ----------------------------------------------------------------
     def has_form(self, form):

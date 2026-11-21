@@ -29,8 +29,8 @@ def drawn_rect(character, image=None):
     image = image or character.image
     rect = character.rect
     animator = getattr(character, "animator", None)
-    below = animator.below_feet(image) if animator is not None else 0
-    return pygame.Rect(rect.x + (rect.width - image.get_width()) // 2, rect.bottom - image.get_height() + below,
+    dx, dy = animator.anchor_shift(image) if animator is not None else (0, 0)
+    return pygame.Rect(rect.x + (rect.width - image.get_width()) // 2 + dx, rect.bottom - image.get_height() + dy,
                        image.get_width(), image.get_height())
 
 

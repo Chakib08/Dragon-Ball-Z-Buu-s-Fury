@@ -44,7 +44,7 @@ EXPECTED = {
     "gogeta": ["Energy Blast", "Big Bang Kamehameha", "Soul Punisher"],
     "cell_imperfect": ["Energy Blast", "Kamehameha", "Absorb Android 17"],
     "cell_semi_perfect": ["Energy Blast", "Kamehameha", "Absorb Android 18"],
-    "cell_perfect": ["Energy Blast", "Kamehameha", "Perfect Barrier"],
+    "cell_perfect": ["Energy Blast", "Kamehameha", "Super Kamehameha", "Perfect Barrier"],
     "buu": ["Energy Blast", "Candy Beam", "Steam Rage"],
     "super_buu": ["Energy Blast", "Human Extinction Attack", "Steam Rage"],
     "super_buu_gotenks": ["Energy Blast", "Human Extinction Attack", "Steam Rage"],
@@ -339,6 +339,45 @@ class TechniqueTests(unittest.TestCase):
         self.assertEqual(names, EXPECTED["goku"] + ["Energy Blast"])
         combat.cycle_technique(-1)
         self.assertEqual(combat.technique.name, EXPECTED["goku"][-1])
+
+
+class LookTests(unittest.TestCase):
+    """Sizes and placement of some characters' frames."""
+
+    @classmethod
+    def setUpClass(cls):
+        pygame.init()
+        Config.init()
+        pygame.display.set_mode((1200, 540))
+
+    def test_cells_super_kamehameha_is_bigger_than_his_kamehameha(self):
+        cell = Saiyan(200, 200, False, "cell_perfect")
+        techniques = {t.id: t for t in cell.techniques}
+        normal, super_ = techniques["kamehameha"], techniques["super_kamehameha"]
+        self.assertGreater(super_.effect_scale, normal.effect_scale)
+        self.assertGreater(super_.stats["range"], normal.stats["range"])
+
+    def test_android_13_is_drawn_smaller_than_his_sheet(self):
+        # His sheet is drawn at twice the others' size
+        android = Saiyan(200, 200, False, "android13")
+        self.assertLess(android.animator.image_by_name("IDLE Down").get_height(), 56)
+
+    def test_vegito_keeps_his_feet_in_place_swinging_his_sword(self):
+        vegito = Saiyan(200, 200, False, "vegito")
+        vegito.update()
+
+        def feet_x(image):
+            vegito.image = image
+            dx, dy = vegito.image_offset()
+            mask = pygame.mask.from_surface(image)
+            bottom = max(y for y in range(image.get_height()) for x in range(image.get_width()) if mask.get_at((x, y)))
+            row = [x for x in range(image.get_width()) if mask.get_at((x, bottom))]
+            return dx + sum(row) / len(row)
+
+        idle = feet_x(vegito.animator.image_by_name("IDLE Right"))
+        for index in range(0, 18, 3):
+            pose = vegito.animator.image_by_name(f"Tech spirit_sword Right {index}")
+            self.assertLess(abs(feet_x(pose) - idle), 4, index)
 
 
 class TechniqueControlsTests(unittest.TestCase):

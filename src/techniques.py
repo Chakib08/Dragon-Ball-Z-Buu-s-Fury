@@ -11,7 +11,8 @@ sheet, the effects on "sheet" when given (with its "background" colour, or
     pose_sheet  poses of some directions drawn on another sheet (the effect
                 is part of the pose there, a sword, steam): {"sheet",
                 "background", "directions", "right_flip"}; a box's fifth
-                number is how far the pose hangs below the feet
+                number is how far the pose hangs below the feet, its sixth
+                where the feet are across it
     fire_at     pose frame on which the effect is released
     projectile  flying frames, facing right (other directions are rotated)
     hit         spark played where it lands
@@ -121,9 +122,13 @@ class TechniqueForm:
         x, y, width, height = box[:4]
         frame = {"AnimationName": name, "x": x, "y": y, "Area Width": width, "Area Height": height,
                  "Size": {"Width": width, "Height": height}}
-        if len(box) > 4:
+        if len(box) > 4 and box[4]:
             # Pixels of the pose below the feet (a blade held down)
             frame["Below"] = box[4]
+        if len(box) > 5:
+            # Where the feet are across the pose (they stay where the
+            # character stands)
+            frame["Anchor X"] = box[5]
         if sheet is not None:
             # A pose on another sheet, on one background colour
             frame["Sheet"] = sheet["sheet"]

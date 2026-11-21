@@ -215,7 +215,8 @@ GOTENKS = dict(hurt=[22, 23], block=24, special=[19, 20, 21], faint=[30, 31, 32,
 # His ghost poses (crouching, then spitting the ghost out) face left on
 # the sheets: mirrored for the right
 SAIYAMAN = dict(hurt=[28, 29], block=27, special=[24, 25, 26], faint=[44, 45, 46, 47],
-                techniques=techniques(("energy_blast", [24, 25, 26], 1), ("kamehameha", [22, 23, 24], 2),
+                # Kamehameha: hands drawn back to his hip (18), then thrust out (19)
+                techniques=techniques(("energy_blast", [24, 25, 26], 1), ("kamehameha", [18, 18, 18, 19, 19], 3),
                                       ("ki_burst", [31], None)))
 # Guard: 23, the forearm up in front of the face (26 is a hit, leaning back)
 VEGITO = dict(hurt=[24, 25], block=23, special=[20, 21, 22], faint=[40, 41, 42, 43],
@@ -234,16 +235,22 @@ GERO_ANDROID = dict(run=NO_RUN, attack=LOG2_ATTACK[:-1] + [17], hurt=[21, 22], b
 # Super Android 13 (Buu's Fury prototype): one grid of 64 px cells (cell n:
 # column n % 10, row n // 10) facing front or left, so the side frames are
 # mirrored for the right; Up uses the few drawn from behind
-_A13_SIDE_ATTACK = [22, 23, 23, 29, 29, 39, 49, 49, 53, 90, 91, 92]
-_A13_FRONT_ATTACK = [14, 15, 16, 24, 25, 26, 27, 28, 30, 31, 34, 35]
+# Punches to the side (drawn facing left), uppercuts and swings facing front
+_A13_SIDE_ATTACK = [22, 23, 23, 36, 29, 29, 53, 49, 49, 90, 91, 92]
+_A13_FRONT_ATTACK = [24, 25, 26, 33, 34, 35, 28, 30, 31, 14, 18, 19]
+# Drawn at twice the others' size: shown at three quarters (as tall as
+# Cell or Majin Buu). Hurt: shaking, sparks at his feet; knocked out: he
+# breaks apart (his destruction frames)
 ANDROID_13 = dict(cell=64, rows={"Down": 32, "Left": 32, "Right": 32, "Up": 32}, grid=10, flip_right=True,
-                  idle={"Down": 0, "Right": 13, "Up": 10},
-                  walk={"Down": [3, 4, 5, 6], "Right": [12, 13, 64, 13], "Up": [10, 11, 60, 11]},
-                  run={"Down": [3, 4, 5, 6], "Right": [62, 63, 64, 63], "Up": [10, 11, 60, 11]},
+                  scale=0.75,
+                  idle={"Down": 0, "Right": 12, "Up": 10},
+                  walk={"Down": [3, 4, 5, 6], "Right": [12, 13, 12, 13], "Up": [10, 11, 10, 60]},
+                  run={"Down": [3, 4, 5, 6], "Right": [63, 64, 63, 64], "Up": [10, 11, 10, 60]},
                   attack={"Down": _A13_FRONT_ATTACK, "Right": _A13_SIDE_ATTACK, "Up": _A13_FRONT_ATTACK},
-                  hurt=[37, 38], block=50, special={"Down": [45, 46, 46], "Right": [21, 22, 22], "Up": [45, 46, 46]},
-                  faint=[40, 41, 42, 43, 44], faint_row="Down",
-                  techniques={"energy_blast": {"pose": {"Down": [45, 46, 46], "Right": [21, 22, 22],
+                  hurt=[76, 77], block=50,
+                  special={"Down": [45, 46, 46], "Right": [12, 36, 36], "Up": [45, 46, 46]},
+                  faint=[37, 38, 40, 42, 44], faint_row="Down",
+                  techniques={"energy_blast": {"pose": {"Down": [45, 46, 46], "Right": [12, 36, 36],
                                                         "Up": [45, 46, 46]}, "fire_at": 1},
                               "sos_bomb": {"pose": [65, 66, 67, 68, 70, 71], "fire_at": 4, "row": "Down"},
                               "ki_burst": {"pose": [55, 51, 47], "row": "Down"}})
@@ -291,11 +298,16 @@ NEW_SHEETS = [
      "transform": [24, 25, 36, 37, 38, 39, 42, 43], "techniques": techniques(*CELL_TECHNIQUES)},
     {"character": "cell_perfect", "form": "base", **BIG, "attack": list(range(6, 18)), "run": NO_RUN,
      "hurt": [24, 25], "block": 26, "special": [20, 21, 22], "faint": [32, 33, 34, 35],
-     "techniques": techniques(*CELL_TECHNIQUES, ("perfect_barrier", [26, 27], None))},
-    {"character": "buu", "form": "base", **BIG, "run": NO_RUN,
-     "attack": [6, 7, 7, 8, 8, 9, 14, 15, 15, 6, 7, 7], "hurt": [22, 23], "block": 24,
-     "special": [18, 18, 19], "faint": [36, 37, 38, 39],
-     "techniques": techniques(("energy_blast", [18, 18, 19], 1), ("candy_beam", [12, 13, 13], 1),
+     # His Super Kamehameha: a longer wind-up, hands cupped at his side
+     "techniques": techniques(*CELL_TECHNIQUES, ("super_kamehameha", [21, 21, 21, 22, 23, 23], 4),
+                              ("perfect_barrier", [26, 27], None))},
+    # Majin Buu: walks on 1-4 (5 is his cape wrapped, not a step), guards
+    # with 21, swings (6-9) then his flying tackle (16-17), raises his
+    # arms for a blast (18-20), falls (38-40) and lies down (27)
+    {"character": "buu", "form": "base", **BIG, "walk": [1, 2, 3, 4], "run": [1, 2, 3, 4],
+     "attack": [6, 7, 7, 8, 8, 9, 9, 16, 17, 17, 6, 7], "hurt": [22, 23], "block": 21,
+     "special": [18, 19, 20], "faint": [38, 39, 40, 27],
+     "techniques": techniques(("energy_blast", [18, 19, 20], 2), ("candy_beam", [12, 13, 13], 1),
                               ("rage", [32, 33, 34, 35], None))},
     # (his Steam Rage: BUU_STEAM, added below)
     {"character": "kid_buu", "form": "base", "rows": {**ROWS, "Charge": 192}, "run": NO_RUN,
@@ -402,6 +414,8 @@ FUSION_DANCE = {
 
 # Bigger and farther than their kind's usual (see techniques.py)
 SIGNATURE = {"effect_scale": 2, "range_scale": 4}
+# Bigger still (Cell's Super Kamehameha)
+SUPER_SIGNATURE = {"effect_scale": 3, "range_scale": 5}
 
 # Name, kind and effects of the new characters' techniques: effects frames
 # on EFFECTS_SHEET, or ("borrow", key of BORROWED)
@@ -444,7 +458,7 @@ NEW_CHARACTER_SPECIALS = {
                 "galactic_donut": ("Galactic Donut", "beam",
                                    ("sheet", GOTENKS_FX, BF_BLUE, GOTENKS_EFFECTS["galactic_donut"]))},
     "great_saiyaman": {"energy_blast": ("Energy Blast", "projectile", ("borrow", "gohan_blast")),
-                       "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam")),
+                       "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
                        "ki_burst": ("Ki Burst", "burst", ("borrow", "gohan_burst"))},
     "vegito": {"energy_blast": ("Energy Blast", "projectile",
                                 ("sheet", VEGITO_FX, BF_BLUE, VEGITO_EFFECTS["energy_blast"])),
@@ -462,7 +476,8 @@ NEW_CHARACTER_SPECIALS = {
     "cell_semi_perfect": {"energy_blast": ENERGY_BLAST,
                           "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"))},
     "cell_perfect": {"energy_blast": ENERGY_BLAST,
-                     "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+                     "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam")),
+                     "super_kamehameha": ("Super Kamehameha", "beam", ("borrow", "gohan_beam"), SUPER_SIGNATURE),
                      "perfect_barrier": ("Perfect Barrier", "burst", {"rings": WHITE_RINGS})},
     "buu": {"energy_blast": ("Energy Blast", "projectile", {"projectile": FIREBALL, "hit": FIRE_EXPLOSION}),
             "candy_beam": ("Candy Beam", "beam", ("sheet", BUU_FX, BUU_BLUE, BUU_EFFECTS["candy_beam"])),
@@ -586,6 +601,28 @@ class Sheet:
         return (min(rows), max(rows)) if rows else None
 
 
+def _is_light(colour):
+    """A blade's or a glow's colour: light blue or white."""
+    r, g, b = colour[:3]
+    return (b > 180 and g > 150 and r < 200) or (r > 230 and g > 230 and b > 230)
+
+
+def anchored(image, box, background):
+    """[x, y, width, height, below, feet x]: box (below: how far the pose
+    hangs below the feet) with the middle of the feet across it, from the
+    lowest rows of the body (light blades and glows left out)."""
+    x, y, width, height = box[:4]
+    below = box[4] if len(box) > 4 else 0
+    background = tuple(background)[:3]
+    body = [(i, j) for j in range(height - below) for i in range(width)
+            if tuple(image.get_at((x + i, y + j)))[:3] != background and not _is_light(image.get_at((x + i, y + j)))]
+    if not body:
+        return [x, y, width, height, below, width / 2]
+    feet = max(j for _, j in body)
+    across = [i for i, j in body if j >= feet - 4]
+    return [x, y, width, height, below, round(sum(across) / len(across) + 0.5, 1)]
+
+
 def frame(name, box, background, extra=None):
     x, y, width, height = box
     data = {"AnimationName": name, "x": x, "y": y, "Area Width": width, "Area Height": height,
@@ -660,6 +697,8 @@ def build_form(spec):
         animations += [frame(f"Transform {i}", b, old["background"], {"Sheet": old["sheet"]})
                        for i, b in enumerate(old["boxes"])]
     config = {"Character": spec["character"], "Image path": sheet.path, "Animations": animations}
+    if "scale" in spec:
+        config["Scale"] = spec["scale"]
     path = os.path.join(ROOT, "Config", "characters", spec["character"], f"{spec['form']}.json")
     with open(path, "w") as file:
         json.dump(config, file, indent=2)
@@ -675,8 +714,11 @@ def build_form(spec):
         elsewhere = technique.get("pose_sheet")
         if elsewhere:
             # Poses of some directions drawn on another sheet (with their
-            # effect: a sword, steam), as boxes there
-            boxes.update(elsewhere["boxes"])
+            # effect: a sword, steam), as boxes there, with where the feet
+            # are across each (they stay where the character stands)
+            other = Sheet(elsewhere["sheet"], CELL, ROWS)
+            boxes.update({direction: [anchored(other.image, box, elsewhere["background"]) for box in direction_boxes]
+                          for direction, direction_boxes in elsewhere["boxes"].items()})
             poses[technique_id]["pose_sheet"] = {
                 "sheet": elsewhere["sheet"], "background": list(elsewhere["background"]),
                 "directions": list(elsewhere["boxes"]), "right_flip": elsewhere.get("right_flip", False)}

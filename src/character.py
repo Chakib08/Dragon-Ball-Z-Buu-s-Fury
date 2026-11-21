@@ -261,9 +261,10 @@ class Character(pygame.sprite.Sprite):
         """Where to draw the current frame relative to the rect: frames have
         different sizes, so keep them centered with the feet on the ground
         (a frame can hang below the feet: a blade held down)."""
+        dx, dy = self.animator.anchor_shift(self.image)
         return (
-            (self.rect.width - self.image.get_width()) // 2,
-            self.rect.height - self.image.get_height() + self.animator.below_feet(self.image),
+            (self.rect.width - self.image.get_width()) // 2 + dx,
+            self.rect.height - self.image.get_height() + dy,
         )
 
     # ---- Looping animations -----------------------------------------------------
