@@ -1,5 +1,7 @@
 import json
 import pygame
+
+import sfx
 from typing import List
 from enum import Enum
 
@@ -59,6 +61,7 @@ class Menu:
         # True when the character was chosen for an online match
         self.online = False
         self.state = State.START
+        self._went_back = False  # this frame (the menu's sounds)
         # Every character whose sheets are installed (Config/roster.json)
         self.character_names = roster.characters()
         self.selected_character = "goku"
@@ -120,6 +123,25 @@ class Menu:
         
 
     def launch_menu(self, screen: pygame.Surface, resolution: tuple, events: List[pygame.event.Event]) -> None:
+        """Draw the current screen and handle this frame's input, with the
+        menu's sounds: the cursor moving, a choice made, going back."""
+        before = self._sound_state()
+        self._went_back = False
+        self._launch_menu(screen, resolution, events)
+        after = self._sound_state()
+        if self._went_back:
+            sfx.play("decline")
+        elif before[:2] != after[:2] or before[3:] != after[3:]:
+            sfx.play("confirm")  # another screen, the fight, a pick
+        elif before[2] != after[2]:
+            sfx.play("cursor")
+
+    def _sound_state(self):
+        """(screen, playing, where the cursor is, what is picked)."""
+        return (self.state, self.isPlaying, (self.selected_item, self.focus, self.selected_character),
+                tuple(self.selected_allies), tuple(self.selected_enemies), self.selected_arena)
+
+    def _launch_menu(self, screen, resolution, events):
         if self.state == State.MAP_SELECT:
             self._draw_map_select(screen, resolution)
             for event in events:
@@ -401,6 +423,7 @@ class Menu:
     def go_back(self):
         """One screen back (Esc or the Back button): opponents -> allies ->
         character -> main menu."""
+        self._went_back = True
         if self.state == State.MAP_SELECT:
             self.state = State.ALLY_SELECT if self.online else State.ENEMY_SELECT
         elif self.state == State.ENEMY_SELECT:

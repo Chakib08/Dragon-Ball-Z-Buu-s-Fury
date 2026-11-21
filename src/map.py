@@ -383,10 +383,11 @@ class MapManager:
         self.combat.update(game_map.npcs, game_map.collisions, player_attacking, self.opponents)
         # Technique effects are sprites: zoomed and drawn with the characters
         for effect in self.combat.new_effects:
-            game_map.group.add(effect, layer=EFFECT_LAYER)
+            # An aura goes with the characters, behind its fighter
+            game_map.group.add(effect, layer=getattr(effect, "layer", EFFECT_LAYER))
         self.combat.new_effects.clear()
         for loaded in self.maps.values():  # finished effects, on any map
-            for effect in loaded.group.get_sprites_from_layer(EFFECT_LAYER):
+            for effect in loaded.group.sprites():
                 if getattr(effect, "done", False):
                     loaded.group.remove(effect)
 

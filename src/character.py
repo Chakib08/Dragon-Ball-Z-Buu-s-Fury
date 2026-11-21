@@ -1,5 +1,6 @@
 import pygame
 
+import sfx
 from animation import AnimationDirection, AnimationType, Animator
 from constants import C_FAINT_ANIMATION_COUNT
 from movement import resolve_movement_collisions
@@ -306,6 +307,7 @@ class Character(pygame.sprite.Sprite):
         frames = moves[self.attack_move_index % len(moves)]
         self.attack_move_index += 1
         self._play("attack", frames, self.ATTACK_CLOCK_SPEED)
+        sfx.play("miss")  # the swing (a hit adds its own sound)
         return True
 
     def strike_frame(self):
@@ -359,7 +361,15 @@ class Character(pygame.sprite.Sprite):
             amount *= self.SUPER_DAMAGE_TAKEN
         if self.blocking:
             amount *= self.BLOCK_DAMAGE_TAKEN
+        alive = self.hp > 0
         self.hp = max(0, self.hp - amount)
+        if amount > 0:
+            if alive and self.hp <= 0:
+                sfx.play("ko")
+            elif self.blocking:
+                sfx.play("block")
+            else:
+                sfx.play("melee" if push <= 1.0 else "impact")
         if amount > 0 and source is not None:
             self.push_from(source, push)
         if amount > 0 and self.hp > 0 and not self.blocking:

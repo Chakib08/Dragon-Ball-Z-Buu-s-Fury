@@ -171,7 +171,12 @@ class EvolutionTests(EvolutionCase):
         # random in the game)
         evolve_first = lambda options: next((t for t in options if t.kind == "evolve"), options[0])
         with patch("npc_ai.random.choice", side_effect=evolve_first):
-            self.run_frames(player, combat, 300, npcs=[cell])
+            # Until his first absorption is over (with ki left, he may go on
+            # to absorb Android 18 too)
+            for _ in range(300):
+                self.run_frames(player, combat, 1, npcs=[cell])
+                if cell.character_name != "cell_imperfect" and cell.action is None:
+                    break
         self.assertEqual(cell.character_name, "cell_semi_perfect")
         self.assertEqual(cell.difficulty.name, "normal")  # still its difficulty
 

@@ -22,6 +22,7 @@ the fighters), counted in 60 FPS frames like every effect.
 
 import pygame
 
+import sfx
 from animation import Animator, AnimationDirection, load_sheet
 from effects import Effect
 from utils.config import Config
@@ -84,6 +85,7 @@ class Evolution(Effect):
         self.on_done = on_done
         self.partner = Animator(technique.partner)
         self.became = False
+        sfx.play("fusion" if self.style == "fusion" else "absorb")
         self.dance = self._dance_frames() if self.style == "fusion" else []
         self.dancing = False
         # How long they take to come together (the dance's length)
@@ -250,6 +252,7 @@ class Defusion(Effect):
         self.original = fusion["original"]
         self.partner = Animator(fusion["partner"])
         self.split = False
+        sfx.play("fusion", 0.7)
         user.stop_block()
         frames = [user.frame_image(f"Defuse {index}") for index in range(8) if user.has_animation(f"Defuse {index}")]
         if not frames:

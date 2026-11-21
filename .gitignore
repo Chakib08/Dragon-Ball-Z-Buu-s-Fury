@@ -16,6 +16,9 @@ user_settings.json
 # Sprite sheets downloaded by setup.sh
 Graphics/assets/*/*.png
 Graphics/assets/*/*.gif
+Sounds/sfx/
+# The menu music is committed as .ogg (Sounds/custom/unmei.ogg): 52 MB as .wav
+Sounds/custom/unmei.wav
 Graphics/assets/.dbz-assets
 # Arenas built from the map pictures (tools/build_arenas.py)
 Graphics/assets/arenas/

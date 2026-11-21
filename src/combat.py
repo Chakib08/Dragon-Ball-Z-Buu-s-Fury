@@ -10,9 +10,10 @@ import math
 
 import pygame
 
+import sfx
 from character import DIRECTION_VECTORS
 from contact import character_touches
-from effects import ChargeGlow, build_effect, effect_origin
+from effects import Aura, ChargeGlow, build_effect, effect_origin
 from evolution import Defusion, Evolution
 from hud import CombatHud
 from movement import solid_bodies
@@ -47,6 +48,10 @@ class CombatSystem:
 
     def __init__(self, player, screen_size):
         self.player = player
+        # The aura around each fighter transforming (id -> effects.Aura),
+        # and whether each was powered up last frame
+        self.auras = {}
+        self.was_powered = {}
         self.screen_size = screen_size
         self.last_update_ms = pygame.time.get_ticks()
         self.last_player_attack_ms = self.last_update_ms - player.ATTACK_COOLDOWN_MS
@@ -91,6 +96,7 @@ class CombatSystem:
         # Everyone on the field: their bodies block each other
         self.fighters = [self.player, *npcs, *opponents]
         self._update_charge()
+        self._update_auras()
         self._update_effects()
         self._end_fusions([self.player, *npcs], now)
 
@@ -103,6 +109,29 @@ class CombatSystem:
 
         for npc in tuple(npcs):
             self.ai.update(npc, now, collisions)
+
+    def _update_auras(self):
+        """A fighter starting a Super Saiyan transformation (or powering up
+        when it is always one) gets the golden aura, with its sound."""
+        auras, powered = self.auras, self.was_powered
+        for fighter in self.fighters:
+            key = id(fighter)
+            aura = auras.get(key)
+            if aura is not None and aura.done:
+                del auras[key]
+                aura = None
+            action = fighter.action
+            transforming = action is not None and action["name"] == "transform"
+            powering = fighter.powered_up and not powered.get(key, fighter.powered_up)
+            powered[key] = fighter.powered_up
+            if aura is None and fighter.hp > 0 and (transforming or powering):
+                aura = Aura(fighter, "transform" if transforming else None, 50 if transforming else 70)
+                if not aura.done:
+                    auras[key] = aura
+                    self.add_effect(aura)
+                sfx.play("aura")
+                sfx.play("powerup", 0.8)
+                sfx.shout(fighter.character_name)
 
     def _update_ki(self, npcs, elapsed_seconds):
         """Ki comes back over time; a Super Saiyan burns it instead."""
@@ -349,6 +378,7 @@ class CombatSystem:
         charge_frames = frames[:fire_at] or frames[:1]
         fire_frames = frames[fire_at:] or frames[-1:]
         player._play("charging", charge_frames, player.SPECIAL_CLOCK_SPEED, hold_ticks=10 ** 9)
+        sfx.play("beam-charge" if technique.kind == "beam" else "charge")
         glow_frames = sprites.cuts("charge") or sprites.cuts("grow")
         glow = ChargeGlow(glow_frames, player, technique.effect_scale) if glow_frames else None
         if glow is not None:
@@ -421,10 +451,25 @@ class CombatSystem:
                               damage, self._hit_target, self.add_effect, power=power)
         if effect is not None:
             effect.team = user.team
+            self.technique_sound(user, technique)
             self.add_effect(effect)
             if self.on_technique is not None and user.team == HEROES:
                 self.on_technique(user, technique.id, direction, effect_origin(effect, user, direction), power)
         return effect
+
+    @staticmethod
+    def technique_sound(user, technique):
+        """The sound of a technique leaving the hands; the signature ones
+        (bigger than usual) and the balls with a shout."""
+        big = technique.effect_scale > 1
+        name = {"projectile": "blast", "ball": "ball", "burst": "burst",
+                "beam": "super-beam" if big else "beam-fire"}.get(technique.kind)
+        if technique.kind == "burst" and "sword" in technique.id:
+            name = "sword"
+        if name:
+            sfx.play(name)
+        if big or technique.kind == "ball":
+            sfx.shout(user.character_name, 0.9)
 
     def show_opponent_technique(self, opponent, technique_id, direction, origin, power=None):
         """Draw a technique the online opponent (or one of its allies) used.
@@ -438,6 +483,7 @@ class CombatSystem:
         if effect is not None:
             effect.from_opponent = True
             self.add_effect(effect)
+            self.technique_sound(opponent, technique)
 
     def add_effect(self, effect):
         self.effects.append(effect)
@@ -479,6 +525,7 @@ class CombatSystem:
         and hit. user: the player unless an NPC uses it."""
         player = user or self.player
         reach = technique.stats["reach"]
+        sfx.play("teleport")
         if target is None or target.hp <= 0:
             foes = self.targets if player is self.player else self.ai.foes_of(player)
             candidates = [t for t in foes if t.hp > 0

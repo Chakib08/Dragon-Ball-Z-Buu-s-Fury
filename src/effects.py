@@ -12,10 +12,12 @@ import math
 import pygame
 
 from character import DIRECTION_VECTORS
-from contact import effect_touches
+from contact import drawn_rect, effect_touches
 from utils import timing
 
 EFFECT_LAYER = 2
+# The characters' layer (an aura is drawn with them, just behind its fighter)
+CHARACTER_LAYER = 1
 
 
 class Effect(pygame.sprite.Sprite):
@@ -86,6 +88,87 @@ def scale_frame(image, factor):
 def charge_scale(power):
     """Size of a charged technique: 0.7x at a tap, 1.2x fully charged."""
     return 0.7 + 0.5 * power
+
+
+class Aura(Effect):
+    """The Super Saiyan aura: golden flames around a fighter while it
+    transforms (and a moment after, fading), drawn behind it.
+
+    Its frames are the three aura flames of Vegeta's Buu's Fury sheet,
+    sized to the fighter (bigger around Cell or Majin Buu)."""
+
+    SHEET = "Graphics/assets/effects/fusion_dance.png"
+    BACKGROUND = (0, 128, 0)
+    BOXES = ((321, 353, 32, 32), (360, 353, 32, 32), (397, 353, 32, 32))
+    FRAME_TICKS = 5
+    FADE_TICKS = 24
+    layer = CHARACTER_LAYER
+    _frames = None
+
+    @classmethod
+    def frames(cls):
+        """The flames, or [] when the sheet is missing."""
+        if cls._frames is None:
+            from animation import load_sheet
+            try:
+                sheet = load_sheet(cls.SHEET)
+            except (pygame.error, FileNotFoundError, OSError):
+                cls._frames = []
+                return cls._frames
+            cls._frames = []
+            for x, y, width, height in cls.BOXES:
+                frame = pygame.Surface((width, height))
+                frame.blit(sheet, (0, 0), (x, y, width, height))
+                frame.set_colorkey(cls.BACKGROUND)
+                cls._frames.append(frame)
+        return cls._frames
+
+    def __init__(self, fighter, action="transform", at_least=50):
+        """Around fighter while its action is action (and at_least ticks)."""
+        super().__init__()
+        self.fighter = fighter
+        self.action = action
+        self.at_least = at_least
+        self.fading = 0.0
+        self._offset = (0, 0)
+        if not self.frames():
+            self.done = True
+            return
+        self.update_effect(())
+
+    @property
+    def active(self):
+        action = self.fighter.action
+        doing = self.action is not None and action is not None and action["name"] == self.action
+        return self.fighter.hp > 0 and (doing or self.ticks < self.at_least)
+
+    def update_effect(self, targets):
+        self.tick()
+        if not self.active:
+            self.fading += timing.ticks()
+            if self.fading >= self.FADE_TICKS:
+                self.done = True
+                return
+        frames = self.frames()
+        frame = frames[self.frame_number() % len(frames)]
+        body = drawn_rect(self.fighter)
+        # Taller than the fighter, a little wider than tall: flames all round
+        height = max(30, round(body.height * 1.35))
+        width = max(26, round(max(body.width * 1.3, height * 0.85)))
+        self.image = pygame.transform.scale(frame, (width, height))
+        self.image.set_colorkey(self.BACKGROUND)
+        if self.fading:
+            self.image.set_alpha(round(255 * (1 - self.fading / self.FADE_TICKS)))
+        drawn = self.image.get_rect(midbottom=(body.centerx, body.bottom + 3))
+        # The map draws the lower sprite in front: the aura's own rect stands
+        # a pixel above the fighter's feet (behind it), and image_offset puts
+        # the picture back where it belongs
+        self.rect = drawn.copy()
+        self.rect.bottom = min(drawn.bottom, self.fighter.rect.bottom - 1)
+        self._offset = (0, drawn.bottom - self.rect.bottom)
+
+    def image_offset(self):
+        return self._offset
 
 
 class ChargeGlow(Effect):

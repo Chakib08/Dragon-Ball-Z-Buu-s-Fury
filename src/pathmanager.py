@@ -37,8 +37,11 @@ class PathManager:
     # Music theme
     @classmethod
     def soundtrack(cls, name):
+        """A music file of Sounds/ by name: the .ogg when there is one (much
+        smaller), else the .wav."""
         if Config.SOUNDS_DIR and os.path.exists(Config.SOUNDS_DIR):
-            return os.path.join(Config.SOUNDS_DIR, f"{name}.wav")
+            ogg = os.path.join(Config.SOUNDS_DIR, f"{name}.ogg")
+            return ogg if os.path.exists(ogg) else os.path.join(Config.SOUNDS_DIR, f"{name}.wav")
         else:
             raise ValueError("SOUNDS_DIR is invalid or does not exist")
 

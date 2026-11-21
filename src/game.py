@@ -32,7 +32,8 @@ DEFAULT_CHARACTER = "goku"
 # A press slightly before the attack is ready still counts, so mashing the
 # button attacks as fast as the character can
 ATTACK_BUFFER_MS = 250
-MENU_MUSIC = "DBZ-Buus-Fury-Soundtrack-Theme"
+# Unmei no Hi ~ Tamashii vs Tamashii (Gohan's SSJ2 theme)
+MENU_MUSIC = "custom/unmei"
 
 
 def is_android():
