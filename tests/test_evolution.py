@@ -15,6 +15,7 @@ import evolution
 from combat import CombatSystem
 from npc import NPC, SaiyanNPC
 from saiyan import Saiyan
+from utils import timing
 from utils.config import Config
 from average_stats import use_average_stats
 
@@ -94,6 +95,30 @@ class EvolutionTests(EvolutionCase):
                 self.assertTrue(cutscene.dance)
                 self.run_frames(player, combat, evolution.ARRIVE + 10)
                 self.assertIn(player.image, cutscene.dance)
+                self.run_frames(player, combat, 300)
+                self.assertEqual(player.character_name, "gogeta")
+                self.assertEqual(player.form, "ssj")  # always a Super Saiyan
+
+    def test_the_dance_plays_at_any_frame_rate(self):
+        # The cutscene's clock moves with the frame time (1.4 ticks a frame
+        # at 42 FPS): it never stops exactly on the arrival's end
+        player, combat = self.fight("goku")
+        self.assertTrue(self.use(player, combat, "fusion_gogeta"))
+        cutscene = combat.effects[-1]
+        timing.advance(24)
+        try:
+            self.run_frames(player, combat, int(evolution.ARRIVE / 1.44) + 8)
+            self.assertIn(player.image, cutscene.dance)
+            self.run_frames(player, combat, 250)
+        finally:
+            timing.reset()
+        self.assertEqual(player.character_name, "gogeta")
+
+    def test_gogeta_splits_back_when_his_time_is_up(self):
+        for name in ("goku", "vegeta"):
+            with self.subTest(character=name):
+                player, combat = self.fight(name)
+                self.assertTrue(self.use(player, combat, "fusion_gogeta"))
                 self.run_frames(player, combat, 300)
                 self.assertEqual(player.character_name, "gogeta")
                 self.assertEqual(player.form, "ssj")  # always a Super Saiyan

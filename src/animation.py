@@ -105,6 +105,13 @@ class SpriteForm:
         """(animation name, flipped) of a frame this form produced, else None."""
         return self._frame_keys.get(id(image))
 
+    def below_feet(self, image):
+        """How many pixels of a frame this form produced hang below the
+        feet (a blade held down: "Below" in its frame), else 0."""
+        key = self._frame_keys.get(id(image))
+        frame = self.frames_by_name.get(key[0]) if key else None
+        return frame.get("Below", 0) if frame else 0
+
     def _cut(self, frame):
         size = (frame["Size"]["Width"], frame["Size"]["Height"])
         # A frame can come from another sheet (e.g. an aura only drawn there)
@@ -201,6 +208,10 @@ class Animator:
         """(animation name, flipped) of the frame shown (or of image), or
         None for a frame made elsewhere (a padded knock-out pose)."""
         return self.sprites.frame_key(self.image if image is None else image)
+
+    def below_feet(self, image=None):
+        """Pixels of the frame shown (or of image) below the feet."""
+        return self.sprites.below_feet(self.image if image is None else image)
 
     # ---- Forms ----------------------------------------------------------------
     def has_form(self, form):

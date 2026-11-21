@@ -85,6 +85,7 @@ class Evolution(Effect):
         self.partner = Animator(technique.partner)
         self.became = False
         self.dance = self._dance_frames() if self.style == "fusion" else []
+        self.dancing = False
         # How long they take to come together (the dance's length)
         self.meet = len(self.dance) * DANCE_TICKS if self.dance else MEET
         # Who the user was (a fusion splits back into it)
@@ -166,8 +167,11 @@ class Evolution(Effect):
     def update_effect(self, targets):
         self.tick()
         t = self.ticks
-        if self.dance and t == ARRIVE:
-            # They dance together: one picture of both, where the user stands
+        if self.dance and t >= ARRIVE and not self.dancing and not self.became:
+            # They dance together: one picture of both, where the user
+            # stands (the clock moves with the frame time: t jumps, so
+            # this starts once t has reached the arrival's end)
+            self.dancing = True
             self.user._play("evolve", self.dance, Config.CLOCK_LIMIT * len(self.dance) / self.meet,
                             hold_ticks=10 ** 9)
         if t >= ARRIVE + self.meet and not self.became:

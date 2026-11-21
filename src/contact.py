@@ -28,7 +28,9 @@ def drawn_rect(character, image=None):
     of every size stand centred on the same feet (see image_offset)."""
     image = image or character.image
     rect = character.rect
-    return pygame.Rect(rect.x + (rect.width - image.get_width()) // 2, rect.bottom - image.get_height(),
+    animator = getattr(character, "animator", None)
+    below = animator.below_feet(image) if animator is not None else 0
+    return pygame.Rect(rect.x + (rect.width - image.get_width()) // 2, rect.bottom - image.get_height() + below,
                        image.get_width(), image.get_height())
 
 

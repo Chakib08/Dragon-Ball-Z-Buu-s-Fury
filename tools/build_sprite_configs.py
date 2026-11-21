@@ -218,7 +218,7 @@ SAIYAMAN = dict(hurt=[28, 29], block=27, special=[24, 25, 26], faint=[44, 45, 46
 # Guard: 23, the forearm up in front of the face (26 is a hit, leaning back)
 VEGITO = dict(hurt=[24, 25], block=23, special=[20, 21, 22], faint=[40, 41, 42, 43],
               techniques=techniques(("energy_blast", [20, 21, 22], 1), ("final_kamehameha", [21, 21, 22, 22], 2),
-                                    ("spirit_sword", [30, 31, 32], None)))
+                                    ("spirit_sword", [30, 31, 32], 6)))
 # Androids 16, 19 and 20 (Legacy of Goku 2): no run, the punches and
 # kicks from column 6, a guard, a hand held out for their blasts
 ANDROID_16 = dict(run=NO_RUN, attack=[10, 10, 11, 11, 12, 12, 13, 13, 10, 11, 12, 13], hurt=[15, 16],
@@ -343,10 +343,23 @@ VEGITO_EFFECTS = {
     "final_kamehameha": {"beam": {"full": [[5, 384, 69, 7], [81, 384, 69, 7]], "tail": 6, "head": 6},
                          "charge": [[36, 357, 4, 4]]},
 }
-# Vegito with his Spirit Sword, facing left (mirrored for the right)
+
+
+def _held(boxes, times=3):
+    """Each pose shown times as long (a sword swing is slower than a blast)."""
+    return [box for box in boxes for _ in range(times)]
+
+
+# Vegito with his Spirit Sword: from the side facing left (mirrored for the
+# right), from the front (the blade down, hanging below his feet: the fifth
+# number) and from behind (the blade up)
 VEGITO_SWORD = {"sheet": VEGITO_FX, "background": BF_BLUE, "right_flip": True,
-                "boxes": {"Right": [[6, 438, 32, 32], [49, 438, 32, 32], [95, 431, 40, 39], [150, 431, 40, 39],
-                                    [199, 427, 44, 43], [257, 427, 44, 43]]}}
+                "boxes": {"Right": _held([[6, 438, 32, 32], [49, 438, 32, 32], [95, 431, 40, 39], [150, 431, 40, 39],
+                                          [199, 427, 44, 43], [257, 427, 44, 43]]),
+                          "Down": _held([[99, 521, 38, 50, 18], [312, 438, 38, 50, 18], [224, 521, 15, 56, 24],
+                                         [224, 521, 15, 56, 24]]),
+                          "Up": _held([[47, 503, 37, 50], [357, 420, 37, 50], [18, 499, 15, 54], [18, 499, 15, 54]])}}
+
 GOTENKS_EFFECTS = {
     "energy_blast": {"projectile": [[309, 294, 16, 16]],
                      "hit": [[287, 290, 13, 14], [337, 290, 13, 10], [398, 290, 13, 10]]},
@@ -430,7 +443,10 @@ NEW_CHARACTER_SPECIALS = {
                                 ("sheet", VEGITO_FX, BF_BLUE, VEGITO_EFFECTS["energy_blast"])),
                "final_kamehameha": ("Final Kamehameha", "beam",
                                     ("sheet", VEGITO_FX, BF_BLUE, VEGITO_EFFECTS["final_kamehameha"]), SIGNATURE),
-               "spirit_sword": ("Spirit Sword", "burst", {"rings": CROSS_SLASH})},
+               # The blade is in his poses (VEGITO_SWORD): the cut itself
+               # shows nothing more (blank cells of his sheet), it only hits
+               "spirit_sword": ("Spirit Sword", "burst",
+                                ("sheet", VEGITO_FX, BF_BLUE, {"rings": [[390, 4, 16, 16]] * 4}))},
     "gogeta": {"energy_blast": ENERGY_BLAST,
                "big_bang_kamehameha": ("Big Bang Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
                "soul_punisher": ("Soul Punisher", "ball", ("borrow", "big_bang"))},
