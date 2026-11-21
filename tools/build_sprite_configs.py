@@ -220,7 +220,7 @@ SAIYAMAN = dict(hurt=[28, 29], block=27, special=[24, 25, 26], faint=[44, 45, 46
                                       ("ki_burst", [31], None)))
 # Guard: 23, the forearm up in front of the face (26 is a hit, leaning back)
 VEGITO = dict(hurt=[24, 25], block=23, special=[20, 21, 22], faint=[40, 41, 42, 43],
-              techniques=techniques(("energy_blast", [20, 21, 22], 1), ("final_kamehameha", [21, 21, 22, 22], 2),
+              techniques=techniques(("energy_blast", [20, 21, 22], 1), ("final_kamehameha", [21, 21, 22, 22], 4),
                                     ("spirit_sword", [30, 31, 32], 6)))
 # Androids 16, 19 and 20 (Legacy of Goku 2): no run, the punches and
 # kicks from column 6, a guard, a hand held out for their blasts
@@ -358,9 +358,6 @@ BUU_BLUE = (0, 6, 254)
 VEGITO_EFFECTS = {
     "energy_blast": {"projectile": [[312, 303, 16, 16]],
                      "hit": [[290, 298, 14, 15], [340, 294, 14, 15], [362, 294, 16, 16]]},
-    # Lines of light, white then blue, from the hands
-    "final_kamehameha": {"beam": {"full": [[5, 384, 69, 7], [81, 384, 69, 7]], "tail": 6, "head": 6},
-                         "charge": [[36, 357, 4, 4]]},
 }
 
 
@@ -369,6 +366,16 @@ def _held(boxes, times=3):
     return [box for box in boxes for _ in range(times)]
 
 
+# Vegito's Final Kamehameha: hands cupped, a blue ball growing in them,
+# then thrust out; from the side, from behind (the ball over his head) and
+# from the front (the ball at his feet)
+VEGITO_KAMEHAMEHA = {"sheet": VEGITO_FX, "background": BF_BLUE,
+                     "boxes": {"Right": _held([[12, 342, 28, 31], [49, 342, 30, 31], [87, 342, 22, 31],
+                                               [116, 342, 22, 31]], 2),
+                               "Up": _held([[162, 379, 19, 35], [192, 377, 20, 37], [224, 383, 19, 31],
+                                            [253, 383, 19, 31]], 2),
+                               "Down": _held([[283, 382, 20, 31], [311, 380, 20, 33], [339, 383, 20, 31],
+                                              [369, 383, 20, 31]], 2)}}
 # Vegito with his Spirit Sword: from the side facing left (mirrored for the
 # right), from the front (the blade down, hanging below his feet: the fifth
 # number) and from behind (the blade up)
@@ -400,6 +407,7 @@ BUU_STEAM = {"sheet": BUU_FX, "background": BUU_BLUE,
              "boxes": {"Down": _BUU_STEAM, "Right": _BUU_STEAM, "Up": _BUU_STEAM}}
 # (both forms of Vegito share his techniques)
 VEGITO["techniques"]["spirit_sword"]["pose_sheet"] = VEGITO_SWORD
+VEGITO["techniques"]["final_kamehameha"]["pose_sheet"] = VEGITO_KAMEHAMEHA
 next(s for s in NEW_SHEETS if s["character"] == "buu")["techniques"]["rage"]["pose_sheet"] = BUU_STEAM
 # Gogeta's Fusion Dance (Vegeta on the left, Goku on the right): the dance,
 # their fingers meeting, the light, Gogeta's white shape (then the flash)
@@ -462,8 +470,9 @@ NEW_CHARACTER_SPECIALS = {
                        "ki_burst": ("Ki Burst", "burst", ("borrow", "gohan_burst"))},
     "vegito": {"energy_blast": ("Energy Blast", "projectile",
                                 ("sheet", VEGITO_FX, BF_BLUE, VEGITO_EFFECTS["energy_blast"])),
-               "final_kamehameha": ("Final Kamehameha", "beam",
-                                    ("sheet", VEGITO_FX, BF_BLUE, VEGITO_EFFECTS["final_kamehameha"]), SIGNATURE),
+               # A thick blue Kamehameha (the thin lines of his sheet looked
+               # nothing like one), from his own pose (VEGITO_KAMEHAMEHA)
+               "final_kamehameha": ("Final Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
                # The blade is in his poses (VEGITO_SWORD): the cut itself
                # shows nothing more (blank cells of his sheet), it only hits
                "spirit_sword": ("Spirit Sword", "burst",
