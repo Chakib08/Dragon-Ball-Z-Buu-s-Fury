@@ -44,10 +44,28 @@ def build(arena, force=False):
         crop=tuple(arena["crop"]) if arena.get("crop") else None,
         walk_areas=[tuple(area) for area in arena.get("walk", [])],
         block_colours=MINT + [tuple(colour) for colour in arena.get("block", [])],
+        walkable_colours=[tuple(colour) for colour in arena.get("ground", [])],
+        tolerance=arena.get("tolerance", 24),
+        threshold=arena.get("threshold", 0.5),
+        block_areas=[tuple(area) for area in arena.get("blocked", [])],
+        free_areas=[tuple(area) for area in arena.get("free", [])],
+        spawn=_spawn(arena),
+        patrol_centre=_spawn(arena, "patrol"),
+        drop_seams=bool(arena.get("seams")),
         water=bool(arena.get("water")),
         thumbnail=os.path.join(OUT, f"{arena['id']}_thumb.png"),
     )
     return "built"
+
+
+def _spawn(arena, key="spawn"):
+    """A point given in the picture's pixels (the player's spawn, the
+    centre of the enemies' patrol), in the map's."""
+    if not arena.get(key):
+        return None
+    x, y = arena[key]
+    crop = arena.get("crop") or (0, 0)
+    return x - crop[0], y - crop[1]
 
 
 def main():

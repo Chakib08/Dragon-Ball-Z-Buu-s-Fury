@@ -23,9 +23,14 @@ Where characters cannot walk comes from one or more of these:
                             free (grass, paths...), everything else blocked
     --walk-area X0,Y0,X1,Y1 only inside these rectangles (repeat it) can
                             characters walk: a stadium's ring, not its stands
+    --block-area X0,Y0,X1,Y1 never walkable (repeat it): a house, a statue
+    --free-area X0,Y0,X1,Y1  always walkable (repeat it): a bridge over water,
+                            ground of an odd colour
 
 --crop X,Y,W,H cuts one area out of a bigger picture (a rip holding a whole
-location); --thumbnail writes a small picture of the map (map screens).
+location); --drop-seams removes the lines rippers draw between the screens
+they stitched (rows and columns of their mint background colours);
+--thumbnail writes a small picture of the map (map screens).
 
 A grid cell (--cell pixels) is blocked when at least --threshold of it is.
 Check the result with --preview: the picture with the blocked places in red,
@@ -81,6 +86,36 @@ def parse_box(text):
     return tuple(parts)
 
 
+SEAM_COLOURS = {(71, 255, 187), (52, 188, 136), (46, 165, 121)}
+
+
+def seam_lines(picture):
+    """(columns, rows) of the picture that are seam lines: at least 90% of
+    their pixels in the rippers' mint colours."""
+    width, height = picture.get_size()
+
+    def is_seam(pixels):
+        return sum(1 for colour in pixels if tuple(colour)[:3] in SEAM_COLOURS) >= 0.9 * len(pixels)
+
+    step = 2
+    columns = [x for x in range(width) if is_seam([picture.get_at((x, y)) for y in range(0, height, step)])]
+    rows = [y for y in range(height) if is_seam([picture.get_at((x, y)) for x in range(0, width, step)])]
+    return columns, rows
+
+
+def without_lines(picture, columns, rows):
+    """The picture with those columns and rows taken out."""
+    keep_x = [x for x in range(picture.get_width()) if x not in set(columns)]
+    keep_y = [y for y in range(picture.get_height()) if y not in set(rows)]
+    narrow = pygame.Surface((len(keep_x), picture.get_height()), pygame.SRCALPHA)
+    for new, old in enumerate(keep_x):
+        narrow.blit(picture, (new, 0), (old, 0, 1, picture.get_height()))
+    result = pygame.Surface((len(keep_x), len(keep_y)), pygame.SRCALPHA)
+    for new, old in enumerate(keep_y):
+        result.blit(narrow, (0, new), (0, old, len(keep_x), 1))
+    return result
+
+
 def parse_point(text):
     try:
         x, y = (int(part) for part in text.split(","))
@@ -130,7 +165,7 @@ def tileset_image(tiles, tile):
 
 # ---- Where feet may go ------------------------------------------------------------------
 def blocked_pixels(picture, mask=None, block_colours=(), walkable_colours=(), water=False, tolerance=24,
-                   walk_areas=()):
+                   walk_areas=(), block_areas=(), free_areas=()):
     """A function telling if the pixel at (x, y) is blocked. walk_areas:
     (x0, y0, x1, y1) rectangles, in the map's pixels, outside which
     everything is blocked."""
@@ -140,9 +175,16 @@ def blocked_pixels(picture, mask=None, block_colours=(), walkable_colours=(), wa
         return any((colour[0] - c[0]) ** 2 + (colour[1] - c[1]) ** 2 + (colour[2] - c[2]) ** 2 <= limit
                    for c in colours)
 
+    def inside(x, y, areas):
+        return any(x0 <= x < x1 and y0 <= y < y1 for x0, y0, x1, y1 in areas)
+
     def is_blocked(x, y):
-        if walk_areas and not any(x0 <= x < x1 and y0 <= y < y1 for x0, y0, x1, y1 in walk_areas):
+        if walk_areas and not inside(x, y, walk_areas):
             return True
+        if inside(x, y, block_areas):
+            return True
+        if inside(x, y, free_areas):
+            return False
         if mask is not None:
             if x < mask.get_width() and y < mask.get_height():
                 r, g, b, a = mask.get_at((x, y))
@@ -274,7 +316,8 @@ def save_preview(path, picture, collisions, spawn, patrol):
 
 def convert(picture_path, name, out_dir=MAP_DIR, tile=16, cell=8, threshold=0.5, mask_path=None,
             block_colours=(), walkable_colours=(), water=False, tolerance=24, spawn=None,
-            preview=None, force=False, crop=None, walk_areas=(), thumbnail=None, thumbnail_size=(240, 160)):
+            preview=None, force=False, crop=None, walk_areas=(), thumbnail=None, thumbnail_size=(240, 160),
+            block_areas=(), free_areas=(), patrol_centre=None, drop_seams=False):
     """Write <out_dir>/<name>.tmx, .tsx and _tiles.png; returns a summary."""
     if not name.replace("_", "").replace("-", "").isalnum():
         raise ValueError(f"{name!r}: use letters, digits, - and _ for the map's name")
@@ -290,7 +333,19 @@ def convert(picture_path, name, out_dir=MAP_DIR, tile=16, cell=8, threshold=0.5,
         # big picture's pixels too
         x, y, w, h = crop
         original = original.subsurface(pygame.Rect(x, y, w, h).clip(original.get_rect())).copy()
-        walk_areas = [(x0 - x, y0 - y, x1 - x, y1 - y) for x0, y0, x1, y1 in walk_areas]
+        shift = lambda areas: [(x0 - x, y0 - y, x1 - x, y1 - y) for x0, y0, x1, y1 in areas]
+        walk_areas, block_areas, free_areas = shift(walk_areas), shift(block_areas), shift(free_areas)
+    if drop_seams:
+        columns, rows = seam_lines(original)
+        if columns or rows:
+            original = without_lines(original, columns, rows)
+            # What was given on the picture moves with the lines taken out
+            fix_x = lambda value: value - sum(1 for column in columns if column < value)
+            fix_y = lambda value: value - sum(1 for row in rows if row < value)
+            fix = lambda areas: [(fix_x(x0), fix_y(y0), fix_x(x1), fix_y(y1)) for x0, y0, x1, y1 in areas]
+            walk_areas, block_areas, free_areas = fix(walk_areas), fix(block_areas), fix(free_areas)
+            spawn = (fix_x(spawn[0]), fix_y(spawn[1])) if spawn else None
+            patrol_centre = (fix_x(patrol_centre[0]), fix_y(patrol_centre[1])) if patrol_centre else None
     picture = padded(original, tile)
     size = picture.get_size()
     mask = pygame.image.load(mask_path).convert_alpha() if mask_path else None
@@ -300,7 +355,8 @@ def convert(picture_path, name, out_dir=MAP_DIR, tile=16, cell=8, threshold=0.5,
     tiles, grid = cut_tiles(picture, tile)
     sheet, columns = tileset_image(tiles, tile)
 
-    is_blocked = blocked_pixels(picture, mask, block_colours, walkable_colours, water, tolerance, walk_areas)
+    is_blocked = blocked_pixels(picture, mask, block_colours, walkable_colours, water, tolerance, walk_areas,
+                                block_areas, free_areas)
     blocked = blocked_grid(size, is_blocked, cell, threshold)
     collisions = merge_cells(blocked, size[0] // cell, size[1] // cell, cell)
     border = [(-16, -16, size[0] + 32, 16), (-16, size[1], size[0] + 32, 16),
@@ -311,7 +367,8 @@ def convert(picture_path, name, out_dir=MAP_DIR, tile=16, cell=8, threshold=0.5,
     start = nearest_free(blocked, cell, wanted[0], wanted[1], size)
     if start is None:
         raise ValueError("nowhere to stand: the whole map is blocked (check the mask or colours)")
-    patrol = patrol_points(blocked, cell, size, (size[0] * 2 // 3, size[1] // 2)) or [start] * 4
+    centre = patrol_centre or (size[0] * 2 // 3, size[1] // 2)
+    patrol = patrol_points(blocked, cell, size, centre) or [start] * 4
     # The other player online: across from the player
     rival = nearest_free(blocked, cell, size[0] * 2 // 3, wanted[1], size) or start
 
@@ -360,6 +417,10 @@ def main():
     parser.add_argument("--water", action="store_true", help="block blue water")
     parser.add_argument("--walk-area", type=parse_box, action="append", default=[], metavar="X0,Y0,X1,Y1",
                         help="only inside these rectangles can characters walk")
+    parser.add_argument("--block-area", type=parse_box, action="append", default=[], metavar="X0,Y0,X1,Y1",
+                        help="never walkable")
+    parser.add_argument("--free-area", type=parse_box, action="append", default=[], metavar="X0,Y0,X1,Y1",
+                        help="always walkable")
     parser.add_argument("--crop", type=parse_box, metavar="X,Y,W,H", help="use only this area of the picture")
     parser.add_argument("--thumbnail", help="also save a small picture of the map")
     parser.add_argument("--tolerance", type=int, default=24, help="how close a colour must be (default 24)")
@@ -375,7 +436,8 @@ def main():
     try:
         summary = convert(args.picture, args.name, args.out_dir, args.tile, args.cell, args.threshold,
                           args.mask, args.block_colour, args.walkable_colour, args.water, args.tolerance,
-                          args.spawn, args.preview, args.force, args.crop, args.walk_area, args.thumbnail)
+                          args.spawn, args.preview, args.force, args.crop, args.walk_area, args.thumbnail,
+                          block_areas=args.block_area, free_areas=args.free_area)
     except (OSError, ValueError, pygame.error) as error:
         sys.exit(f"error: {error}")
     print(f"{summary['map']}: {summary['size'][0]}x{summary['size'][1]} px, {summary['tiles']} unique tiles, "
