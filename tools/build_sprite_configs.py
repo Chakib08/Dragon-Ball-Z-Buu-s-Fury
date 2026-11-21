@@ -210,8 +210,10 @@ KID_TRUNKS = dict(hurt=[25, 26], block=27, special=[21, 22, 23], faint=[31, 32, 
                                         ("ki_burst", [24, 24], None)))
 GOTENKS = dict(hurt=[22, 23], block=24, special=[19, 20, 21], faint=[30, 31, 32, 33],
                techniques=techniques(("energy_blast", [19, 20, 21], 1),
-                                     ("super_ghost_kamikaze", [35, 36, 37, 38], 3),
+                                     ("super_ghost_kamikaze", [36, 37, 38, 35], 3),
                                      ("galactic_donut", [34, 34], 1)))
+# His ghost poses (crouching, then spitting the ghost out) face left on
+# the sheets: mirrored for the right
 SAIYAMAN = dict(hurt=[28, 29], block=27, special=[24, 25, 26], faint=[44, 45, 46, 47],
                 techniques=techniques(("energy_blast", [24, 25, 26], 1), ("kamehameha", [22, 23, 24], 2),
                                       ("ki_burst", [31], None)))
@@ -264,7 +266,7 @@ NEW_SHEETS = [
     # Before he splits (the fusion's time is up) his hair goes back to black
     {"character": "gotenks", "form": "base", "transform": [48, 49, 50, 51, 52],
      **{**GOTENKS, "techniques": techniques(("energy_blast", [19, 20, 21], 1),
-                                            ("super_ghost_kamikaze", [39, 40, 41, 42], 3),
+                                            ("super_ghost_kamikaze", [40, 41, 42, 39], 3),
                                             ("galactic_donut", [34, 34], 1))}},
     {"character": "gotenks", "form": "ssj", "transform": [42, 43, 44, 45], "defuse": [48, 49, 50], **GOTENKS},
     {"character": "gotenks", "form": "ssj3", "defuse": [43, 44, 45], **GOTENKS},
@@ -317,6 +319,11 @@ NEW_SHEETS = [
      "techniques": techniques(("energy_blast", [23, 24, 25], 1), ("human_extinction", [39, 40, 41], 1),
                               ("rage", [42, 43, 44], None, "Down"))},
 ]
+# Gotenks' ghost poses (crouching, then spitting the ghost out) face left
+# on his sheets: mirrored for the right
+for _sheet in NEW_SHEETS:
+    if _sheet["character"] == "gotenks":
+        _sheet["techniques"]["super_ghost_kamikaze"]["right_flip"] = True
 SHEETS += NEW_SHEETS
 
 # Effects borrowed from another character's techniques (read from its
@@ -662,7 +669,7 @@ def build_form(spec):
     for technique_id, technique in spec["techniques"].items():
         key = "vanish" if "vanish" in technique else "pose"
         boxes = {d: [box(c, row) for c, row in pose_cells] for d, pose_cells in technique_cells(technique).items()}
-        if flip_right:
+        if flip_right or technique.get("right_flip"):
             boxes["right_flip"] = True
         poses[technique_id] = {key: boxes, **({"fire_at": technique["fire_at"]} if "fire_at" in technique else {})}
         elsewhere = technique.get("pose_sheet")
