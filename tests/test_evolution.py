@@ -137,7 +137,11 @@ class EvolutionTests(EvolutionCase):
         cell.ki = cell.max_ki
         cell.next_technique_ms = 0
         cell.combat_engaged = True
-        self.run_frames(player, combat, 300, npcs=[cell])
+        # Of the techniques that fit, it picks the absorption (the pick is
+        # random in the game)
+        evolve_first = lambda options: next((t for t in options if t.kind == "evolve"), options[0])
+        with patch("npc_ai.random.choice", side_effect=evolve_first):
+            self.run_frames(player, combat, 300, npcs=[cell])
         self.assertEqual(cell.character_name, "cell_semi_perfect")
         self.assertEqual(cell.difficulty.name, "normal")  # still its difficulty
 

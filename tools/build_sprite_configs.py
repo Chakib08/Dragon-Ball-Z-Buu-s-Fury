@@ -215,8 +215,9 @@ GOTENKS = dict(hurt=[22, 23], block=24, special=[19, 20, 21], faint=[30, 31, 32,
 SAIYAMAN = dict(hurt=[28, 29], block=27, special=[24, 25, 26], faint=[44, 45, 46, 47],
                 techniques=techniques(("energy_blast", [24, 25, 26], 1), ("kamehameha", [22, 23, 24], 2),
                                       ("ki_burst", [31], None)))
-VEGITO = dict(hurt=[24, 25], block=26, special=[20, 21, 22], faint=[40, 41, 42, 43],
-              techniques=techniques(("energy_blast", [20, 21, 22], 1), ("final_kamehameha", [21, 22, 22, 23], 2),
+# Guard: 23, the forearm up in front of the face (26 is a hit, leaning back)
+VEGITO = dict(hurt=[24, 25], block=23, special=[20, 21, 22], faint=[40, 41, 42, 43],
+              techniques=techniques(("energy_blast", [20, 21, 22], 1), ("final_kamehameha", [21, 21, 22, 22], 2),
                                     ("spirit_sword", [30, 31, 32], None)))
 CELL_TECHNIQUES = (("energy_blast", [20, 21, 22], 1), ("kamehameha", [21, 22, 23], 2))
 

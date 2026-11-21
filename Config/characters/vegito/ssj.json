@@ -468,7 +468,7 @@
     },
     {
       "AnimationName": "Block Down 0",
-      "x": 832,
+      "x": 736,
       "y": 32,
       "Area Width": 32,
       "Area Height": 32,
@@ -477,9 +477,9 @@
         "Height": 32
       },
       "Background": {
-        "R": 71,
-        "G": 255,
-        "B": 187
+        "R": 52,
+        "G": 188,
+        "B": 136
       }
     },
     {
@@ -884,7 +884,7 @@
     },
     {
       "AnimationName": "Block Right 0",
-      "x": 832,
+      "x": 736,
       "y": 96,
       "Area Width": 32,
       "Area Height": 32,
@@ -893,9 +893,9 @@
         "Height": 32
       },
       "Background": {
-        "R": 71,
-        "G": 255,
-        "B": 187
+        "R": 52,
+        "G": 188,
+        "B": 136
       }
     },
     {
@@ -1300,7 +1300,7 @@
     },
     {
       "AnimationName": "Block Left 0",
-      "x": 832,
+      "x": 736,
       "y": 96,
       "Area Width": 32,
       "Area Height": 32,
@@ -1309,9 +1309,9 @@
         "Height": 32
       },
       "Background": {
-        "R": 71,
-        "G": 255,
-        "B": 187
+        "R": 52,
+        "G": 188,
+        "B": 136
       }
     },
     {
@@ -1716,7 +1716,7 @@
     },
     {
       "AnimationName": "Block Up 0",
-      "x": 832,
+      "x": 736,
       "y": 128,
       "Area Width": 32,
       "Area Height": 32,
@@ -1725,9 +1725,9 @@
         "Height": 32
       },
       "Background": {
-        "R": 52,
-        "G": 188,
-        "B": 136
+        "R": 71,
+        "G": 255,
+        "B": 187
       }
     },
     {
