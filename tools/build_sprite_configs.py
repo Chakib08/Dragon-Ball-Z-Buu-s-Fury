@@ -231,12 +231,23 @@ NEW_SHEETS = [
     {"character": "kid_trunks", "form": "ssj", **KID_TRUNKS},
     # Gotenks is always a Super Saiyan; his SSJ sheet turns him into SSJ3.
     # Before he splits (the fusion's time is up) his hair goes back to black
+    {"character": "gotenks", "form": "base", "transform": [48, 49, 50, 51, 52],
+     **{**GOTENKS, "techniques": techniques(("energy_blast", [19, 20, 21], 1),
+                                            ("super_ghost_kamikaze", [39, 40, 41, 42], 3),
+                                            ("galactic_donut", [34, 34], None))}},
     {"character": "gotenks", "form": "ssj", "transform": [42, 43, 44, 45], "defuse": [48, 49, 50], **GOTENKS},
     {"character": "gotenks", "form": "ssj3", "defuse": [43, 44, 45], **GOTENKS},
     {"character": "great_saiyaman", "form": "base", "transform": [57, 57, 58, 59, 60, 61], **SAIYAMAN},
     {"character": "great_saiyaman", "form": "ssj", **SAIYAMAN},
     {"character": "vegito", "form": "base", "transform": [32, 33, 33, 34, 35, 36], **VEGITO},
     {"character": "vegito", "form": "ssj", **VEGITO},
+    # Gogeta is always a Super Saiyan; his black-haired frames are his
+    # fusion running out
+    {"character": "gogeta", "form": "ssj", "hurt": [29, 30], "block": 28, "special": [22, 23, 24],
+     "faint": [37, 38, 39, 40], "defuse": [47, 48],
+     "techniques": techniques(("energy_blast", [22, 23, 24], 1),
+                              ("big_bang_kamehameha", [21, 22, 23, 24], 3),
+                              ("soul_punisher", [45, 46, 46], 2, "Down"))},
     # Cell: the transformation frames turn him into his next form (played
     # while he absorbs an android, see the "evolve" techniques)
     {"character": "cell_imperfect", "form": "base", **BIG, "attack": list(range(6, 18)), "run": NO_RUN,
@@ -283,6 +294,7 @@ BORROWED = {
     "gohan_blast": ("gohan", "energy_blast"),
     "gohan_burst": ("gohan", "ki_burst"),
     "final_flash": ("vegeta", "final_flash"),
+    "big_bang": ("vegeta", "big_bang"),
 }
 # Bigger and farther than their kind's usual (see techniques.py)
 SIGNATURE = {"effect_scale": 2, "range_scale": 4}
@@ -321,6 +333,9 @@ NEW_CHARACTER_SPECIALS = {
     "vegito": {"energy_blast": ENERGY_BLAST,
                "final_kamehameha": ("Final Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
                "spirit_sword": ("Spirit Sword", "burst", {"rings": CROSS_SLASH})},
+    "gogeta": {"energy_blast": ENERGY_BLAST,
+               "big_bang_kamehameha": ("Big Bang Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+               "soul_punisher": ("Soul Punisher", "ball", ("borrow", "big_bang"))},
     "cell_imperfect": {"energy_blast": ENERGY_BLAST,
                        "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"))},
     "cell_semi_perfect": {"energy_blast": ENERGY_BLAST,
@@ -351,10 +366,14 @@ for _buu in ("super_buu", "super_buu_gotenks", "super_buu_gohan"):
 # absorption is for good
 FUSION_SECONDS = 60
 EVOLVE = {
-    "goku": [{"id": "potara", "name": "Potara Fusion", "kind": "evolve", "style": "fusion",
-              "partner": "vegeta", "becomes": "vegito", "lasts_s": FUSION_SECONDS}],
-    "vegeta": [{"id": "potara", "name": "Potara Fusion", "kind": "evolve", "style": "fusion",
-                "partner": "goku", "becomes": "vegito", "lasts_s": FUSION_SECONDS}],
+    "goku": [{"id": "potara", "name": "Potara Fusion (Vegito)", "kind": "evolve", "style": "fusion",
+              "partner": "vegeta", "becomes": "vegito", "lasts_s": FUSION_SECONDS},
+             {"id": "fusion_gogeta", "name": "Fusion Dance (Gogeta)", "kind": "evolve", "style": "fusion",
+              "partner": "vegeta", "becomes": "gogeta", "lasts_s": FUSION_SECONDS}],
+    "vegeta": [{"id": "potara", "name": "Potara Fusion (Vegito)", "kind": "evolve", "style": "fusion",
+                "partner": "goku", "becomes": "vegito", "lasts_s": FUSION_SECONDS},
+               {"id": "fusion_gogeta", "name": "Fusion Dance (Gogeta)", "kind": "evolve", "style": "fusion",
+                "partner": "goku", "becomes": "gogeta", "lasts_s": FUSION_SECONDS}],
     "goten": [{"id": "fusion_dance", "name": "Fusion Dance", "kind": "evolve", "style": "fusion",
                "partner": "kid_trunks", "becomes": "gotenks", "lasts_s": FUSION_SECONDS}],
     "kid_trunks": [{"id": "fusion_dance", "name": "Fusion Dance", "kind": "evolve", "style": "fusion",

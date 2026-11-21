@@ -224,6 +224,13 @@
       "dialog": [
         "Hehehehe!"
       ]
+    },
+    "gogeta": {
+      "difficulty": "hard",
+      "dialog": [
+        "I am neither Goku nor Vegeta.",
+        "I am the one who will defeat you!"
+      ]
     }
   }
 }

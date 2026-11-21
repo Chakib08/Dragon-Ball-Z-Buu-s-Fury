@@ -22,9 +22,11 @@ setUpModule, tearDownModule = steady_module_fixtures()
 
 
 EXPECTED = {
-    "goku": ["Energy Blast", "Kamehameha", "Instant Transmission", "Potara Fusion"],
+    "goku": ["Energy Blast", "Kamehameha", "Instant Transmission", "Potara Fusion (Vegito)",
+             "Fusion Dance (Gogeta)"],
     "gohan": ["Energy Blast", "Kamehameha", "Ki Burst"],
-    "vegeta": ["Energy Blast", "Final Flash", "Big Bang Attack", "Potara Fusion"],
+    "vegeta": ["Energy Blast", "Final Flash", "Big Bang Attack", "Potara Fusion (Vegito)",
+               "Fusion Dance (Gogeta)"],
     "trunks": ["Energy Blast", "Burning Attack", "Sword Slash"],
     "broly": ["Energy Blast", "Eraser Cannon", "Blaster Shell"],
     "piccolo": ["Energy Blast", "Special Beam Cannon", "Ki Burst"],
@@ -35,6 +37,7 @@ EXPECTED = {
     "gotenks": ["Energy Blast", "Super Ghost Kamikaze Attack", "Galactic Donut"],
     "great_saiyaman": ["Energy Blast", "Kamehameha", "Ki Burst"],
     "vegito": ["Energy Blast", "Final Kamehameha", "Spirit Sword"],
+    "gogeta": ["Energy Blast", "Big Bang Kamehameha", "Soul Punisher"],
     "cell_imperfect": ["Energy Blast", "Kamehameha", "Absorb Android 17"],
     "cell_semi_perfect": ["Energy Blast", "Kamehameha", "Absorb Android 18"],
     "cell_perfect": ["Energy Blast", "Kamehameha", "Perfect Barrier"],

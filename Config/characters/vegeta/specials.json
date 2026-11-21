@@ -639,11 +639,20 @@
     },
     {
       "id": "potara",
-      "name": "Potara Fusion",
+      "name": "Potara Fusion (Vegito)",
       "kind": "evolve",
       "style": "fusion",
       "partner": "goku",
       "becomes": "vegito",
+      "lasts_s": 60
+    },
+    {
+      "id": "fusion_gogeta",
+      "name": "Fusion Dance (Gogeta)",
+      "kind": "evolve",
+      "style": "fusion",
+      "partner": "goku",
+      "becomes": "gogeta",
       "lasts_s": 60
     }
   ]

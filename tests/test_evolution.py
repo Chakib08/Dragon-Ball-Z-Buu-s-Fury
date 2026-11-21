@@ -83,6 +83,22 @@ class EvolutionTests(EvolutionCase):
                 # Vegito can still go Super Saiyan
                 self.assertEqual(player.super_levels, ["ssj"])
 
+    def test_goku_and_vegeta_can_also_dance_into_gogeta(self):
+        for name in ("goku", "vegeta"):
+            with self.subTest(character=name):
+                player, combat = self.fight(name)
+                self.assertTrue(self.use(player, combat, "fusion_gogeta"))
+                self.run_frames(player, combat)
+                self.assertEqual(player.character_name, "gogeta")
+                self.assertEqual(player.form, "ssj")  # always a Super Saiyan
+                self.assertEqual(player.fusion["original"], name)
+                # His time up: black hair (his own frames), then the split
+                self.clock.now += 61_000
+                combat.update([], [])
+                self.assertIs(player.action["frames"][0], player.frame_image("Defuse 0"))
+                self.run_frames(player, combat, 120)
+                self.assertEqual(player.character_name, name)
+
     def test_it_costs_ki(self):
         player, combat = self.fight("goku")
         player.ki = 10
@@ -174,10 +190,12 @@ class FusionTimeTests(EvolutionCase):
         self.assertAlmostEqual(player.hp / player.max_hp, 0.4)
         self.assertIsNone(player.action)
         self.assertEqual(combat.effects, [])
-        self.assertIn("Potara Fusion", [t.name for t in player.techniques])
+        self.assertIn("Potara Fusion (Vegito)", [t.name for t in player.techniques])
 
     def test_gotenks_powers_down_with_his_own_frames(self):
         player, combat = self.fuse("goten", "fusion_dance")
+        self.assertEqual(player.form, "base")  # the dance makes base Gotenks
+        player.set_form("ssj")  # gone Super Saiyan meanwhile
         self.clock.now += 61_000
         combat.update([], [])
         self.assertEqual(player.action["name"], "evolve")
