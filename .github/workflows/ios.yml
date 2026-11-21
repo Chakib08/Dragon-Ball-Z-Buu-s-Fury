@@ -4,8 +4,8 @@ name: Build iOS app
 # kivy-ios, pygame from our recipe (ios/recipes/pygame), and kivy-ios's
 # Xcode project around the game (ios/stage_app.py).
 #
-#   assets   downloads the sprite sheets (setup.sh, on Linux)
-#   build    on macOS: builds Python, SDL2 and pygame for iOS, the Xcode
+#   build    on macOS: downloads the sprite sheets (setup.sh), builds
+#            Python, SDL2 and pygame for iOS, the Xcode
 #            project, then
 #              - the app for the iOS Simulator (zipped .app), started once
 #                in a simulator in smoke-test mode (a short fight, then it
@@ -13,7 +13,9 @@ name: Build iOS app
 #              - the app for iPhone/iPad, NOT signed (.ipa): to install it,
 #                sign it with your Apple account (Xcode, or a sideloading
 #                tool such as AltStore or Sideloadly)
-#   release  on a v* tag, attaches the .ipa to the GitHub release
+#            and, on a v* tag, attaches the .ipa to the GitHub release
+#
+# No workflow artifacts: the sprite sheets (private) never leave the job.
 #
 # Run it by hand on any branch: Actions > this workflow > Run workflow.
 # The first run takes long (Python and SDL2 are built from source); later
@@ -41,30 +43,10 @@ env:
   BUNDLE_ID: org.chakib08.trunkshope
 
 jobs:
-  assets:
-    runs-on: ubuntu-22.04
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Download sprite sheets
-        run: ./setup.sh
-        env:
-          # A token that can read the private dbz-assets repository
-          GH_TOKEN: ${{ secrets.DBZ_ASSETS_TOKEN }}
-
-      - name: Keep them for the iOS build
-        uses: actions/upload-artifact@v4
-        with:
-          name: sprite-sheets-ios
-          path: Graphics/assets/
-          include-hidden-files: true
-          if-no-files-found: error
-          retention-days: 1
-
   build:
-    needs: assets
+    permissions:
+      # To attach the .ipa to the release (on a v* tag)
+      contents: write
     # macos-14 is retired; the first build compiles Python and SDL2 (long)
     runs-on: macos-latest
     timeout-minutes: 300
@@ -73,16 +55,20 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Get the sprite sheets
-        uses: actions/download-artifact@v4
-        with:
-          name: sprite-sheets-ios
-          path: Graphics/assets/
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
+      - name: Download sprite sheets
+        run: |
+          # pygame here (macOS) builds the arenas from the map pictures
+          python -m pip install -q pygame==2.6.1
+          ./setup.sh
+        env:
+          # A token that can read the private dbz-assets repository
+          GH_TOKEN: ${{ secrets.DBZ_ASSETS_TOKEN }}
+          PYTHON: python
 
       - name: Install kivy-ios and its tools
         run: |
@@ -181,16 +167,6 @@ jobs:
           cp -R "$app" Payload/
           zip -qry "$GITHUB_WORKSPACE/$APP_NAME-v$version-ios-unsigned.ipa" Payload
 
-      - name: Upload the apps
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-apps
-          path: |
-            ${{ env.APP_NAME }}-*-ios-unsigned.ipa
-            ${{ env.APP_NAME }}-simulator.zip
-          if-no-files-found: error
-          retention-days: 14
-
       - name: Start it once in a simulator (smoke test)
         working-directory: ios-build
         run: |
@@ -210,22 +186,9 @@ jobs:
           export SIMCTL_CHILD_DBZ_SMOKE_TEST=arcade SIMCTL_CHILD_DBZ_SMOKE_TEST_SECONDS=8
           python ../tools/ios_smoke_test.py "$device" "$BUNDLE_ID"
 
-  release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-22.04
-    permissions:
-      contents: write
-
-    steps:
-      - name: Download the apps
-        uses: actions/download-artifact@v4
-        with:
-          name: ios-apps
-          path: dist/
-
       - name: Attach the iPhone app to the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.ipa
+          files: ${{ env.APP_NAME }}-*-ios-unsigned.ipa
           generate_release_notes: true
