@@ -1,0 +1,35 @@
+{
+  "sheets": {
+    "bf": {"path": "Graphics/assets/portraits/bf.png", "size": 64, "transparent_corners": true},
+    "log2": {"path": "Graphics/assets/portraits/log2.png", "size": 64},
+    "android13": {"path": "Graphics/assets/android13/base.png", "size": 32, "scale": 2}
+  },
+  "characters": {
+    "goku": ["bf", 33, 54],
+    "vegeta": ["bf", 33, 607],
+    "gohan": ["bf", 33, 192],
+    "trunks": ["log2", 192, 191],
+    "piccolo": ["log2", 384, 191],
+    "goten": ["bf", 33, 538],
+    "kid_trunks": ["bf", 33, 745],
+    "gotenks": ["bf", 33, 814],
+    "great_saiyaman": ["bf", 33, 261],
+    "vegito": ["bf", 33, 883],
+    "gogeta": ["bf", 33, 952],
+    "android17": ["log2", 128, 255],
+    "android18": ["log2", 192, 255],
+    "android16": ["log2", 0, 255],
+    "android19": ["log2", 256, 255],
+    "android20": ["log2", 320, 255],
+    "android13": ["android13", 16, 34],
+    "cell_imperfect": ["log2", 0, 319],
+    "cell_semi_perfect": ["log2", 64, 319],
+    "cell_perfect": ["log2", 128, 319],
+    "buu": ["bf", 33, 2182],
+    "super_buu": ["bf", 102, 2251],
+    "super_buu_gotenks": ["bf", 102, 2320],
+    "super_buu_gohan": ["bf", 33, 2320],
+    "kid_buu": ["bf", 171, 2320],
+    "broly": ["bf", 33, 2458]
+  }
+}

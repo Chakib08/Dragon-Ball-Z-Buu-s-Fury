@@ -1,0 +1,21 @@
+{
+  "caption": "Dragon Ball Z Trunks Hope",
+  "fullscreen": true,
+  "server": {
+    "host": "127.0.0.1",
+    "port": 5050
+  },
+  "resolution": {
+    "width": 1200,
+    "heigth": 1000
+  },
+  "arena": "map",
+  "MAP_DIR": "Graphics/maps/",
+  "CONFIG_DIR": "Config/characters/",
+  "MENU_DIR": "Graphics/menu/",
+  "SOUNDS_DIR": "Sounds/",
+  "DIALOG_DIR": "Graphics/dialog/",
+  "CLOCK_SPEED": 14,
+  "CLOCK_LIMIT": 100,
+  "FPS": 60
+}

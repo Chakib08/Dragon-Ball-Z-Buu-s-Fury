@@ -3,3 +3,27 @@
 
 # Folders
 __pycache__/
+.venv/
+# Sprite sheets downloaded by setup.sh
+*.part
+
+# Never commit a ROM or what is extracted from it
+*.gba
+rips/
+
+# Settings changed in the game (server address)
+user_settings.json
+# Sprite sheets downloaded by setup.sh
+Graphics/assets/*/*.png
+Graphics/assets/*/*.gif
+Graphics/assets/.dbz-assets
+# Arenas built from the map pictures (tools/build_arenas.py)
+Graphics/assets/arenas/
+.setup-env/
+
+# Local secrets (GH_TOKEN for setup.sh)
+.env
+
+# Desktop builds (tools/build_desktop.py)
+build/
+dist/

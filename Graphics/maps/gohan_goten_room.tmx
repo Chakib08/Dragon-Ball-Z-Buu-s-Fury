@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.10.1" orientation="orthogonal" renderorder="right-down" width="25" height="25" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="3">
+<map version="1.10" tiledversion="1.10.1" orientation="orthogonal" renderorder="right-down" width="25" height="25" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="42">
  <tileset firstgid="1" source="Goku_home.tsx"/>
  <layer id="1" name="Tile Layer 1" width="25" height="25">
   <data encoding="csv">
@@ -35,5 +35,18 @@
   <object id="2" name="spawn_gohan_goten_room" x="188.378" y="336.189">
    <point/>
   </object>
+  <object id="29" name="auto_wall" type="collision" x="0" y="0" width="400" height="240"/>
+  <object id="30" name="auto_wall" type="collision" x="0" y="240" width="88" height="72"/>
+  <object id="31" name="auto_wall" type="collision" x="100" y="240" width="36" height="20"/>
+  <object id="32" name="auto_wall" type="collision" x="140" y="240" width="68" height="12"/>
+  <object id="33" name="auto_wall" type="collision" x="272" y="240" width="128" height="28"/>
+  <object id="34" name="auto_wall" type="collision" x="244" y="268" width="156" height="28"/>
+  <object id="35" name="auto_wall" type="collision" x="232" y="296" width="168" height="16"/>
+  <object id="36" name="auto_wall" type="collision" x="0" y="312" width="128" height="32"/>
+  <object id="37" name="auto_wall" type="collision" x="244" y="312" width="156" height="20"/>
+  <object id="38" name="auto_wall" type="collision" x="272" y="332" width="128" height="12"/>
+  <object id="39" name="auto_wall" type="collision" x="0" y="344" width="176" height="12"/>
+  <object id="40" name="auto_wall" type="collision" x="204" y="344" width="196" height="12"/>
+  <object id="41" name="auto_wall" type="collision" x="0" y="356" width="400" height="44"/>
  </objectgroup>
 </map>

@@ -7,7 +7,14 @@ class PathManager:
     @classmethod
     def map_path(cls, map_name):
         if Config.MAP_DIR and os.path.exists(Config.MAP_DIR):
-            return os.path.join(Config.MAP_DIR, f"{map_name}.tmx")
+            path = os.path.join(Config.MAP_DIR, f"{map_name}.tmx")
+            if not os.path.exists(path):
+                # An arena built from the dbz-assets pictures (arenas.py)
+                import arenas
+                built = arenas.built_path(map_name)
+                if built:
+                    return built
+            return path
         else:
             raise ValueError("MAP_DIR is invalid or does not exist")
         
