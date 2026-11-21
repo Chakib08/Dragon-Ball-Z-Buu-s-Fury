@@ -8,40 +8,38 @@
         "base": {
           "projectile": [
             [
-              8,
-              8,
-              16,
-              16
-            ],
-            [
-              24,
-              8,
-              16,
-              16
-            ],
-            [
-              40,
-              8,
-              16,
-              16
-            ],
-            [
-              56,
-              8,
+              312,
+              303,
               16,
               16
             ]
           ],
           "hit": [
             [
-              72,
-              8,
+              290,
+              298,
+              14,
+              15
+            ],
+            [
+              340,
+              294,
+              14,
+              15
+            ],
+            [
+              362,
+              294,
               16,
               16
             ]
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
+          "sheet": "Graphics/assets/effects/vegito_fx.gif",
+          "background": [
+            13,
+            107,
+            247
+          ],
           "pose": {
             "Down": [
               [
@@ -109,40 +107,38 @@
         "ssj": {
           "projectile": [
             [
-              8,
-              8,
-              16,
-              16
-            ],
-            [
-              24,
-              8,
-              16,
-              16
-            ],
-            [
-              40,
-              8,
-              16,
-              16
-            ],
-            [
-              56,
-              8,
+              312,
+              303,
               16,
               16
             ]
           ],
           "hit": [
             [
-              72,
-              8,
+              290,
+              298,
+              14,
+              15
+            ],
+            [
+              340,
+              294,
+              14,
+              15
+            ],
+            [
+              362,
+              294,
               16,
               16
             ]
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
+          "sheet": "Graphics/assets/effects/vegito_fx.gif",
+          "background": [
+            13,
+            107,
+            247
+          ],
           "pose": {
             "Down": [
               [
@@ -220,40 +216,34 @@
           "beam": {
             "full": [
               [
-                235,
-                408,
-                38,
-                14
+                5,
+                384,
+                69,
+                7
               ],
               [
-                235,
-                429,
-                38,
-                14
+                81,
+                384,
+                69,
+                7
               ]
             ],
-            "tail": 8,
-            "head": 14
+            "tail": 6,
+            "head": 6
           },
           "charge": [
             [
-              116,
-              415,
-              10,
-              10
-            ],
-            [
-              129,
-              413,
-              14,
-              14
+              36,
+              357,
+              4,
+              4
             ]
           ],
-          "sheet": "Graphics/assets/effects/gohan_base.png",
+          "sheet": "Graphics/assets/effects/vegito_fx.gif",
           "background": [
-            0,
-            156,
-            255
+            13,
+            107,
+            247
           ],
           "pose": {
             "Down": [
@@ -341,40 +331,34 @@
           "beam": {
             "full": [
               [
-                235,
-                408,
-                38,
-                14
+                5,
+                384,
+                69,
+                7
               ],
               [
-                235,
-                429,
-                38,
-                14
+                81,
+                384,
+                69,
+                7
               ]
             ],
-            "tail": 8,
-            "head": 14
+            "tail": 6,
+            "head": 6
           },
           "charge": [
             [
-              116,
-              415,
-              10,
-              10
-            ],
-            [
-              129,
-              413,
-              14,
-              14
+              36,
+              357,
+              4,
+              4
             ]
           ],
-          "sheet": "Graphics/assets/effects/gohan_base.png",
+          "sheet": "Graphics/assets/effects/vegito_fx.gif",
           "background": [
-            0,
-            156,
-            255
+            13,
+            107,
+            247
           ],
           "pose": {
             "Down": [
@@ -517,22 +501,40 @@
             ],
             "Right": [
               [
-                960,
-                96,
+                6,
+                438,
                 32,
                 32
               ],
               [
-                992,
-                96,
+                49,
+                438,
                 32,
                 32
               ],
               [
-                1024,
-                96,
-                32,
-                32
+                95,
+                431,
+                40,
+                39
+              ],
+              [
+                150,
+                431,
+                40,
+                39
+              ],
+              [
+                199,
+                427,
+                44,
+                43
+              ],
+              [
+                257,
+                427,
+                44,
+                43
               ]
             ],
             "Up": [
@@ -555,6 +557,18 @@
                 32
               ]
             ]
+          },
+          "pose_sheet": {
+            "sheet": "Graphics/assets/effects/vegito_fx.gif",
+            "background": [
+              13,
+              107,
+              247
+            ],
+            "directions": [
+              "Right"
+            ],
+            "right_flip": true
           }
         },
         "ssj": {
@@ -609,22 +623,40 @@
             ],
             "Right": [
               [
-                960,
-                96,
+                6,
+                438,
                 32,
                 32
               ],
               [
-                992,
-                96,
+                49,
+                438,
                 32,
                 32
               ],
               [
-                1024,
-                96,
-                32,
-                32
+                95,
+                431,
+                40,
+                39
+              ],
+              [
+                150,
+                431,
+                40,
+                39
+              ],
+              [
+                199,
+                427,
+                44,
+                43
+              ],
+              [
+                257,
+                427,
+                44,
+                43
               ]
             ],
             "Up": [
@@ -647,6 +679,18 @@
                 32
               ]
             ]
+          },
+          "pose_sheet": {
+            "sheet": "Graphics/assets/effects/vegito_fx.gif",
+            "background": [
+              13,
+              107,
+              247
+            ],
+            "directions": [
+              "Right"
+            ],
+            "right_flip": true
           }
         }
       }

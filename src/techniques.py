@@ -8,6 +8,9 @@ sheet, the effects on "sheet" when given (with its "background" colour, or
     pose        the character's poses per direction (Down, Right, Up), shown
                 while the technique runs; "right_flip" when the sheet draws
                 the sideways poses facing left
+    pose_sheet  poses of some directions drawn on another sheet (the effect
+                is part of the pose there, a sword, steam): {"sheet",
+                "background", "directions", "right_flip"}
     fire_at     pose frame on which the effect is released
     projectile  flying frames, facing right (other directions are rotated)
     hit         spark played where it lands
@@ -103,19 +106,29 @@ class TechniqueForm:
         self.fire_at = data.get("fire_at", 0)
         frames = data.get("pose") or data.get("vanish") or {}
         right_flip = frames.get("right_flip", False)
+        other = data.get("pose_sheet") or {}
         for direction in DIRECTIONS:
-            boxes = frames.get("Right" if direction == "Left" else direction, [])
+            source = "Right" if direction == "Left" else direction
+            boxes = frames.get(source, [])
+            elsewhere = source in other.get("directions", ())
+            flip = (other.get("right_flip", False) if elsewhere else right_flip) and direction in ("Right", "Left")
             for index, box in enumerate(boxes):
-                self._register(f"Tech {technique_id} {direction} {index}", box,
-                               flip=right_flip and direction in ("Right", "Left"))
+                self._register(f"Tech {technique_id} {direction} {index}", box, flip=flip,
+                               sheet=other if elsewhere else None)
 
-    def _register(self, name, box, flip=False):
+    def _register(self, name, box, flip=False, sheet=None):
         x, y, width, height = box
         frame = {"AnimationName": name, "x": x, "y": y, "Area Width": width, "Area Height": height,
                  "Size": {"Width": width, "Height": height}}
-        # The pose's own cell colour: the sheets alternate two shades from
-        # one cell to the next, and a corner of the box may be the sprite
-        r, g, b = self._cell_background(x, y, width, height)
+        if sheet is not None:
+            # A pose on another sheet, on one background colour
+            frame["Sheet"] = sheet["sheet"]
+            r, g, b = sheet["background"]
+        else:
+            # The pose's own cell colour: the sheets alternate two shades
+            # from one cell to the next, and a corner of the box may be the
+            # sprite
+            r, g, b = self._cell_background(x, y, width, height)
         frame["Background"] = {"R": r, "G": g, "B": b}
         if flip:
             frame["Flip"] = True
@@ -197,6 +210,8 @@ class Technique:
         self.lasts_s = data.get("lasts_s")
         # Seconds after a fusion splits before the fighter can fuse again
         self.cooldown_s = data.get("cooldown_s")
+        # A fusion's dance, frames of the two together (see evolution.py)
+        self.dance = data.get("dance")
 
     def form_for(self, character):
         """Sprites for the character's current form (or any form it has)."""

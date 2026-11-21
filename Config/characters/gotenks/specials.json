@@ -8,40 +8,38 @@
         "base": {
           "projectile": [
             [
-              8,
-              8,
-              16,
-              16
-            ],
-            [
-              24,
-              8,
-              16,
-              16
-            ],
-            [
-              40,
-              8,
-              16,
-              16
-            ],
-            [
-              56,
-              8,
+              309,
+              294,
               16,
               16
             ]
           ],
           "hit": [
             [
-              72,
-              8,
-              16,
-              16
+              287,
+              290,
+              13,
+              14
+            ],
+            [
+              337,
+              290,
+              13,
+              10
+            ],
+            [
+              398,
+              290,
+              13,
+              10
             ]
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
+          "sheet": "Graphics/assets/effects/gotenks_fx.gif",
+          "background": [
+            13,
+            107,
+            247
+          ],
           "pose": {
             "Down": [
               [
@@ -109,40 +107,38 @@
         "ssj": {
           "projectile": [
             [
-              8,
-              8,
-              16,
-              16
-            ],
-            [
-              24,
-              8,
-              16,
-              16
-            ],
-            [
-              40,
-              8,
-              16,
-              16
-            ],
-            [
-              56,
-              8,
+              309,
+              294,
               16,
               16
             ]
           ],
           "hit": [
             [
-              72,
-              8,
-              16,
-              16
+              287,
+              290,
+              13,
+              14
+            ],
+            [
+              337,
+              290,
+              13,
+              10
+            ],
+            [
+              398,
+              290,
+              13,
+              10
             ]
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
+          "sheet": "Graphics/assets/effects/gotenks_fx.gif",
+          "background": [
+            13,
+            107,
+            247
+          ],
           "pose": {
             "Down": [
               [
@@ -210,40 +206,38 @@
         "ssj3": {
           "projectile": [
             [
-              8,
-              8,
-              16,
-              16
-            ],
-            [
-              24,
-              8,
-              16,
-              16
-            ],
-            [
-              40,
-              8,
-              16,
-              16
-            ],
-            [
-              56,
-              8,
+              309,
+              294,
               16,
               16
             ]
           ],
           "hit": [
             [
-              72,
-              8,
-              16,
-              16
+              287,
+              290,
+              13,
+              14
+            ],
+            [
+              337,
+              290,
+              13,
+              10
+            ],
+            [
+              398,
+              290,
+              13,
+              10
             ]
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
+          "sheet": "Graphics/assets/effects/gotenks_fx.gif",
+          "background": [
+            13,
+            107,
+            247
+          ],
           "pose": {
             "Down": [
               [
@@ -318,60 +312,58 @@
         "base": {
           "grow": [
             [
-              152,
-              200,
-              8,
-              8
-            ],
-            [
-              160,
-              200,
+              182,
+              335,
               16,
-              16
+              30
             ]
           ],
           "projectile": [
             [
-              208,
-              192,
-              32,
+              206,
+              333,
+              16,
+              32
+            ],
+            [
+              230,
+              333,
+              16,
               32
             ]
           ],
           "hit": [
             [
-              16,
-              232,
-              16,
-              16
-            ],
-            [
-              32,
-              232,
+              199,
+              466,
               32,
               32
             ],
             [
-              64,
-              232,
+              250,
+              447,
               32,
               32
             ],
             [
-              96,
-              232,
+              330,
+              449,
               32,
               32
             ],
             [
-              128,
-              232,
+              370,
+              448,
               32,
               32
             ]
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
+          "sheet": "Graphics/assets/effects/gotenks_fx.gif",
+          "background": [
+            13,
+            107,
+            247
+          ],
           "pose": {
             "Down": [
               [
@@ -457,60 +449,58 @@
         "ssj": {
           "grow": [
             [
-              152,
-              200,
-              8,
-              8
-            ],
-            [
-              160,
-              200,
+              182,
+              335,
               16,
-              16
+              30
             ]
           ],
           "projectile": [
             [
-              208,
-              192,
-              32,
+              206,
+              333,
+              16,
+              32
+            ],
+            [
+              230,
+              333,
+              16,
               32
             ]
           ],
           "hit": [
             [
-              16,
-              232,
-              16,
-              16
-            ],
-            [
-              32,
-              232,
+              199,
+              466,
               32,
               32
             ],
             [
-              64,
-              232,
+              250,
+              447,
               32,
               32
             ],
             [
-              96,
-              232,
+              330,
+              449,
               32,
               32
             ],
             [
-              128,
-              232,
+              370,
+              448,
               32,
               32
             ]
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
+          "sheet": "Graphics/assets/effects/gotenks_fx.gif",
+          "background": [
+            13,
+            107,
+            247
+          ],
           "pose": {
             "Down": [
               [
@@ -596,60 +586,58 @@
         "ssj3": {
           "grow": [
             [
-              152,
-              200,
-              8,
-              8
-            ],
-            [
-              160,
-              200,
+              182,
+              335,
               16,
-              16
+              30
             ]
           ],
           "projectile": [
             [
-              208,
-              192,
-              32,
+              206,
+              333,
+              16,
+              32
+            ],
+            [
+              230,
+              333,
+              16,
               32
             ]
           ],
           "hit": [
             [
-              16,
-              232,
-              16,
-              16
-            ],
-            [
-              32,
-              232,
+              199,
+              466,
               32,
               32
             ],
             [
-              64,
-              232,
+              250,
+              447,
               32,
               32
             ],
             [
-              96,
-              232,
+              330,
+              449,
               32,
               32
             ],
             [
-              128,
-              232,
+              370,
+              448,
               32,
               32
             ]
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
+          "sheet": "Graphics/assets/effects/gotenks_fx.gif",
+          "background": [
+            13,
+            107,
+            247
+          ],
           "pose": {
             "Down": [
               [
@@ -737,37 +725,27 @@
     {
       "id": "galactic_donut",
       "name": "Galactic Donut",
-      "kind": "burst",
+      "kind": "beam",
       "forms": {
         "base": {
-          "rings": [
-            [
-              152,
-              200,
-              8,
-              8
+          "beam": {
+            "full": [
+              [
+                247,
+                425,
+                48,
+                4
+              ]
             ],
-            [
-              160,
-              200,
-              16,
-              16
-            ],
-            [
-              176,
-              192,
-              32,
-              32
-            ],
-            [
-              208,
-              192,
-              32,
-              32
-            ]
+            "tail": 4,
+            "head": 4
+          },
+          "sheet": "Graphics/assets/effects/gotenks_fx.gif",
+          "background": [
+            13,
+            107,
+            247
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
           "pose": {
             "Down": [
               [
@@ -811,37 +789,28 @@
                 32
               ]
             ]
-          }
+          },
+          "fire_at": 1
         },
         "ssj": {
-          "rings": [
-            [
-              152,
-              200,
-              8,
-              8
+          "beam": {
+            "full": [
+              [
+                247,
+                425,
+                48,
+                4
+              ]
             ],
-            [
-              160,
-              200,
-              16,
-              16
-            ],
-            [
-              176,
-              192,
-              32,
-              32
-            ],
-            [
-              208,
-              192,
-              32,
-              32
-            ]
+            "tail": 4,
+            "head": 4
+          },
+          "sheet": "Graphics/assets/effects/gotenks_fx.gif",
+          "background": [
+            13,
+            107,
+            247
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
           "pose": {
             "Down": [
               [
@@ -885,37 +854,28 @@
                 32
               ]
             ]
-          }
+          },
+          "fire_at": 1
         },
         "ssj3": {
-          "rings": [
-            [
-              152,
-              200,
-              8,
-              8
+          "beam": {
+            "full": [
+              [
+                247,
+                425,
+                48,
+                4
+              ]
             ],
-            [
-              160,
-              200,
-              16,
-              16
-            ],
-            [
-              176,
-              192,
-              32,
-              32
-            ],
-            [
-              208,
-              192,
-              32,
-              32
-            ]
+            "tail": 4,
+            "head": 4
+          },
+          "sheet": "Graphics/assets/effects/gotenks_fx.gif",
+          "background": [
+            13,
+            107,
+            247
           ],
-          "sheet": "Graphics/assets/effects/sfx.png",
-          "background": "auto",
           "pose": {
             "Down": [
               [
@@ -959,7 +919,8 @@
                 32
               ]
             ]
-          }
+          },
+          "fire_at": 1
         }
       }
     }

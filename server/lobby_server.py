@@ -59,7 +59,7 @@ import time
 
 # The server's own version: the game's it ships with (src/version.py; a
 # test keeps them in step). The release page has this file for each version
-SERVER_VERSION = "0.0.13"
+SERVER_VERSION = "0.0.16"
 # 2: names, team matches (allies in the states, hits for any fighter)
 # 3: the room's arena ("map")
 PROTOCOL_VERSION = 3

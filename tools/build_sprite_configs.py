@@ -211,7 +211,7 @@ KID_TRUNKS = dict(hurt=[25, 26], block=27, special=[21, 22, 23], faint=[31, 32, 
 GOTENKS = dict(hurt=[22, 23], block=24, special=[19, 20, 21], faint=[30, 31, 32, 33],
                techniques=techniques(("energy_blast", [19, 20, 21], 1),
                                      ("super_ghost_kamikaze", [35, 36, 37, 38], 3),
-                                     ("galactic_donut", [34, 34], None)))
+                                     ("galactic_donut", [34, 34], 1)))
 SAIYAMAN = dict(hurt=[28, 29], block=27, special=[24, 25, 26], faint=[44, 45, 46, 47],
                 techniques=techniques(("energy_blast", [24, 25, 26], 1), ("kamehameha", [22, 23, 24], 2),
                                       ("ki_burst", [31], None)))
@@ -265,7 +265,7 @@ NEW_SHEETS = [
     {"character": "gotenks", "form": "base", "transform": [48, 49, 50, 51, 52],
      **{**GOTENKS, "techniques": techniques(("energy_blast", [19, 20, 21], 1),
                                             ("super_ghost_kamikaze", [39, 40, 41, 42], 3),
-                                            ("galactic_donut", [34, 34], None))}},
+                                            ("galactic_donut", [34, 34], 1))}},
     {"character": "gotenks", "form": "ssj", "transform": [42, 43, 44, 45], "defuse": [48, 49, 50], **GOTENKS},
     {"character": "gotenks", "form": "ssj3", "defuse": [43, 44, 45], **GOTENKS},
     {"character": "great_saiyaman", "form": "base", "transform": [57, 57, 58, 59, 60, 61], **SAIYAMAN},
@@ -295,6 +295,7 @@ NEW_SHEETS = [
      "special": [18, 18, 19], "faint": [36, 37, 38, 39],
      "techniques": techniques(("energy_blast", [18, 18, 19], 1), ("candy_beam", [12, 13, 13], 1),
                               ("rage", [32, 33, 34, 35], None))},
+    # (his Steam Rage: BUU_STEAM, added below)
     {"character": "kid_buu", "form": "base", "rows": {**ROWS, "Charge": 192}, "run": NO_RUN,
      "attack": list(range(6, 18)), "hurt": [18, 19], "block": 20, "special": [12, 12, 13],
      "faint": [21, 22, 23, 24],
@@ -327,6 +328,58 @@ BORROWED = {
     "final_flash": ("vegeta", "final_flash"),
     "big_bang": ("vegeta", "big_bang"),
 }
+# Buu's Fury sheets of Vegito, Gotenks and Majin Buu with their techniques'
+# effects (setup.sh: Graphics/assets/effects/<name>_fx.gif), one background
+# colour each; boxes read off the sheets
+VEGITO_FX = f"{EFFECTS}/vegito_fx.gif"
+GOTENKS_FX = f"{EFFECTS}/gotenks_fx.gif"
+BUU_FX = f"{EFFECTS}/buu_fx.gif"
+BF_BLUE = (13, 107, 247)
+BUU_BLUE = (0, 6, 254)
+VEGITO_EFFECTS = {
+    "energy_blast": {"projectile": [[312, 303, 16, 16]],
+                     "hit": [[290, 298, 14, 15], [340, 294, 14, 15], [362, 294, 16, 16]]},
+    # Lines of light, white then blue, from the hands
+    "final_kamehameha": {"beam": {"full": [[5, 384, 69, 7], [81, 384, 69, 7]], "tail": 6, "head": 6},
+                         "charge": [[36, 357, 4, 4]]},
+}
+# Vegito with his Spirit Sword, facing left (mirrored for the right)
+VEGITO_SWORD = {"sheet": VEGITO_FX, "background": BF_BLUE, "right_flip": True,
+                "boxes": {"Right": [[6, 438, 32, 32], [49, 438, 32, 32], [95, 431, 40, 39], [150, 431, 40, 39],
+                                    [199, 427, 44, 43], [257, 427, 44, 43]]}}
+GOTENKS_EFFECTS = {
+    "energy_blast": {"projectile": [[309, 294, 16, 16]],
+                     "hit": [[287, 290, 13, 14], [337, 290, 13, 10], [398, 290, 13, 10]]},
+    # The ghosts fly at the foe and burst in big yellow balls
+    "super_ghost_kamikaze": {"grow": [[182, 335, 16, 30]], "projectile": [[206, 333, 16, 32], [230, 333, 16, 32]],
+                             "hit": [[199, 466, 32, 32], [250, 447, 32, 32], [330, 449, 32, 32],
+                                     [370, 448, 32, 32]]},
+    # The ring thrown flat, a thin yellow line
+    "galactic_donut": {"beam": {"full": [[247, 425, 48, 4]], "tail": 4, "head": 4}},
+}
+BUU_EFFECTS = {
+    # From the antenna on his head, ending in the candy-making tip
+    "candy_beam": {"beam": {"full": [[252, 167, 60, 10]], "tail": 4, "head": 16}},
+}
+# Buu fuming, steam out of his head (facing front, for every direction)
+_BUU_STEAM = [[18, 679, 43, 58], [75, 688, 49, 49], [136, 680, 54, 56], [198, 676, 64, 63], [271, 674, 63, 64],
+              [341, 672, 64, 64], [420, 676, 59, 63]]
+BUU_STEAM = {"sheet": BUU_FX, "background": BUU_BLUE,
+             "boxes": {"Down": _BUU_STEAM, "Right": _BUU_STEAM, "Up": _BUU_STEAM}}
+# (both forms of Vegito share his techniques)
+VEGITO["techniques"]["spirit_sword"]["pose_sheet"] = VEGITO_SWORD
+next(s for s in NEW_SHEETS if s["character"] == "buu")["techniques"]["rage"]["pose_sheet"] = BUU_STEAM
+# Gogeta's Fusion Dance (Vegeta on the left, Goku on the right): the dance,
+# their fingers meeting, the light, Gogeta's white shape (then the flash)
+FUSION_DANCE = {
+    "sheet": f"{EFFECTS}/fusion_dance.png", "background": [0, 128, 0],
+    "frames": [[18, 651, 48, 31], [93, 650, 47, 32], [164, 651, 59, 31], [248, 651, 56, 31], [326, 651, 46, 31],
+               [402, 651, 46, 31], [474, 652, 48, 30], [549, 652, 46, 30], [14, 693, 54, 31], [91, 693, 52, 31],
+               [160, 693, 63, 31], [249, 696, 52, 28], [325, 703, 51, 21], [399, 703, 51, 21], [474, 703, 51, 21],
+               [549, 703, 51, 21], [17, 748, 51, 21], [93, 748, 51, 21], [166, 748, 51, 21], [243, 748, 51, 21],
+               [325, 748, 51, 21], [445, 590, 16, 33]],
+}
+
 # Bigger and farther than their kind's usual (see techniques.py)
 SIGNATURE = {"effect_scale": 2, "range_scale": 4}
 
@@ -364,16 +417,19 @@ NEW_CHARACTER_SPECIALS = {
                    "burning_attack": ("Burning Attack", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
                                                                 "hit": YELLOW_BLAST}),
                    "ki_burst": ("Ki Burst", "burst", {"rings": WHITE_RINGS})},
-    "gotenks": {"energy_blast": ENERGY_BLAST,
+    "gotenks": {"energy_blast": ("Energy Blast", "projectile",
+                                 ("sheet", GOTENKS_FX, BF_BLUE, GOTENKS_EFFECTS["energy_blast"])),
                 "super_ghost_kamikaze": ("Super Ghost Kamikaze Attack", "ball",
-                                         {"grow": WHITE_RINGS[:2], "projectile": WHITE_RINGS[-1:],
-                                          "hit": STAR_EXPLOSION}),
-                "galactic_donut": ("Galactic Donut", "burst", {"rings": WHITE_RINGS})},
+                                         ("sheet", GOTENKS_FX, BF_BLUE, GOTENKS_EFFECTS["super_ghost_kamikaze"])),
+                "galactic_donut": ("Galactic Donut", "beam",
+                                   ("sheet", GOTENKS_FX, BF_BLUE, GOTENKS_EFFECTS["galactic_donut"]))},
     "great_saiyaman": {"energy_blast": ("Energy Blast", "projectile", ("borrow", "gohan_blast")),
                        "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam")),
                        "ki_burst": ("Ki Burst", "burst", ("borrow", "gohan_burst"))},
-    "vegito": {"energy_blast": ENERGY_BLAST,
-               "final_kamehameha": ("Final Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+    "vegito": {"energy_blast": ("Energy Blast", "projectile",
+                                ("sheet", VEGITO_FX, BF_BLUE, VEGITO_EFFECTS["energy_blast"])),
+               "final_kamehameha": ("Final Kamehameha", "beam",
+                                    ("sheet", VEGITO_FX, BF_BLUE, VEGITO_EFFECTS["final_kamehameha"]), SIGNATURE),
                "spirit_sword": ("Spirit Sword", "burst", {"rings": CROSS_SLASH})},
     "gogeta": {"energy_blast": ENERGY_BLAST,
                "big_bang_kamehameha": ("Big Bang Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
@@ -386,7 +442,7 @@ NEW_CHARACTER_SPECIALS = {
                      "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
                      "perfect_barrier": ("Perfect Barrier", "burst", {"rings": WHITE_RINGS})},
     "buu": {"energy_blast": ("Energy Blast", "projectile", {"projectile": FIREBALL, "hit": FIRE_EXPLOSION}),
-            "candy_beam": ("Candy Beam", "projectile", {"projectile": PURPLE_SPARK, "hit": STAR_EXPLOSION}),
+            "candy_beam": ("Candy Beam", "beam", ("sheet", BUU_FX, BUU_BLUE, BUU_EFFECTS["candy_beam"])),
             "rage": ("Steam Rage", "burst", {"rings": WHITE_RINGS})},
     "kid_buu": {"energy_blast": ("Energy Blast", "projectile", {"projectile": FIREBALL, "hit": FIRE_EXPLOSION}),
                 "planet_burst": ("Planet Burst", "ball", {"grow": GREEN_BALL, "projectile": GREEN_FLYING_BALL,
@@ -415,13 +471,13 @@ EVOLVE = {
               "cooldown_s": FUSION_COOLDOWN_SECONDS},
              {"id": "fusion_gogeta", "name": "Fusion Dance (Gogeta)", "kind": "evolve", "style": "fusion",
               "partner": "vegeta", "becomes": "gogeta", "lasts_s": FUSION_SECONDS,
-              "cooldown_s": FUSION_COOLDOWN_SECONDS}],
+              "cooldown_s": FUSION_COOLDOWN_SECONDS, "dance": FUSION_DANCE}],
     "vegeta": [{"id": "potara", "name": "Potara Fusion (Vegito)", "kind": "evolve", "style": "fusion",
                 "partner": "goku", "becomes": "vegito", "lasts_s": FUSION_SECONDS,
               "cooldown_s": FUSION_COOLDOWN_SECONDS},
                {"id": "fusion_gogeta", "name": "Fusion Dance (Gogeta)", "kind": "evolve", "style": "fusion",
                 "partner": "goku", "becomes": "gogeta", "lasts_s": FUSION_SECONDS,
-              "cooldown_s": FUSION_COOLDOWN_SECONDS}],
+              "cooldown_s": FUSION_COOLDOWN_SECONDS, "dance": FUSION_DANCE}],
     "goten": [{"id": "fusion_dance", "name": "Fusion Dance", "kind": "evolve", "style": "fusion",
                "partner": "kid_trunks", "becomes": "gotenks", "lasts_s": FUSION_SECONDS,
               "cooldown_s": FUSION_COOLDOWN_SECONDS}],
@@ -452,7 +508,10 @@ def build_character_specials(character, form_poses):
     for technique_id, entry in NEW_CHARACTER_SPECIALS[character].items():
         name, kind, effects = entry[:3]
         extra = entry[3] if len(entry) > 3 else {}
-        if isinstance(effects, tuple):
+        if isinstance(effects, tuple) and effects[0] == "sheet":
+            # Effects on a sheet of their own: ("sheet", path, background, frames)
+            effects = {**effects[3], "sheet": effects[1], "background": list(effects[2])}
+        elif isinstance(effects, tuple):
             effects = borrowed_effects(effects[1])  # with its own "sheet" and "background"
         else:
             effects = {**effects, "sheet": EFFECTS_SHEET, "background": "auto"}
@@ -590,6 +649,14 @@ def build_form(spec):
         if flip_right:
             boxes["right_flip"] = True
         poses[technique_id] = {key: boxes, **({"fire_at": technique["fire_at"]} if "fire_at" in technique else {})}
+        elsewhere = technique.get("pose_sheet")
+        if elsewhere:
+            # Poses of some directions drawn on another sheet (with their
+            # effect: a sword, steam), as boxes there
+            boxes.update(elsewhere["boxes"])
+            poses[technique_id]["pose_sheet"] = {
+                "sheet": elsewhere["sheet"], "background": list(elsewhere["background"]),
+                "directions": list(elsewhere["boxes"]), "right_flip": elsewhere.get("right_flip", False)}
     return poses
 
 
@@ -597,7 +664,7 @@ def old_background(character, form):
     return OLD_BACKGROUNDS[f"{character}_{form}"]
 
 
-POSE_KEYS = ("pose", "vanish", "fire_at", "right_flip", "sheet", "background")
+POSE_KEYS = ("pose", "vanish", "fire_at", "right_flip", "sheet", "background", "pose_sheet")
 
 
 def effects_only(form_data):

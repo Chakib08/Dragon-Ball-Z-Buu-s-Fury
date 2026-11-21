@@ -7,6 +7,10 @@ character with the help of a partner who comes out of nowhere.
              fusion frames when their sheets have some), a blinding light,
              and the fused warrior stands there. A fusion lasts its
              technique's lasts_s; then Defusion splits it again.
+             With a "dance" (Gogeta's Fusion Dance), the two dance
+             together instead (frames of both on one picture, from the
+             technique's dance sheet), merge in light and the fused
+             warrior steps out.
     absorb   Cell and an android: the android appears in front of him, his
              tail draws it in (it shrinks into him), he changes shape
              (his own transformation frames), a flash: his next form.
@@ -18,7 +22,7 @@ the fighters), counted in 60 FPS frames like every effect.
 
 import pygame
 
-from animation import Animator, AnimationDirection
+from animation import Animator, AnimationDirection, load_sheet
 from effects import Effect
 from utils.config import Config
 
@@ -31,6 +35,8 @@ FLASH_RADIUS = 70
 # in front of it (absorb)
 FUSION_GAP = 56
 ABSORB_GAP = 40
+# Frames of a fusion dance, each shown this long
+DANCE_TICKS = 7
 # De-fusion, in 60 FPS frames: powering down, then the split
 POWER_DOWN = 36
 SPLIT = 48
@@ -78,6 +84,9 @@ class Evolution(Effect):
         self.on_done = on_done
         self.partner = Animator(technique.partner)
         self.became = False
+        self.dance = self._dance_frames() if self.style == "fusion" else []
+        # How long they take to come together (the dance's length)
+        self.meet = len(self.dance) * DANCE_TICKS if self.dance else MEET
         # Who the user was (a fusion splits back into it)
         self.original = user.character_name
         # The partner faces the user, on its right if there is room
@@ -91,10 +100,29 @@ class Evolution(Effect):
         user.facing = "Right" if self.start[0] > user_x else "Left" if self.start[0] < user_x else user.facing
         user.stop_block()
         frames = self._user_frames()
-        # The user's frames play over the arrival and the meeting
-        clock_speed = Config.CLOCK_LIMIT * len(frames) / (ARRIVE + MEET)
+        # The user's frames play over the arrival and the meeting (or,
+        # with a dance, the arrival)
+        clock_speed = Config.CLOCK_LIMIT * len(frames) / (ARRIVE if self.dance else ARRIVE + MEET)
         user._play("evolve", frames, clock_speed, hold_ticks=10 ** 9)
         self.update_effect(())
+
+    def _dance_frames(self):
+        """The dance's pictures (both fighters on each), or [] without one
+        (or when its sheet is missing)."""
+        dance = getattr(self.technique, "dance", None)
+        if not dance:
+            return []
+        try:
+            sheet = load_sheet(dance["sheet"])
+        except (pygame.error, FileNotFoundError, OSError):
+            return []
+        frames = []
+        for x, y, width, height in dance["frames"]:
+            image = pygame.Surface((width, height))
+            image.blit(sheet, (0, 0), (x, y, width, height))
+            image.set_colorkey(tuple(dance["background"]))
+            frames.append(image)
+        return frames
 
     def _user_frames(self):
         user = self.user
@@ -133,12 +161,16 @@ class Evolution(Effect):
 
     @property
     def total(self):
-        return ARRIVE + MEET + FLASH
+        return ARRIVE + self.meet + FLASH
 
     def update_effect(self, targets):
         self.tick()
         t = self.ticks
-        if t >= ARRIVE + MEET and not self.became:
+        if self.dance and t == ARRIVE:
+            # They dance together: one picture of both, where the user stands
+            self.user._play("evolve", self.dance, Config.CLOCK_LIMIT * len(self.dance) / self.meet,
+                            hold_ticks=10 ** 9)
+        if t >= ARRIVE + self.meet and not self.became:
             # At the brightest of the flash, the user is someone else
             self._became()
             self.user.action = None
@@ -171,8 +203,8 @@ class Evolution(Effect):
         the light, on one picture over the fighters."""
         user_ground = self.user.rect.midbottom
         layers = []  # (surface, midbottom or center, anchor)
-        if t < ARRIVE + MEET:
-            progress = 0.0 if t < ARRIVE else (t - ARRIVE) / MEET
+        if t < ARRIVE + self.meet and not (self.dance and t >= ARRIVE):
+            progress = 0.0 if t < ARRIVE else (t - ARRIVE) / self.meet
             ease = progress * progress * (3 - 2 * progress)
             x = self.start[0] + (user_ground[0] - self.start[0]) * ease
             y = self.start[1] + (user_ground[1] - self.start[1]) * ease
@@ -189,9 +221,9 @@ class Evolution(Effect):
                 radius = int(6 + 30 * (t / ARRIVE))
                 layers.append((glow(radius, int(220 * (1 - t / ARRIVE))),
                                (self.start[0], self.start[1] - 16), "center"))
-        if t >= ARRIVE + MEET * 0.7:
+        if t >= ARRIVE + self.meet - MEET * 0.3:
             # The light where they meet, brightest at the change
-            flash_t = t - (ARRIVE + MEET * 0.7)
+            flash_t = t - (ARRIVE + self.meet - MEET * 0.3)
             span = MEET * 0.3 + FLASH
             peak = MEET * 0.3
             strength = flash_t / peak if flash_t < peak else max(0.0, 1 - (flash_t - peak) / (span - peak))

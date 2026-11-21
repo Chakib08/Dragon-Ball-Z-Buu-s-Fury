@@ -89,7 +89,12 @@ class EvolutionTests(EvolutionCase):
             with self.subTest(character=name):
                 player, combat = self.fight(name)
                 self.assertTrue(self.use(player, combat, "fusion_gogeta"))
-                self.run_frames(player, combat)
+                cutscene = combat.effects[-1]
+                # They dance together: one picture of both, where the user stands
+                self.assertTrue(cutscene.dance)
+                self.run_frames(player, combat, evolution.ARRIVE + 10)
+                self.assertIn(player.image, cutscene.dance)
+                self.run_frames(player, combat, 300)
                 self.assertEqual(player.character_name, "gogeta")
                 self.assertEqual(player.form, "ssj")  # always a Super Saiyan
                 self.assertEqual(player.fusion["original"], name)

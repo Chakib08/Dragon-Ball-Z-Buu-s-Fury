@@ -15,6 +15,7 @@ rips/
 user_settings.json
 # Sprite sheets downloaded by setup.sh
 Graphics/assets/*/*.png
+Graphics/assets/*/*.gif
 Graphics/assets/.dbz-assets
 # Arenas built from the map pictures (tools/build_arenas.py)
 Graphics/assets/arenas/

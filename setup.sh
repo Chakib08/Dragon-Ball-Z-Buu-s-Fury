@@ -80,6 +80,11 @@ REPO_ASSETS=(
     "super-buu/gohab-absorbed.png      Graphics/assets/super_buu_gohan/base.png"
     # Effects of the techniques of Trunks and Broly
     "effects/effects.png               Graphics/assets/effects/sfx.png"
+    # Buu's Fury sheets with the techniques' effects (and the Fusion Dance)
+    "vegito/effects.gif                Graphics/assets/effects/vegito_fx.gif"
+    "gotenks/effects.gif               Graphics/assets/effects/gotenks_fx.gif"
+    "buu/effects.gif                   Graphics/assets/effects/buu_fx.gif"
+    "goku/fusion_effects.png           Graphics/assets/effects/fusion_dance.png"
     # Character portraits (character screens, dialog box)
     "portraits/bf/portraits-bf.png     Graphics/assets/portraits/bf.png"
     "portraits/log2/portrait-log2.png  Graphics/assets/portraits/log2.png"
