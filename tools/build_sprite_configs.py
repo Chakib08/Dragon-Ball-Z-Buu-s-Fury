@@ -219,6 +219,32 @@ SAIYAMAN = dict(hurt=[28, 29], block=27, special=[24, 25, 26], faint=[44, 45, 46
 VEGITO = dict(hurt=[24, 25], block=23, special=[20, 21, 22], faint=[40, 41, 42, 43],
               techniques=techniques(("energy_blast", [20, 21, 22], 1), ("final_kamehameha", [21, 21, 22, 22], 2),
                                     ("spirit_sword", [30, 31, 32], None)))
+# Androids 16, 19 and 20 (Legacy of Goku 2): no run, the punches and
+# kicks from column 6, a guard, a hand held out for their blasts
+ANDROID_16 = dict(run=NO_RUN, attack=[10, 10, 11, 11, 12, 12, 13, 13, 10, 11, 12, 13], hurt=[15, 16],
+                  block=14, special=[20, 10, 10], faint=[6, 7, 8, 9],
+                  techniques=techniques(("energy_blast", [20, 10, 10], 1), ("hells_flash", [20, 20, 10, 10], 2),
+                                        ("ki_burst", [17, 18], None)))
+GERO_ANDROID = dict(run=NO_RUN, attack=LOG2_ATTACK[:-1] + [17], hurt=[21, 22], block=18, special=[19, 20, 20],
+                    faint=[25, 26, 27, 28],
+                    techniques=techniques(("eye_laser", [23, 23, 24], 1), ("photon_wave", [19, 20, 20], 2),
+                                          ("energy_absorption", [19, 18], None)))
+# Super Android 13 (Buu's Fury prototype): one grid of 64 px cells (cell n:
+# column n % 10, row n // 10) facing front or left, so the side frames are
+# mirrored for the right; Up uses the few drawn from behind
+_A13_SIDE_ATTACK = [22, 23, 23, 29, 29, 39, 49, 49, 53, 90, 91, 92]
+_A13_FRONT_ATTACK = [14, 15, 16, 24, 25, 26, 27, 28, 30, 31, 34, 35]
+ANDROID_13 = dict(cell=64, rows={"Down": 32, "Left": 32, "Right": 32, "Up": 32}, grid=10, flip_right=True,
+                  idle={"Down": 0, "Right": 13, "Up": 10},
+                  walk={"Down": [3, 4, 5, 6], "Right": [12, 13, 64, 13], "Up": [10, 11, 60, 11]},
+                  run={"Down": [3, 4, 5, 6], "Right": [62, 63, 64, 63], "Up": [10, 11, 60, 11]},
+                  attack={"Down": _A13_FRONT_ATTACK, "Right": _A13_SIDE_ATTACK, "Up": _A13_FRONT_ATTACK},
+                  hurt=[37, 38], block=50, special={"Down": [45, 46, 46], "Right": [21, 22, 22], "Up": [45, 46, 46]},
+                  faint=[40, 41, 42, 43, 44], faint_row="Down",
+                  techniques={"energy_blast": {"pose": {"Down": [45, 46, 46], "Right": [21, 22, 22],
+                                                        "Up": [45, 46, 46]}, "fire_at": 1},
+                              "sos_bomb": {"pose": [65, 66, 67, 68, 70, 71], "fire_at": 4, "row": "Down"},
+                              "ki_burst": {"pose": [55, 51, 47], "row": "Down"}})
 CELL_TECHNIQUES = (("energy_blast", [20, 21, 22], 1), ("kamehameha", [21, 22, 23], 2))
 
 NEW_SHEETS = [
@@ -226,6 +252,10 @@ NEW_SHEETS = [
     {"character": "piccolo", "form": "ssj", **PICCOLO},
     {"character": "android17", "form": "base", **ANDROID},
     {"character": "android18", "form": "base", **ANDROID},
+    {"character": "android13", "form": "base", **ANDROID_13},
+    {"character": "android16", "form": "base", **ANDROID_16},
+    {"character": "android19", "form": "base", **GERO_ANDROID},
+    {"character": "android20", "form": "base", **GERO_ANDROID},
     {"character": "goten", "form": "base", "transform": [52, 52, 53, 54, 55, 56], "fuse": [57, 58], **GOTEN},
     {"character": "goten", "form": "ssj", **GOTEN},
     {"character": "kid_trunks", "form": "base", "transform": [48, 48, 49, 50, 51], "fuse": [51, 52], **KID_TRUNKS},
@@ -316,6 +346,17 @@ NEW_CHARACTER_SPECIALS = {
                   "power_blitz": ("Destructo Disc", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
                                                             "hit": YELLOW_BLAST}),
                   "barrier": ("Barrier", "burst", {"rings": WHITE_RINGS})},
+    "android13": {"energy_blast": ENERGY_BLAST,
+                  "sos_bomb": ("S.O.S. Bomb", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
+                                                       "hit": STAR_EXPLOSION}),
+                  "ki_burst": ("Ki Burst", "burst", {"rings": WHITE_RINGS})},
+    "android16": {"energy_blast": ENERGY_BLAST,
+                  "hells_flash": ("Hell's Flash", "beam", ("borrow", "final_flash")),
+                  "ki_burst": ("Ki Burst", "burst", {"rings": WHITE_RINGS})},
+    "android19": {"eye_laser": ("Eye Laser", "projectile", {"projectile": PURPLE_SPARK, "hit": PURPLE_SPARK}),
+                  "photon_wave": ("Photon Wave", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
+                                                         "hit": YELLOW_BLAST}),
+                  "energy_absorption": ("Energy Absorption", "burst", {"rings": WHITE_RINGS})},
     "goten": {"energy_blast": ("Energy Blast", "projectile", ("borrow", "gohan_blast")),
               "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam")),
               "ki_burst": ("Ki Burst", "burst", ("borrow", "gohan_burst"))},
@@ -352,6 +393,7 @@ NEW_CHARACTER_SPECIALS = {
                                                          "hit": STAR_EXPLOSION}),
                 "rage": ("Steam Rage", "burst", {"rings": WHITE_RINGS})},
 }
+NEW_CHARACTER_SPECIALS["android20"] = NEW_CHARACTER_SPECIALS["android19"]
 for _buu in ("super_buu", "super_buu_gotenks", "super_buu_gohan"):
     NEW_CHARACTER_SPECIALS[_buu] = {
         "energy_blast": ("Energy Blast", "projectile", {"projectile": FIREBALL, "hit": FIRE_EXPLOSION}),
@@ -432,22 +474,31 @@ def sheet_path(character, form):
 
 
 class Sheet:
-    def __init__(self, path, cell, rows):
+    def __init__(self, path, cell, rows, grid=None):
         self.image = pygame.image.load(os.path.join(ROOT, path))
         self.path = path
         self.cell = cell
         self.rows = rows
+        # A sheet of numbered cells instead of one row per direction: cell
+        # n is column n % grid of row n // grid (from the direction's row)
+        self.grid = grid
+
+    def origin(self, column, row):
+        """Top left corner of a cell."""
+        if self.grid:
+            return (column % self.grid) * self.cell, self.rows[row] + (column // self.grid) * self.cell
+        return column * self.cell, self.rows[row]
 
     def background(self, column, row):
         """The cell's own colour (the cells alternate two shades)."""
-        x, y, size = column * self.cell, self.rows[row], self.cell
+        (x, y), size = self.origin(column, row), self.cell
         corners = [tuple(self.image.get_at((x + dx, y + dy)))[:3] for dx in (0, size - 1) for dy in (0, size - 1)]
         return max(set(corners), key=corners.count)
 
     def bounds(self, column, row):
         """Top and bottom rows of the sprite in a cell (None when empty)."""
         background = self.background(column, row)
-        x, y = column * self.cell, self.rows[row]
+        x, y = self.origin(column, row)
         rows = [dy for dy in range(self.cell) for dx in range(self.cell)
                 if tuple(self.image.get_at((x + dx, y + dy)))[:3] != background]
         return (min(rows), max(rows)) if rows else None
@@ -462,16 +513,23 @@ def frame(name, box, background, extra=None):
     return data
 
 
+def facing(value, row):
+    """A move's columns (or column): the same for every direction, or
+    {row: ...} (Down, Right, Up) when the sheet draws each its own way."""
+    return value[row] if isinstance(value, dict) else value
+
+
 def body_frames(spec):
     """(name, column, row) of every frame of the form."""
-    frames = [(f"IDLE {direction}", 0, SOURCE_ROW[direction]) for direction in DIRECTIONS]
+    frames = [(f"IDLE {direction}", facing(spec.get("idle", 0), SOURCE_ROW[direction]), SOURCE_ROW[direction])
+              for direction in DIRECTIONS]
     moves = (("Walk", spec.get("walk", WALK)), ("Run", spec.get("run", RUN)),
              ("Attack", spec.get("attack", ATTACK)), ("Hurt", spec["hurt"]), ("Special", spec["special"]))
     for direction in DIRECTIONS:
         row = SOURCE_ROW[direction]
         for prefix, columns in moves:
-            frames += [(f"{prefix} {direction} {i}", c, row) for i, c in enumerate(columns)]
-        frames.append((f"Block {direction} 0", spec["block"], row))
+            frames += [(f"{prefix} {direction} {i}", c, row) for i, c in enumerate(facing(columns, row))]
+        frames.append((f"Block {direction} 0", facing(spec["block"], row), row))
     faint_row = spec.get("faint_row", "Right")
     frames += [(f"Faint {i}", c, faint_row) for i, c in enumerate(spec.get("faint", []))]
     frames += [(f"Transform {i}", c, "Down") for i, c in enumerate(spec.get("transform", []))]
@@ -493,7 +551,11 @@ def technique_cells(technique):
 
 
 def build_form(spec):
-    sheet = Sheet(sheet_path(spec["character"], spec["form"]), spec.get("cell", CELL), spec.get("rows", ROWS))
+    sheet = Sheet(sheet_path(spec["character"], spec["form"]), spec.get("cell", CELL), spec.get("rows", ROWS),
+                  spec.get("grid"))
+    # Sheets drawing the side frames facing left: the game's "Right" frames
+    # are those, mirrored
+    flip_right = spec.get("flip_right", False)
     frames = body_frames(spec)
     cells = {(c, row) for _, c, row in frames}
     for technique in spec["techniques"].values():
@@ -506,9 +568,11 @@ def build_form(spec):
     bottom = max(b[1] for b in bounds)
 
     def box(column, row):
-        return [column * sheet.cell, sheet.rows[row] + top, sheet.cell, bottom - top + 1]
+        x, y = sheet.origin(column, row)
+        return [x, y + top, sheet.cell, bottom - top + 1]
 
-    animations = [frame(name, box(c, row), sheet.background(c, row)) for name, c, row in frames]
+    animations = [frame(name, box(c, row), sheet.background(c, row),
+                        {"Flip": True} if flip_right and row == "Right" else None) for name, c, row in frames]
     old = spec.get("transform_old")
     if old:
         animations += [frame(f"Transform {i}", b, old["background"], {"Sheet": old["sheet"]})
@@ -523,6 +587,8 @@ def build_form(spec):
     for technique_id, technique in spec["techniques"].items():
         key = "vanish" if "vanish" in technique else "pose"
         boxes = {d: [box(c, row) for c, row in pose_cells] for d, pose_cells in technique_cells(technique).items()}
+        if flip_right:
+            boxes["right_flip"] = True
         poses[technique_id] = {key: boxes, **({"fire_at": technique["fire_at"]} if "fire_at" in technique else {})}
     return poses
 

@@ -1,7 +1,8 @@
 """Each character's face, for the character screens: a framed 64 x 64
 portrait cut from one of the portrait sheets (setup.sh downloads them).
 Config/portraits.json lists the sheets and, per character, the sheet and
-the top-left corner of its portrait; a character without one gets None
+the top-left corner of its portrait (a sheet with a "scale" is a sprite
+sheet: its crop is enlarged); a character without one gets None
 (the screens then show its sprite instead).
 """
 
@@ -58,6 +59,10 @@ def portrait(name):
                 if info.get("transparent_corners"):
                     # The sheet's background shows at the frame's rounded corners
                     image.set_colorkey(source.get_at((0, 0))[:3])
+                if info.get("scale"):
+                    # A face cut from a sprite sheet: smaller, so enlarged
+                    side = round(size * float(info["scale"]))
+                    image = pygame.transform.scale(image, (side, side))
         except (pygame.error, KeyError, ValueError, TypeError):
             image = None
     _portraits[name] = image

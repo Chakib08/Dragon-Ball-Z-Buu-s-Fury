@@ -143,6 +143,32 @@
         "Don't think I'll go easy on you."
       ]
     },
+    "android16": {
+      "difficulty": "normal",
+      "dialog": [
+        "I don't like fighting... but I was built to destroy Goku."
+      ]
+    },
+    "android19": {
+      "difficulty": "easy",
+      "dialog": [
+        "Your energy will make me stronger."
+      ]
+    },
+    "android20": {
+      "difficulty": "normal",
+      "dialog": [
+        "I am Dr. Gero, the greatest genius of the Red Ribbon Army!",
+        "Goku's death is my life's work."
+      ]
+    },
+    "android13": {
+      "difficulty": "hard",
+      "dialog": [
+        "Mission: kill Goku.",
+        "You are in the way."
+      ]
+    },
     "goten": {
       "difficulty": "easy",
       "dialog": [
