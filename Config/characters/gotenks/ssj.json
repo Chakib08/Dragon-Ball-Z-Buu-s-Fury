@@ -1857,6 +1857,54 @@
         "G": 188,
         "B": 136
       }
+    },
+    {
+      "AnimationName": "Defuse 0",
+      "x": 1536,
+      "y": 32,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 71,
+        "G": 255,
+        "B": 187
+      }
+    },
+    {
+      "AnimationName": "Defuse 1",
+      "x": 1568,
+      "y": 32,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 52,
+        "G": 188,
+        "B": 136
+      }
+    },
+    {
+      "AnimationName": "Defuse 2",
+      "x": 1600,
+      "y": 32,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 71,
+        "G": 255,
+        "B": 187
+      }
     }
   ]
 }

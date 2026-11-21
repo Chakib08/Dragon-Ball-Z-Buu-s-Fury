@@ -30,7 +30,9 @@ def technique(fighter, technique_id):
     return next(t for t in fighter.techniques if t.id == technique_id)
 
 
-class EvolutionTests(unittest.TestCase):
+class EvolutionCase(unittest.TestCase):
+    """A fight to evolve in, with the clock in the test's hands."""
+
     @classmethod
     def setUpClass(cls):
         pygame.init()
@@ -57,6 +59,8 @@ class EvolutionTests(unittest.TestCase):
         combat.selected_technique = [t.id for t in player.techniques].index(technique_id)
         return combat.start_special()
 
+
+class EvolutionTests(EvolutionCase):
     def test_goku_and_vegeta_fuse_into_vegito(self):
         for name in ("goku", "vegeta"):
             with self.subTest(character=name):
@@ -125,6 +129,97 @@ class EvolutionTests(unittest.TestCase):
         self.use(player, combat, "potara")
         combat.clear_effects()
         self.assertEqual(player.character_name, "vegito")
+        self.assertIsNone(player.action)
+
+
+class FusionTimeTests(EvolutionCase):
+    """A fusion lasts a while, then the fighter is itself again."""
+
+    def fuse(self, name, technique_id):
+        player, combat = self.fight(name)
+        self.assertTrue(self.use(player, combat, technique_id))
+        self.run_frames(player, combat)
+        return player, combat
+
+    def test_goten_and_kid_trunks_dance_into_gotenks(self):
+        for name in ("goten", "kid_trunks"):
+            with self.subTest(character=name):
+                player, combat = self.fuse(name, "fusion_dance")
+                self.assertEqual(player.character_name, "gotenks")
+                self.assertEqual(player.fusion["original"], name)
+
+    def test_the_fusion_dance_uses_the_kids_own_glowing_frames(self):
+        player, combat = self.fight("goten")
+        self.use(player, combat, "fusion_dance")
+        glowing = evolution.fusion_frames(player.animator, player.facing)
+        self.assertTrue(glowing)
+        self.assertTrue(any(frame is glowing[0] for frame in player.action["frames"]))
+
+    def test_when_its_time_is_up_the_fusion_splits(self):
+        player, combat = self.fuse("goku", "potara")
+        self.assertEqual(player.character_name, "vegito")
+        self.assertAlmostEqual(combat.fusion_left(player), 1.0, delta=0.1)
+        player.hp = player.max_hp * 0.4
+        # Half way: still Vegito, half the bar
+        self.clock.now += 30_000
+        combat.update([], [])
+        self.assertEqual(player.character_name, "vegito")
+        self.assertAlmostEqual(combat.fusion_left(player), 0.5, delta=0.05)
+        # Time is up: powering down, a flash, Goku again with the same share of HP
+        self.clock.now += 31_000
+        self.run_frames(player, combat, 120)
+        self.assertEqual(player.character_name, "goku")
+        self.assertIsNone(player.fusion)
+        self.assertIsNone(combat.fusion_left(player))
+        self.assertAlmostEqual(player.hp / player.max_hp, 0.4)
+        self.assertIsNone(player.action)
+        self.assertEqual(combat.effects, [])
+        self.assertIn("Potara Fusion", [t.name for t in player.techniques])
+
+    def test_gotenks_powers_down_with_his_own_frames(self):
+        player, combat = self.fuse("goten", "fusion_dance")
+        self.clock.now += 61_000
+        combat.update([], [])
+        self.assertEqual(player.action["name"], "evolve")
+        self.assertIs(player.action["frames"][0], player.frame_image("Defuse 0"))
+        self.run_frames(player, combat, 120)
+        self.assertEqual(player.character_name, "goten")
+
+    def test_the_fusion_bar_shows_under_the_ki(self):
+        player, combat = self.fuse("vegeta", "potara")
+        drawn = []
+        real = combat.hud._label
+        combat.hud._label = lambda text, font, color=(255, 255, 255): drawn.append(text) or real(text, font, color)
+        combat.draw(pygame.Surface((1200, 540)))
+        self.assertIn("FU", drawn)
+        self.assertEqual(combat.hud.ally_panel_top(), combat.hud.ALLY_PANEL_TOP + 20)
+
+    def test_a_fused_npc_splits_too(self):
+        player, combat = self.fight("vegeta")
+        goten = SaiyanNPC(500, 500, False, "goten", 0, [], difficulty="normal")
+        goten.update()
+        goten.ki = goten.max_ki
+        combat.start_evolution(goten, technique(goten, "fusion_dance"))
+        self.run_frames(player, combat, 200, npcs=[goten])
+        self.assertEqual(goten.character_name, "gotenks")
+        self.clock.now += 61_000
+        self.run_frames(player, combat, 120, npcs=[goten])
+        self.assertEqual(goten.character_name, "goten")
+        self.assertEqual(goten.difficulty.name, "normal")
+
+    def test_an_absorption_is_for_good(self):
+        player, combat = self.fuse("cell_imperfect", "absorb_17")
+        self.assertIsNone(player.fusion)
+        self.clock.now += 10 ** 6
+        self.run_frames(player, combat, 60)
+        self.assertEqual(player.character_name, "cell_semi_perfect")
+
+    def test_changing_map_while_it_splits_finishes_the_split(self):
+        player, combat = self.fuse("goku", "potara")
+        self.clock.now += 61_000
+        combat.update([], [])
+        combat.clear_effects()
+        self.assertEqual(player.character_name, "goku")
         self.assertIsNone(player.action)
 
 

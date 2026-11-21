@@ -1873,6 +1873,134 @@
         "G": 188,
         "B": 136
       }
+    },
+    {
+      "AnimationName": "Fuse Down 0",
+      "x": 1632,
+      "y": 32,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 52,
+        "G": 188,
+        "B": 136
+      }
+    },
+    {
+      "AnimationName": "Fuse Down 1",
+      "x": 1664,
+      "y": 32,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 35,
+        "G": 127,
+        "B": 90
+      }
+    },
+    {
+      "AnimationName": "Fuse Right 0",
+      "x": 1632,
+      "y": 96,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 52,
+        "G": 188,
+        "B": 136
+      }
+    },
+    {
+      "AnimationName": "Fuse Right 1",
+      "x": 1664,
+      "y": 96,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 71,
+        "G": 255,
+        "B": 187
+      }
+    },
+    {
+      "AnimationName": "Fuse Left 0",
+      "x": 1632,
+      "y": 96,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 52,
+        "G": 188,
+        "B": 136
+      }
+    },
+    {
+      "AnimationName": "Fuse Left 1",
+      "x": 1664,
+      "y": 96,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 71,
+        "G": 255,
+        "B": 187
+      }
+    },
+    {
+      "AnimationName": "Fuse Up 0",
+      "x": 1632,
+      "y": 128,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 35,
+        "G": 127,
+        "B": 90
+      }
+    },
+    {
+      "AnimationName": "Fuse Up 1",
+      "x": 1664,
+      "y": 128,
+      "Area Width": 32,
+      "Area Height": 32,
+      "Size": {
+        "Width": 32,
+        "Height": 32
+      },
+      "Background": {
+        "R": 35,
+        "G": 127,
+        "B": 90
+      }
     }
   ]
 }

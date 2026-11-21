@@ -12,7 +12,7 @@ import pygame
 
 from character import DIRECTION_VECTORS
 from effects import ChargeGlow, build_effect, effect_origin
-from evolution import Evolution
+from evolution import Defusion, Evolution
 from hud import CombatHud
 from movement import solid_bodies
 from npc import HEROES
@@ -91,6 +91,7 @@ class CombatSystem:
         self.fighters = [self.player, *npcs, *opponents]
         self._update_charge()
         self._update_effects()
+        self._end_fusions([self.player, *npcs], now)
 
         self.player_swung = False
         self.player.update_knockback(collisions, solid_bodies(self.fighters, self.player))
@@ -272,6 +273,24 @@ class CombatSystem:
         self.charge = None if user is self.player else self.charge
         self.add_effect(Evolution(user, technique, on_done=self._evolved))
         return True
+
+    def _end_fusions(self, fighters, now):
+        """A fusion whose time is up splits (evolution.Defusion)."""
+        for fighter in fighters:
+            fusion = getattr(fighter, "fusion", None)
+            if (fusion is None or fusion.get("ending") or now < fusion["ends_ms"]
+                    or fighter.hp <= 0 or fighter.action is not None):
+                continue
+            fusion["ending"] = True
+            self.add_effect(Defusion(fighter, on_done=self._evolved))
+
+    def fusion_left(self, fighter):
+        """Share of its fusion's time left (1 to 0), or None if not fused."""
+        fusion = getattr(fighter, "fusion", None)
+        if fusion is None:
+            return None
+        left = fusion["ends_ms"] - pygame.time.get_ticks()
+        return max(0.0, min(1.0, left / fusion["total_ms"]))
 
     def _evolved(self, user):
         if user is self.player:

@@ -36,6 +36,7 @@ class CombatHud:
     SUPER_COLOR = (245, 205, 60)
     KO_COLOR = (125, 125, 135)
     HP_COLOR = (70, 200, 90)
+    FUSION_COLOR = (190, 110, 245)
     KI_COLOR = (65, 145, 245)
     FRAME_COLOR = (235, 235, 235)
     BAR_BACKGROUND = (35, 35, 42)
@@ -73,19 +74,25 @@ class CombatHud:
         self._draw_bar(screen, "HP", player.hp, player.max_hp, self.HP_COLOR, 20)
         ki_color = self.SUPER_COLOR if player.powered_up else self.KI_COLOR
         self._draw_bar(screen, "KI", player.ki, player.max_ki, ki_color, 58)
+        y = 88
+        left = self.combat.fusion_left(player)
+        if left is not None:
+            # A fusion's time: when the bar is empty, it splits again
+            self._draw_bar(screen, "FU", left, 1.0, self.FUSION_COLOR, y, height=12, label_font=self.name_font)
+            y += 20
         technique = self.combat.technique
         if technique is not None:
             # Selected technique and its cost, dimmed while there is not enough ki
             color = (255, 230, 120) if player.ki >= technique.cost else (150, 150, 160)
             label = self._label(f"{technique.name} ({technique.cost} KI)", self.name_font, color)
-            screen.blit(label, (62, 88))
+            screen.blit(label, (62, y))
         self.draw_team_panels(screen)
 
-    def _draw_bar(self, screen, label, value, maximum, color, y):
+    def _draw_bar(self, screen, label, value, maximum, color, y, height=22, label_font=None):
         x = 20
         bar_width = min(260, self.screen_size[0] // 3)
-        bar_height = 22
-        screen.blit(self._label(label, self.font), (x, y))
+        bar_height = height
+        screen.blit(self._label(label, label_font or self.font), (x, y))
         bar_x = x + 42
         bar_y = y + 3
         pygame.draw.rect(screen, self.BAR_BACKGROUND, (bar_x, bar_y, bar_width, bar_height))
@@ -108,6 +115,11 @@ class CombatHud:
         pygame.draw.rect(screen, self.FRAME_COLOR, bar, 1)
 
     # ---- Team panels --------------------------------------------------------------
+    def ally_panel_top(self):
+        """Under the player's bars (and its fusion bar while fused)."""
+        fused = self.combat.fusion_left(self.combat.player) is not None
+        return self.ALLY_PANEL_TOP + (20 if fused else 0)
+
     def _right_panel_top(self):
         """Just under the quit button (see quit_prompt.QuitPrompt)."""
         radius = max(22, int(min(self.screen_size) * 0.034))
@@ -117,7 +129,7 @@ class CombatHud:
         """The allies' rows (left) and the enemies' (right); returns the
         rectangles of the rows drawn, allies first."""
         rows = []
-        y = self.ALLY_PANEL_TOP
+        y = self.ally_panel_top()
         for ally in self.combat.allies:
             rows.append(self._draw_panel_row(screen, ally, 62, y, ally=True))
             y = rows[-1].bottom + self.PANEL_ROW_GAP + 2 * self.PANEL_PADDING
@@ -192,4 +204,9 @@ class CombatHud:
                                  (bar.x, bar.y, max(1, round(bar.width * fraction)), bar.height))
             if npc.powered_up:
                 pygame.draw.rect(screen, self.SUPER_COLOR, bar.inflate(2, 2), 1)
+            left = self.combat.fusion_left(npc)
+            if left is not None:
+                # A fused NPC's time, just under its health
+                pygame.draw.rect(screen, self.FUSION_COLOR,
+                                 (bar.x, bar.bottom + 1, max(1, round(bar.width * left)), 2))
         return placed

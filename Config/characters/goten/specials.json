@@ -676,6 +676,15 @@
           }
         }
       }
+    },
+    {
+      "id": "fusion_dance",
+      "name": "Fusion Dance",
+      "kind": "evolve",
+      "style": "fusion",
+      "partner": "kid_trunks",
+      "becomes": "gotenks",
+      "lasts_s": 60
     }
   ]
 }

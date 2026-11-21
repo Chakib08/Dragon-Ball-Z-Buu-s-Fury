@@ -193,6 +193,8 @@ class Technique:
         self.style = data.get("style")
         self.partner = data.get("partner")
         self.becomes = data.get("becomes")
+        # A fusion's duration in seconds (None: for good, an absorption)
+        self.lasts_s = data.get("lasts_s")
 
     def form_for(self, character):
         """Sprites for the character's current form (or any form it has)."""

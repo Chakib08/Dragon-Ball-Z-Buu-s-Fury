@@ -225,13 +225,14 @@ NEW_SHEETS = [
     {"character": "piccolo", "form": "ssj", **PICCOLO},
     {"character": "android17", "form": "base", **ANDROID},
     {"character": "android18", "form": "base", **ANDROID},
-    {"character": "goten", "form": "base", "transform": [52, 52, 53, 54, 55, 56], **GOTEN},
+    {"character": "goten", "form": "base", "transform": [52, 52, 53, 54, 55, 56], "fuse": [57, 58], **GOTEN},
     {"character": "goten", "form": "ssj", **GOTEN},
-    {"character": "kid_trunks", "form": "base", "transform": [48, 48, 49, 50, 51], **KID_TRUNKS},
+    {"character": "kid_trunks", "form": "base", "transform": [48, 48, 49, 50, 51], "fuse": [51, 52], **KID_TRUNKS},
     {"character": "kid_trunks", "form": "ssj", **KID_TRUNKS},
-    # Gotenks is always a Super Saiyan; his SSJ sheet turns him into SSJ3
-    {"character": "gotenks", "form": "ssj", "transform": [42, 43, 44, 45], **GOTENKS},
-    {"character": "gotenks", "form": "ssj3", **GOTENKS},
+    # Gotenks is always a Super Saiyan; his SSJ sheet turns him into SSJ3.
+    # Before he splits (the fusion's time is up) his hair goes back to black
+    {"character": "gotenks", "form": "ssj", "transform": [42, 43, 44, 45], "defuse": [48, 49, 50], **GOTENKS},
+    {"character": "gotenks", "form": "ssj3", "defuse": [43, 44, 45], **GOTENKS},
     {"character": "great_saiyaman", "form": "base", "transform": [57, 57, 58, 59, 60, 61], **SAIYAMAN},
     {"character": "great_saiyaman", "form": "ssj", **SAIYAMAN},
     {"character": "vegito", "form": "base", "transform": [32, 33, 33, 34, 35, 36], **VEGITO},
@@ -346,11 +347,18 @@ for _buu in ("super_buu", "super_buu_gotenks", "super_buu_gohan"):
 # Techniques that turn the user into another character (techniques.py
 # "evolve"): the partner who appears, how (a Potara fusion, or Cell
 # absorbing an android), the character it becomes
+# A fusion lasts lasts_s seconds, then the fighter is itself again; an
+# absorption is for good
+FUSION_SECONDS = 60
 EVOLVE = {
     "goku": [{"id": "potara", "name": "Potara Fusion", "kind": "evolve", "style": "fusion",
-              "partner": "vegeta", "becomes": "vegito"}],
+              "partner": "vegeta", "becomes": "vegito", "lasts_s": FUSION_SECONDS}],
     "vegeta": [{"id": "potara", "name": "Potara Fusion", "kind": "evolve", "style": "fusion",
-                "partner": "goku", "becomes": "vegito"}],
+                "partner": "goku", "becomes": "vegito", "lasts_s": FUSION_SECONDS}],
+    "goten": [{"id": "fusion_dance", "name": "Fusion Dance", "kind": "evolve", "style": "fusion",
+               "partner": "kid_trunks", "becomes": "gotenks", "lasts_s": FUSION_SECONDS}],
+    "kid_trunks": [{"id": "fusion_dance", "name": "Fusion Dance", "kind": "evolve", "style": "fusion",
+                    "partner": "goten", "becomes": "gotenks", "lasts_s": FUSION_SECONDS}],
     "cell_imperfect": [{"id": "absorb_17", "name": "Absorb Android 17", "kind": "evolve", "style": "absorb",
                         "partner": "android17", "becomes": "cell_semi_perfect"}],
     "cell_semi_perfect": [{"id": "absorb_18", "name": "Absorb Android 18", "kind": "evolve", "style": "absorb",
@@ -440,6 +448,11 @@ def body_frames(spec):
     faint_row = spec.get("faint_row", "Right")
     frames += [(f"Faint {i}", c, faint_row) for i, c in enumerate(spec.get("faint", []))]
     frames += [(f"Transform {i}", c, "Down") for i, c in enumerate(spec.get("transform", []))]
+    # A fusion: glowing as it merges (per direction), and the fused
+    # character powering down before it splits again (facing front)
+    for direction in DIRECTIONS:
+        frames += [(f"Fuse {direction} {i}", c, SOURCE_ROW[direction]) for i, c in enumerate(spec.get("fuse", []))]
+    frames += [(f"Defuse {i}", c, "Down") for i, c in enumerate(spec.get("defuse", []))]
     return frames
 
 
@@ -523,8 +536,10 @@ def update_specials(character, form_poses, effects):
             entry["sheet"] = source["sheet"]
             entry["background"] = source["background"]
             forms[form] = entry
-    known = {technique["id"] for technique in specials["techniques"]}
-    specials["techniques"] += [technique for technique in EVOLVE.get(character, []) if technique["id"] not in known]
+    # The evolve techniques as EVOLVE says now (replacing older entries)
+    evolve = EVOLVE.get(character, [])
+    ids = {technique["id"] for technique in evolve}
+    specials["techniques"] = [t for t in specials["techniques"] if t["id"] not in ids] + evolve
     write_specials(character, specials)
 
 

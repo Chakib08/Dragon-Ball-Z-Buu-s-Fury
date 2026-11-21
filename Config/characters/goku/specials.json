@@ -884,7 +884,8 @@
       "kind": "evolve",
       "style": "fusion",
       "partner": "vegeta",
-      "becomes": "vegito"
+      "becomes": "vegito",
+      "lasts_s": 60
     }
   ]
 }

@@ -97,6 +97,8 @@ class Character(pygame.sprite.Sprite):
 
         # Short animation that locks the character (hurt, transform, special)
         self.action = None
+        # While fused (evolution.py): who it was, its partner, when it ends
+        self.fusion = None
         self.faint_frames = None
         self.faint_index = 0
         self.faint_clock = 0

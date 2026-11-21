@@ -1,9 +1,12 @@
 """The cutscene of an "evolve" technique: the user turns into another
 character with the help of a partner who comes out of nowhere.
 
-    fusion   Goku and Vegeta, Potara earrings: the partner appears beside
-             the user in a flash, they fly into each other, a blinding light,
-             and Vegito stands there.
+    fusion   Goku and Vegeta (Potara earrings: Vegito), Goten and Kid Trunks
+             (the Fusion Dance: Gotenks): the partner appears beside the
+             user in a flash, they come together (glowing, with their own
+             fusion frames when their sheets have some), a blinding light,
+             and the fused warrior stands there. A fusion lasts its
+             technique's lasts_s; then Defusion splits it again.
     absorb   Cell and an android: the android appears in front of him, his
              tail draws it in (it shrinks into him), he changes shape
              (his own transformation frames), a flash: his next form.
@@ -15,7 +18,7 @@ the fighters), counted in 60 FPS frames like every effect.
 
 import pygame
 
-from animation import Animator
+from animation import Animator, AnimationDirection
 from effects import Effect
 from utils.config import Config
 
@@ -28,6 +31,42 @@ FLASH_RADIUS = 70
 # in front of it (absorb)
 FUSION_GAP = 56
 ABSORB_GAP = 40
+# De-fusion, in 60 FPS frames: powering down, then the split
+POWER_DOWN = 36
+SPLIT = 48
+
+
+def glow(radius, alpha):
+    """A white light fading to its edge."""
+    radius = max(2, radius)
+    surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+    for ring in range(radius, 0, -max(1, radius // 8)):
+        share = 1 - ring / radius
+        pygame.draw.circle(surface, (255, 255, 235, int(alpha * (0.25 + 0.75 * share))), (radius, radius), ring)
+    return surface
+
+
+def compose(effect, layers, fallback_point):
+    """Put layers [(surface, point, anchor)] on one picture: the effect's
+    image and rect."""
+    rects = [surface.get_rect(**{anchor: (round(point[0]), round(point[1]))}) for surface, point, anchor in layers]
+    if not rects:
+        effect.image = pygame.Surface((1, 1), pygame.SRCALPHA)
+        effect.rect = effect.image.get_rect(center=fallback_point)
+        return
+    bounds = rects[0].unionall(rects[1:])
+    image = pygame.Surface(bounds.size, pygame.SRCALPHA)
+    for (surface, _, _), rect in zip(layers, rects):
+        image.blit(surface, (rect.x - bounds.x, rect.y - bounds.y))
+    effect.image = image
+    effect.rect = bounds
+
+
+def fusion_frames(animator, facing):
+    """The glowing frames of a fighter merging, facing that way, or []."""
+    flipped = facing == AnimationDirection.LEFT.value
+    names = [f"Fuse {facing} {index}" for index in range(8)]
+    return [animator.image_by_name(name, flipped) for name in names if animator.has_animation(name)]
 
 
 class Evolution(Effect):
@@ -39,6 +78,8 @@ class Evolution(Effect):
         self.on_done = on_done
         self.partner = Animator(technique.partner)
         self.became = False
+        # Who the user was (a fusion splits back into it)
+        self.original = user.character_name
         # The partner faces the user, on its right if there is room
         user_x, user_y = user.rect.midbottom
         if self.style == "absorb":
@@ -63,13 +104,26 @@ class Evolution(Effect):
             if frames:
                 return frames
         user.face_idle()
+        glowing = fusion_frames(user.animator, user.facing) if self.style == "fusion" else []
+        if glowing:
+            # Standing while the partner arrives, glowing as they merge
+            return [user.image] * 3 + glowing * 3
         return [user.image]
+
+    def _became(self):
+        """The user is the new character now; a fusion's clock starts."""
+        self.became = True
+        self.user.become(self.technique.becomes)
+        lasts = getattr(self.technique, "lasts_s", None)
+        if self.style == "fusion" and lasts:
+            now = pygame.time.get_ticks()
+            self.user.fusion = {"original": self.original, "partner": self.technique.partner,
+                                "ends_ms": now + lasts * 1000, "total_ms": lasts * 1000}
 
     def finish(self):
         """End at once (the map changed): the user is the new character."""
         if not self.became:
-            self.became = True
-            self.user.become(self.technique.becomes)
+            self._became()
         self.done = True
         self.user.action = None
         self.user.face_idle()
@@ -85,8 +139,7 @@ class Evolution(Effect):
         t = self.ticks
         if t >= ARRIVE + MEET and not self.became:
             # At the brightest of the flash, the user is someone else
-            self.became = True
-            self.user.become(self.technique.becomes)
+            self._became()
             self.user.action = None
             self.user._play("evolve", [self.user.image], 10, hold_ticks=10 ** 9)
         if t >= self.total:
@@ -101,6 +154,10 @@ class Evolution(Effect):
     def _partner_frame(self, t):
         name = f"Walk {self.partner_facing}" if t >= ARRIVE else f"IDLE {self.partner_facing}"
         flipped = self.partner_facing == "Left"
+        if t >= ARRIVE and self.style == "fusion":
+            glowing = fusion_frames(self.partner, self.partner_facing)
+            if glowing:
+                return glowing[int(t // 6) % len(glowing)]
         if t >= ARRIVE:
             frames = self.partner.frames(name)
             if frames:
@@ -129,7 +186,7 @@ class Evolution(Effect):
             if t < ARRIVE:
                 # The flash it comes out of
                 radius = int(6 + 30 * (t / ARRIVE))
-                layers.append((self._glow(radius, int(220 * (1 - t / ARRIVE))),
+                layers.append((glow(radius, int(220 * (1 - t / ARRIVE))),
                                (self.start[0], self.start[1] - 16), "center"))
         if t >= ARRIVE + MEET * 0.7:
             # The light where they meet, brightest at the change
@@ -138,30 +195,72 @@ class Evolution(Effect):
             peak = MEET * 0.3
             strength = flash_t / peak if flash_t < peak else max(0.0, 1 - (flash_t - peak) / (span - peak))
             radius = int(10 + FLASH_RADIUS * min(1.0, flash_t / peak))
-            layers.append((self._glow(radius, int(250 * strength)),
+            layers.append((glow(radius, int(250 * strength)),
                            (user_ground[0], user_ground[1] - self.user.rect.height / 2), "center"))
-        # One picture holding every layer
-        rects = []
-        for surface, point, anchor in layers:
-            rect = surface.get_rect(**{anchor: (round(point[0]), round(point[1]))})
-            rects.append(rect)
-        if not rects:
-            self.image = pygame.Surface((1, 1), pygame.SRCALPHA)
-            self.rect = self.image.get_rect(center=user_ground)
-            return
-        bounds = rects[0].unionall(rects[1:])
-        image = pygame.Surface(bounds.size, pygame.SRCALPHA)
-        for (surface, _, _), rect in zip(layers, rects):
-            image.blit(surface, (rect.x - bounds.x, rect.y - bounds.y))
-        self.image = image
-        self.rect = bounds
+        compose(self, layers, user_ground)
 
-    @staticmethod
-    def _glow(radius, alpha):
-        """A white light fading to its edge."""
-        radius = max(2, radius)
-        surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
-        for ring in range(radius, 0, -max(1, radius // 8)):
-            share = 1 - ring / radius
-            pygame.draw.circle(surface, (255, 255, 235, int(alpha * (0.25 + 0.75 * share))), (radius, radius), ring)
-        return surface
+
+class Defusion(Effect):
+    """A fusion's time is up: the fused warrior powers down (its own
+    frames, when its sheet has some), a flash, and the two split: the user
+    is itself again (same share of HP), the partner leaves."""
+
+    def __init__(self, user, on_done=None):
+        super().__init__()
+        self.user = user
+        self.on_done = on_done
+        fusion = user.fusion
+        self.original = fusion["original"]
+        self.partner = Animator(fusion["partner"])
+        self.split = False
+        user.stop_block()
+        frames = [user.frame_image(f"Defuse {index}") for index in range(8) if user.has_animation(f"Defuse {index}")]
+        if not frames:
+            user.face_idle()
+            frames = [user.image]
+        user._play("evolve", frames, Config.CLOCK_LIMIT * len(frames) / POWER_DOWN, hold_ticks=10 ** 9)
+        self.update_effect(())
+
+    def _split(self):
+        self.split = True
+        self.user.become(self.original)
+        self.user.fusion = None
+        self.user.action = None
+        self.user._play("evolve", [self.user.image], 10, hold_ticks=10 ** 9)
+
+    def finish(self):
+        """End at once (the map changed): split now."""
+        if not self.split:
+            self._split()
+        self.done = True
+        self.user.action = None
+        self.user.face_idle()
+        if self.on_done is not None:
+            self.on_done(self.user)
+
+    def update_effect(self, targets):
+        self.tick()
+        t = self.ticks
+        if t >= POWER_DOWN and not self.split:
+            self._split()
+        if t >= POWER_DOWN + SPLIT:
+            self.finish()
+            return
+        ground = self.user.rect.midbottom
+        layers = []
+        if t >= POWER_DOWN * 0.5:
+            # The light it splits in, brightest at the split
+            flash_t = t - POWER_DOWN * 0.5
+            peak = POWER_DOWN * 0.5
+            strength = flash_t / peak if flash_t < peak else max(0.0, 1 - (flash_t - peak) / SPLIT)
+            radius = int(10 + FLASH_RADIUS * 0.8 * min(1.0, flash_t / peak))
+            layers.append((glow(radius, int(240 * strength)), (ground[0], ground[1] - self.user.rect.height / 2),
+                           "center"))
+        if self.split:
+            # The partner steps out to the side and fades away
+            progress = (t - POWER_DOWN) / SPLIT
+            frame = self.partner.image_by_name("IDLE Down").copy()
+            frame.set_alpha(int(255 * max(0.0, 1 - progress)))
+            layers.insert(0, (frame, (ground[0] + FUSION_GAP * min(1.0, progress * 1.6), ground[1]), "midbottom"))
+        compose(self, layers, ground)
+

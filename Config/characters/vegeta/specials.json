@@ -643,7 +643,8 @@
       "kind": "evolve",
       "style": "fusion",
       "partner": "goku",
-      "becomes": "vegito"
+      "becomes": "vegito",
+      "lasts_s": 60
     }
   ]
 }
