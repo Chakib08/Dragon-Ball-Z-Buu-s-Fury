@@ -8,6 +8,7 @@
       "hero": "goku_log2",
       "waves": [["frieza"]],
       "arena": "diablo_desert",
+      "music": "buus-fury/dangerous-standoff",
       "intro": [
         ["frieza", "You monkeys never learn. I will destroy you and this planet!"],
         ["goku_log2", "You've hurt too many people, Frieza. I won't forgive you!"]
@@ -21,6 +22,7 @@
       "form": "ssj",
       "waves": [["cooler"]],
       "arena": "southwest_forest",
+      "music": "buus-fury/vegetas-theme",
       "intro": [
         ["cooler", "My little brother was a disgrace. Watch the true power of our family."],
         ["goku_log2", "Then I'll beat you the same way I beat him!"]
@@ -35,6 +37,7 @@
       "allies": ["gohan_teen"],
       "waves": [["android17", "android18"]],
       "arena": "hercule_city",
+      "music": "buus-fury/turned-to-stone",
       "intro": [
         ["android17", "Another one who wants to play? Fine, it's been boring lately."],
         ["trunks_future", "This time I'll end your reign of terror!"]
@@ -48,6 +51,7 @@
       "allies": ["vegeta_log2", "trunks_future"],
       "waves": [["android19", "android20"], ["android13"]],
       "arena": "nataday_village",
+      "music": "buus-fury/battlefield-royale",
       "intro": [
         ["android20", "Dr. Gero's last creation will finish what I started."],
         ["goku_log2", "Everybody, together! We can't let them win!"]
@@ -90,6 +94,7 @@
       "allies": ["goten", "kid_trunks"],
       "waves": [["broly"]],
       "arena": "volcano",
+      "music": "buus-fury/majin-buu-returns",
       "intro": [
         ["broly", "Kakarot... Kakarooot!"],
         ["gohan", "Goten, Trunks, stay together! We'll beat him as a team!"]
@@ -103,6 +108,7 @@
       "form": "ssj3",
       "waves": [["super_buu"]],
       "arena": "kamis_lookout",
+      "music": "buus-fury/super-buu",
       "intro": [
         ["super_buu", "I'm bored. Entertain me, or I'll eat you."],
         ["gotenks", "The Grim Reaper of Justice has arrived! Super Ghost Kamikaze Attack!"]
@@ -115,6 +121,7 @@
       "hero": "gohan_ultimate",
       "waves": [["super_buu_gotenks"]],
       "arena": "kamis_lookout",
+      "music": "buus-fury/gohans-hidden-power",
       "intro": [
         ["super_buu_gotenks", "I absorbed Gotenks. Now I'm even stronger!"],
         ["gohan_ultimate", "That won't be enough. Your time is up, Buu."]
@@ -128,6 +135,7 @@
       "form": "ssj",
       "waves": [["super_buu_gohan"]],
       "arena": "kamis_lookout",
+      "music": "buus-fury/vegito-is-born",
       "intro": [
         ["super_buu_gohan", "With Gohan inside me, nobody can stop me."],
         ["vegito", "I'm not Goku, I'm not Vegeta. I'm the one who's going to beat you."]
@@ -142,6 +150,7 @@
       "allies": ["vegeta"],
       "waves": [["kid_buu"]],
       "arena": "king_kais_planet",
+      "music": "buus-fury/kid-buu",
       "intro": [
         ["kid_buu", "Hehehe... boom!"],
         ["goku", "Vegeta, buy me some time. This ends here!"]
@@ -157,6 +166,7 @@
       "waves": [["goku_black"]],
       "boss_form": "ssj",
       "arena": "capsule_corp",
+      "music": "buus-fury/daburas-theme",
       "intro": [
         ["goku_black", "Mortals are a mistake. Behold the beauty of Super Saiyan Rosé."],
         ["trunks_future", "You took everything from my world. I'll never forgive you!"]

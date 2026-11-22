@@ -42,6 +42,15 @@ def available():
     return tuple(entry["id"] for entry in _load() if entry.get("builtin") or built_path(entry["id"]))
 
 
+def music(arena):
+    """The arena's own soundtrack (a name under Sounds/, see
+    PathManager.soundtrack), or None."""
+    for entry in _load():
+        if entry["id"] == arena:
+            return entry.get("music")
+    return None
+
+
 def name(arena):
     for entry in _load():
         if entry["id"] == arena:

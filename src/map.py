@@ -6,6 +6,7 @@ import pygame
 import pyscroll
 import pytmx
 
+import arenas
 from combat import CombatSystem
 from effects import EFFECT_LAYER
 from movement import resolve_movement_collisions, solid_bodies
@@ -141,8 +142,19 @@ def arena():
         return "map"
 
 
+def world_music(world_file):
+    """The fighting map's music: its arena's own (Config/arenas.json), else
+    the default one."""
+    track = arenas.music(world_file or "map")
+    if track:
+        path = PathManager.soundtrack(track)
+        if os.path.exists(path):
+            return path
+    return PathManager.soundtrack(WORLD_MUSIC)
+
+
 def map_definitions(enemies=(DEFAULT_ENEMY,), allies=(), world_file=None):
-    world = PathManager.soundtrack(WORLD_MUSIC)
+    world = world_music(world_file)
     home = PathManager.soundtrack(HOME_MUSIC)
     return [
         MapDefinition("map", world, [Portal("map", "enter_house", "house", "spawn_house")],
