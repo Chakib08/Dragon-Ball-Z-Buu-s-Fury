@@ -10,6 +10,8 @@
     {"id": "gohan_teen", "name": "Teen Gohan"},
     {"id": "gohan_ultimate", "name": "Ultimate Gohan"},
     {"id": "trunks_future", "name": "Future Trunks"},
+    {"id": "trunks_teen", "name": "Future Trunks (Teen)"},
+    {"id": "gohan_future", "name": "Future Gohan"},
     {"id": "piccolo", "name": "Piccolo", "levels": {"ssj": "No weights"}},
     {"id": "krillin", "name": "Krillin"},
     {"id": "tien", "name": "Tien"},

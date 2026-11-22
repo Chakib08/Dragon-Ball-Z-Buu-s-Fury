@@ -60,9 +60,16 @@ def portrait(name):
                     # The sheet's background shows at the frame's rounded corners
                     image.set_colorkey(source.get_at((0, 0))[:3])
                 if info.get("scale"):
-                    # A face cut from a sprite sheet: smaller, so enlarged
-                    side = round(size * float(info["scale"]))
-                    image = pygame.transform.scale(image, (side, side))
+                    # A face cut from a sprite sheet (smaller: enlarged, pixel
+                    # art) or a big picture (shrunk smoothly)
+                    scale = float(info["scale"])
+                    side = round(size * scale)
+                    if scale < 1:
+                        full = pygame.Surface(image.get_size(), pygame.SRCALPHA)
+                        full.blit(image, (0, 0))
+                        image = pygame.transform.smoothscale(full, (side, side))
+                    else:
+                        image = pygame.transform.scale(image, (side, side))
         except (pygame.error, KeyError, ValueError, TypeError):
             image = None
     _portraits[name] = image

@@ -49,6 +49,8 @@ EXPECTED = {
     "trunks_future": ["Energy Blast", "Burning Attack", "Sword Slash"],
     "vegeta_log2": ["Energy Blast", "Big Bang Attack", "Final Flash"],
     "goku_black": ["Energy Blast", "Black Kamehameha", "Rosé Ki Sphere", "Instant Transmission"],
+    "gohan_future": ["Energy Blast", "Masenko", "Ki Burst"],
+    "trunks_teen": ["Energy Blast", "Burning Attack", "Ki Burst"],
     "goten": ["Energy Blast", "Kamehameha", "Ki Burst", "Fusion Dance"],
     "kid_trunks": ["Energy Blast", "Burning Attack", "Ki Burst", "Fusion Dance"],
     "gotenks": ["Energy Blast", "Super Ghost Kamikaze Attack", "Galactic Donut"],

@@ -254,6 +254,25 @@ ANDROID_13 = dict(cell=64, rows={"Down": 32, "Left": 32, "Right": 32, "Up": 32},
                               "ki_burst": {"pose": [55, 51, 47], "row": "Down"}})
 CELL_TECHNIQUES = (("energy_blast", [20, 21, 22], 1), ("kamehameha", [21, 22, 23], 2))
 
+# Future Gohan (LoG2, always a Super Saiyan, one arm): his front row has
+# only his idle and walk, so facing down he uses his side frames to act
+GOHAN_FUTURE = dict(
+    run=NO_RUN, action_rows={"Down": "Right"},
+    attack={"Down": [6, 7, 7, 8, 9, 9, 6, 7, 7, 8, 9, 9], "Right": [6, 7, 7, 8, 9, 9, 6, 7, 7, 8, 9, 9],
+            "Up": [6, 10, 10, 11, 11, 12, 6, 10, 11, 11, 12, 12]},
+    hurt={"Down": [10, 10], "Right": [10, 10], "Up": [7, 8]}, block={"Down": 6, "Right": 6, "Up": 9},
+    special={"Down": [8, 9, 9], "Right": [8, 9, 9], "Up": [6, 9, 9]}, faint=[10, 11, 12, 13],
+    techniques={"energy_blast": {"pose": {"Down": [8, 9, 9], "Right": [8, 9, 9], "Up": [6, 9, 9]},
+                                 "fire_at": 1, "rows": {"Down": "Right"}},
+                "masenko": {"pose": {"Down": [7, 7, 9], "Right": [7, 7, 9], "Up": [6, 6, 9]},
+                            "fire_at": 2, "rows": {"Down": "Right"}},
+                "ki_burst": {"pose": {"Down": [9, 9], "Right": [9, 9], "Up": [9, 9]}, "rows": {"Down": "Right"}}})
+# Future Trunks as a teen (LoG2): run 6-9, strikes from 10
+TRUNKS_TEEN = dict(run=[6, 7, 8, 9], attack=list(range(10, 22)), hurt=[25, 26], block=22, special=[23, 24, 24],
+                   faint=[30, 31, 32],
+                   techniques=techniques(("energy_blast", [23, 24, 24], 1), ("burning_attack", [22, 23, 24], 2),
+                                         ("ki_burst", [27, 28], None)))
+
 # ---- Third batch: Legacy of Goku 2 / Buu's Fury fighters, Goku Black ---------------
 # Small LoG2 sheets: idle, walk 2-5, punches and kicks from 6, then hurt,
 # guard, a pose for blasts, knocked out lying (no run: they walk faster)
@@ -358,6 +377,8 @@ NEW_SHEETS = [
     {"character": "trunks_future", "form": "ssj", **TRUNKS_FUTURE},
     {"character": "vegeta_log2", "form": "base", "transform": [57, 58, 59, 60], **VEGETA_LOG2},
     {"character": "vegeta_log2", "form": "ssj", **VEGETA_LOG2},
+    {"character": "gohan_future", "form": "ssj", **GOHAN_FUTURE},
+    {"character": "trunks_teen", "form": "base", **TRUNKS_TEEN},
     {"character": "goku_black", "form": "base", **goku_black(4)},
     {"character": "goku_black", "form": "ssj", **goku_black(204)},
     {"character": "android16", "form": "base", **ANDROID_16},
@@ -646,6 +667,15 @@ NEW_CHARACTER_SPECIALS = {
                 "rage": ("Steam Rage", "burst", {"rings": WHITE_RINGS})},
 }
 NEW_CHARACTER_SPECIALS["android20"] = NEW_CHARACTER_SPECIALS["android19"]
+NEW_CHARACTER_SPECIALS["gohan_future"] = {
+    "energy_blast": ("Energy Blast", "projectile", ("borrow", "gohan_blast")),
+    "masenko": ("Masenko", "beam", ("borrow", "final_flash")),
+    "ki_burst": ("Ki Burst", "burst", ("borrow", "gohan_burst"))}
+NEW_CHARACTER_SPECIALS["trunks_teen"] = {
+    "energy_blast": ENERGY_BLAST,
+    "burning_attack": ("Burning Attack", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
+                                                 "hit": YELLOW_BLAST}),
+    "ki_burst": ("Ki Burst", "burst", {"rings": WHITE_RINGS})}
 
 # Goku Black's effects sheet (one background colour): a pink ki blast, the
 # black and pink Kamehameha, a pink ki sphere; drawn at about twice the
@@ -946,11 +976,16 @@ def body_frames(spec):
               for direction in DIRECTIONS]
     moves = (("Walk", spec.get("walk", WALK)), ("Run", spec.get("run", RUN)),
              ("Attack", spec.get("attack", ATTACK)), ("Hurt", spec["hurt"]), ("Special", spec["special"]))
+    # A sheet without some direction's moves (only its idle and walk):
+    # they come from another row ({"Down": "Right"})
+    action_rows = spec.get("action_rows", {})
     for direction in DIRECTIONS:
         row = SOURCE_ROW[direction]
+        acting = action_rows.get(row, row)
         for prefix, columns in moves:
-            frames += [(f"{prefix} {direction} {i}", c, row) for i, c in enumerate(facing(columns, row))]
-        frames.append((f"Block {direction} 0", facing(spec["block"], row), row))
+            source = row if prefix in ("Walk", "Run") else acting
+            frames += [(f"{prefix} {direction} {i}", c, source) for i, c in enumerate(facing(columns, source))]
+        frames.append((f"Block {direction} 0", facing(spec["block"], acting), acting))
     faint_row = spec.get("faint_row", "Right")
     frames += [(f"Faint {i}", c, faint_row) for i, c in enumerate(spec.get("faint", []))]
     frames += [(f"Transform {i}", c, "Down") for i, c in enumerate(spec.get("transform", []))]
@@ -967,7 +1002,8 @@ def technique_cells(technique):
     poses = technique.get("pose") or technique.get("vanish")
     if isinstance(poses, list):
         poses = {direction: poses for direction in ("Down", "Right", "Up")}
-    return {direction: [(c, technique.get("row", direction)) for c in columns]
+    rows = technique.get("rows", {})  # a direction's poses from another row
+    return {direction: [(c, rows.get(direction, technique.get("row", direction))) for c in columns]
             for direction, columns in poses.items()}
 
 

@@ -337,6 +337,18 @@
       "dialog": [
         "My brother was soft. I am not."
       ]
+    },
+    "trunks_teen": {
+      "difficulty": "easy",
+      "dialog": [
+        "Gohan taught me everything. I won't lose!"
+      ]
+    },
+    "gohan_future": {
+      "difficulty": "normal",
+      "dialog": [
+        "I've lost an arm, not my will to fight."
+      ]
     }
   }
 }
