@@ -25,7 +25,7 @@
     "android20": ["log2", 320, 255],
     "android13": ["android13", 16, 34],
     "goku_log2": ["log2", 0, 63],
-    "goku_end_of_z": ["bf", 33, 54],
+    "goku_end_of_z": ["bf", 33, 3751],
     "vegeta_log2": ["log2", 256, 63],
     "gohan_teen": ["log2", 0, 127],
     "gohan_ultimate": ["bf", 33, 468],
