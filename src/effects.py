@@ -163,8 +163,13 @@ class Aura(Effect):
                  "boxes": ((321, 353, 32, 32), (360, 353, 32, 32), (397, 353, 32, 32)), "height": 1.35},
         "rose": {"sheet": "Graphics/assets/effects/goku_black_fx.png", "background": (87, 137, 170),
                  "boxes": ((437, 72, 96, 78), (547, 72, 96, 78), (657, 72, 96, 78)), "height": 1.5},
+        # Super Saiyan Blue: the golden flames turned blue (red and blue swapped)
+        "blue": {"sheet": "Graphics/assets/effects/fusion_dance.png", "background": (0, 128, 0),
+                 "boxes": ((321, 353, 32, 32), (360, 353, 32, 32), (397, 353, 32, 32)), "height": 1.35,
+                 "swap_red_blue": True},
     }
     CHARACTER_STYLES = {"goku_black": "rose"}
+    FORM_STYLES = {"ssjb": "blue"}
     FRAME_TICKS = 5
     FADE_TICKS = 24
     layer = CHARACTER_LAYER
@@ -185,6 +190,13 @@ class Aura(Effect):
             for x, y, width, height in info["boxes"]:
                 frame = pygame.Surface((width, height))
                 frame.blit(sheet, (0, 0), (x, y, width, height))
+                if info.get("swap_red_blue"):
+                    background = tuple(info["background"])
+                    for px in range(width):
+                        for py in range(height):
+                            r, g, b = frame.get_at((px, py))[:3]
+                            if (r, g, b) != background:
+                                frame.set_at((px, py), (b, g, r))
                 frame.set_colorkey(info["background"])
                 frames.append(frame)
             cls._frames[style] = frames
@@ -198,7 +210,8 @@ class Aura(Effect):
         self.at_least = at_least
         self.fading = 0.0
         self._offset = (0, 0)
-        self.style = self.CHARACTER_STYLES.get(fighter.character_name, "gold")
+        self.style = (self.FORM_STYLES.get(fighter.form) or self.CHARACTER_STYLES.get(fighter.character_name)
+                      or "gold")
         if not self.frames(self.style):
             self.style = "gold"
         if not self.frames(self.style):

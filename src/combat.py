@@ -44,7 +44,7 @@ class CombatSystem:
     NPC_SUPER_DAMAGE_MULTIPLIER = 1.5
     # Ki drained per second by each Super Saiyan level: very slow (a full
     # bar keeps SSJ going for about 100 s), a little more for SSJ3
-    SUPER_KI_DRAIN_PER_SECOND = {"ssj": 1, "ssj2": 1.5, "ssj3": 2}
+    SUPER_KI_DRAIN_PER_SECOND = {"ssj": 1, "ssj2": 1.5, "ssj3": 2, "ssjb": 2}
 
     def __init__(self, player, screen_size):
         self.player = player

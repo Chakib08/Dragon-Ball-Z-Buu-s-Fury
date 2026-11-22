@@ -177,8 +177,10 @@ class Animator:
     SUPER_FORM = "ssj"
     SUPER_2_FORM = "ssj2"
     SUPER_3_FORM = "ssj3"
+    # Super Saiyan Blue (Vegito)
+    SUPER_BLUE_FORM = "ssjb"
     # Super Saiyan levels, weakest first
-    SUPER_FORMS = (SUPER_FORM, SUPER_2_FORM, SUPER_3_FORM)
+    SUPER_FORMS = (SUPER_FORM, SUPER_2_FORM, SUPER_3_FORM, SUPER_BLUE_FORM)
 
     def __init__(self, name):
         # Every form uses the same animation names, so switching form only

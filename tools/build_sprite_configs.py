@@ -379,6 +379,7 @@ NEW_SHEETS = [
     {"character": "great_saiyaman", "form": "ssj", **SAIYAMAN},
     {"character": "vegito", "form": "base", "transform": [32, 33, 33, 34, 35, 36], **VEGITO},
     {"character": "vegito", "form": "ssj", **VEGITO},
+    {"character": "vegito", "form": "ssjb", "sheet": "Graphics/assets/vegito/ssjb.png"},
     # Gogeta is always a Super Saiyan; his black-haired frames are his
     # fusion running out
     {"character": "gogeta", "form": "ssj", "hurt": [29, 30], "block": 28, "special": [22, 23, 24],
@@ -511,6 +512,48 @@ BUU_STEAM = {"sheet": BUU_FX, "background": BUU_BLUE,
              "boxes": {"Down": _BUU_STEAM, "Right": _BUU_STEAM, "Up": _BUU_STEAM}}
 # (both forms of Vegito share his techniques)
 VEGITO["techniques"]["spirit_sword"]["pose_sheet"] = VEGITO_SWORD
+
+
+def _band(name, count, first=0):
+    return [[name, index] for index in range(first, first + count)]
+
+
+# Vegito Blue (Super Saiyan Blue): no grid, frames on a plain background in
+# two blocks: on the left the idle poses (L0), walks (L1 front, L2 side, L3
+# back), strikes (L4-L6), blast and Kamehameha poses (L7-L9); on the right
+# the hurt frames (R0), falling and powering down (R1), the transformation
+# from black hair (R2). Each direction's frames are picked from them:
+#   Down   0 idle, 1-8 walk, 9-16 strikes, 17-18 hurt, 19 guard, 20-22 blast,
+#          23-26 transformation, 27-30 powering down
+#   Right  0 idle, 1-8 walk, 9-16 strikes, 17-18 hurt, 19 guard, 20-22 blast,
+#          23-25 Kamehameha, 26-27 falling, lying
+#   Up     0 idle, 1-8 walk, 9-16 strikes, 17-18 hurt, 19 guard, 20-22 blast,
+#          23-24 Kamehameha
+_BLUE_BANDS = {**{f"L{i}": (top, bottom, 0, 215) for i, (top, bottom) in enumerate(
+    ((4, 36), (40, 72), (76, 108), (112, 144), (148, 179), (183, 215), (219, 251), (255, 287), (291, 322),
+     (326, 358)))},
+    "R0": (14, 46, 215, 434), "R1": (50, 81, 215, 434), "R2": (85, 117, 215, 434)}
+VEGITO_BLUE_PICK = {
+    "Down": [["L0", 0], *_band("L1", 8), *_band("L4", 8), ["R0", 1], ["R0", 0], ["R1", 4],
+             *_band("L7", 3), *_band("R2", 4), *_band("R1", 4, 4)],
+    "Right": [["L0", 2], *_band("L2", 8), *_band("L5", 8), ["R0", 3], ["R0", 4], ["R1", 0],
+              *_band("L7", 3, 3), ["L8", 2], ["L9", 0], ["L9", 1], ["R1", 1], ["R1", 2]],
+    "Up": [["L0", 7], *_band("L3", 8), *_band("L6", 8), ["R0", 6], ["R0", 7], ["R0", 8],
+           *_band("L7", 3, 6), ["L8", 4], ["L8", 5]],
+}
+_STRIKES = [9, 10, 10, 11, 11, 12, 13, 14, 14, 15, 15, 16]
+VEGITO_BLUE = dict(
+    cells={"bands": _BLUE_BANDS, "background": (171, 227, 167), "pick": VEGITO_BLUE_PICK},
+    idle=0, walk=[1, 3, 5, 7], run=[2, 4, 6, 8], attack=_STRIKES, hurt=[17, 18], block=19,
+    special=[20, 21, 22], transform=[23, 24, 25, 26], defuse=[27, 28, 29, 30], faint=[26, 27, 27],
+    techniques={
+        "energy_blast": {"pose": [20, 21, 22], "fire_at": 1},
+        "final_kamehameha": {"pose": {"Down": [20, 21, 21, 22], "Right": [23, 23, 24, 25], "Up": [23, 23, 24, 24]},
+                             "fire_at": 2},
+        # No sword on this sheet: his widest swings
+        "spirit_sword": {"pose": {"Down": [9, 13, 15], "Right": [11, 14, 15], "Up": [10, 13, 14]}, "fire_at": 1},
+    })
+next(s for s in NEW_SHEETS if s["character"] == "vegito" and s["form"] == "ssjb").update(VEGITO_BLUE)
 VEGITO["techniques"]["final_kamehameha"]["pose_sheet"] = VEGITO_KAMEHAMEHA
 next(s for s in NEW_SHEETS if s["character"] == "buu")["techniques"]["rage"]["pose_sheet"] = BUU_STEAM
 # Gogeta's Fusion Dance (Vegeta on the left, Goku on the right): the dance,
@@ -774,13 +817,17 @@ def detect_cells(image, bands, background, cell_background=None):
     """{row: [[x, y, width, height]]}: the frames of a sheet that is no grid
     (each frame in a box of its own, of cell_background, on the
     background), row by row from the bands of rows they are in ({row: (top,
-    bottom)}). Two touching boxes, too wide for one frame, are split in
+    bottom)}, or (top, bottom, left, right) for one block of the sheet). Two touching boxes, too wide for one frame, are split in
     halves."""
     background = tuple(background)[:3]
     width = image.get_width()
     cells = {}
-    for row, (top, bottom) in bands.items():
-        filled = [any(tuple(image.get_at((x, y)))[:3] != background for y in range(top, bottom))
+    for row, band in bands.items():
+        top, bottom = band[:2]
+        # (top, bottom) across the sheet, or (top, bottom, left, right)
+        left, right = (band[2], band[3]) if len(band) > 2 else (0, width)
+        filled = [left <= x < right and any(tuple(image.get_at((x, y)))[:3] != background
+                                             for y in range(top, bottom))
                   for x in range(width)]
         boxes = []
         x = 0
@@ -818,6 +865,11 @@ class Sheet:
         # is its n-th box (see detect_cells)
         self.cells = detect_cells(self.image, cells["bands"], cells["background"],
                                   cells.get("cell_background")) if cells else None
+        if cells and "pick" in cells:
+            # Each direction's frames picked from the bands: [band, n]
+            found = self.cells
+            self.cells = {row: [found[band][index] for band, index in picks]
+                          for row, picks in cells["pick"].items()}
 
     def box(self, column, row):
         """[x, y, width, height] of a frame of a sheet that is no grid."""

@@ -302,11 +302,12 @@
     {
       "id": "goku_black",
       "title": "Black's Rosé",
-      "subtitle": "Future Trunks and Vegeta vs Goku Black",
+      "subtitle": "Future Trunks, Vegeta and Vegito Blue vs Goku Black",
       "hero": "trunks_future",
       "form": "ssj",
       "allies": [
-        "vegeta"
+        "vegeta",
+        "vegito"
       ],
       "waves": [
         [
@@ -322,10 +323,17 @@
           "Mortals are a mistake. Behold the beauty of Super Saiyan Rosé."
         ],
         [
+          "vegito",
+          "A god? Then you're about to meet Super Saiyan Blue."
+        ],
+        [
           "trunks_future",
           "You took everything from my world. I'll never forgive you!"
         ]
-      ]
+      ],
+      "ally_forms": {
+        "vegito": "ssjb"
+      }
     }
   ]
 }

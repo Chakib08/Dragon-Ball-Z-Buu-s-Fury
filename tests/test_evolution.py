@@ -82,8 +82,8 @@ class EvolutionTests(EvolutionCase):
                 self.assertIn("Final Kamehameha", [t.name for t in player.techniques])
                 self.assertEqual(combat.selected_technique, 0)
                 self.assertEqual(combat.effects, [])
-                # Vegito can still go Super Saiyan
-                self.assertEqual(player.super_levels, ["ssj"])
+                # Vegito can still go Super Saiyan, or Super Saiyan Blue
+                self.assertEqual(player.super_levels, ["ssj", "ssjb"])
 
     def test_goku_and_vegeta_can_also_dance_into_gogeta(self):
         for name in ("goku", "vegeta"):

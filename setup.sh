@@ -88,6 +88,7 @@ REPO_ASSETS=(
     "gohan-great-saiyaman/ssj.png      Graphics/assets/great_saiyaman/ssj.png"
     "vegito/base.png                   Graphics/assets/vegito/base.png"
     "vegito/ssj.png                    Graphics/assets/vegito/ssj.png"
+    "vegito/ssj_blue.png               Graphics/assets/vegito/ssjb.png"
     "gogeta/ssj.png                    Graphics/assets/gogeta/ssj.png"
     "cell/imperfect.png                Graphics/assets/cell_imperfect/base.png"
     "cell/semi-perfect.png             Graphics/assets/cell_semi_perfect/base.png"
