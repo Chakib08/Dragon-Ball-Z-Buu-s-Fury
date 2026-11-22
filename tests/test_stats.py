@@ -55,7 +55,13 @@ class StatsTests(unittest.TestCase):
     def test_the_ranking(self):
         power = {name: character_stats(name).power for name in ROSTER}
         self.assertEqual(sorted(power, key=power.get, reverse=True),
-                         ["broly", "goku", "vegeta", "gohan", "trunks"])
+                         ["broly", "goku", "vegeta", "trunks", "gohan"])
+
+    def test_trunks_in_armor_is_stronger_than_future_trunks(self):
+        armor, future = character_stats("trunks"), character_stats("trunks_future")
+        for stat in ("power", "hp", "defense"):
+            self.assertGreater(getattr(armor, stat), getattr(future, stat), stat)
+        self.assertGreaterEqual(armor.speed, future.speed)
 
     def test_the_players_character_has_its_own_hp_and_speed(self):
         goku, trunks = Saiyan(0, 0, False, "goku"), Saiyan(0, 0, False, "trunks")
@@ -97,7 +103,7 @@ class StatsTests(unittest.TestCase):
             blast = next(t for t in player.techniques if t.kind == "projectile")
             damage[name] = combat._release_by(player, blast, "Right").damage / blast.damage
         self.assertAlmostEqual(damage["goku"], 1.15)
-        self.assertAlmostEqual(damage["trunks"], 0.95)
+        self.assertAlmostEqual(damage["trunks"], 1.12)
 
     def test_an_enemys_difficulty_comes_on_top_of_its_stats(self):
         broly = SaiyanNPC(0, 0, False, "broly", 0, [], difficulty="hard")

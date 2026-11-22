@@ -605,7 +605,7 @@ class TouchControlsTests(unittest.TestCase):
             menu.launch_menu(pygame.Surface(resolution), resolution, [])
         self.assertIn("Broly", drawn)
         self.assertIn("Choose Trunks", drawn)
-        for label in ("POW", "HP", "DEF", "SPD", "130", "95"):
+        for label in ("POW", "HP", "DEF", "SPD", "130", "112"):
             self.assertIn(label, drawn)
 
     def test_the_portrait_grid_is_walked_with_the_arrows_and_the_mouse(self):
