@@ -97,9 +97,9 @@ DEFAULT_ENEMY = "gohan"
 # allies against 4 enemies), 8 on the field
 MAX_ENEMIES = 4
 MAX_ALLIES = 3
-# An Epic Fight can be bigger: 7 against 7
-EPIC_MAX_ENEMIES = 7
-EPIC_MAX_ALLIES = 6
+# An Epic Fight can be bigger: 10 against 7
+EPIC_MAX_ENEMIES = 10
+EPIC_MAX_ALLIES = 7
 ALLY_LINES = ["I've got your back!", "Let's beat them together!"]
 
 

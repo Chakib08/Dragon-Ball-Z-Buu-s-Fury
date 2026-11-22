@@ -106,10 +106,11 @@
     },
     {
       "id": "cell_juniors",
-      "title": "Seven Little Monsters",
-      "subtitle": "Goku, Vegeta, Trunks and the Z Fighters vs the seven Cell Juniors",
-      "hero": "goku",
+      "title": "Ten Little Monsters",
+      "subtitle": "Goku, Vegeta, Trunks and the Z Fighters vs the ten Cell Juniors",
+      "hero": "gohan_teen",
       "allies": [
+        "goku_log2",
         "vegeta_log2",
         "trunks",
         "piccolo",
@@ -128,9 +129,6 @@
           "cell_jr",
           "cell_jr",
           "cell_jr",
-          "cell_jr",
-          "cell_jr",
-          "cell_jr",
           "cell_jr"
         ]
       ],
@@ -139,15 +137,16 @@
       "intro": [
         [
           "cell_jr",
-          "Hee hee! Papa said we can play with you! All seven of us!"
+          "Hee hee! Papa said we can play with you! All ten of us!"
         ],
         [
           "goku",
           "Everybody, one each! Don't let them get past you!"
         ]
       ],
-      "form": "ssj",
+      "form": "ssj2",
       "ally_forms": {
+        "goku_log2": "ssj",
         "vegeta_log2": "ssj",
         "trunks": "ssj"
       }
@@ -215,7 +214,7 @@
           "super_buu"
         ]
       ],
-      "arena": "kamis_lookout",
+      "arena": "king_kais_planet",
       "music": "buus-fury/super-buu",
       "intro": [
         [
@@ -238,7 +237,7 @@
           "super_buu_gotenks"
         ]
       ],
-      "arena": "kamis_lookout",
+      "arena": "king_kais_planet",
       "music": "buus-fury/gohans-hidden-power",
       "intro": [
         [
@@ -262,7 +261,7 @@
           "super_buu_gohan"
         ]
       ],
-      "arena": "kamis_lookout",
+      "arena": "king_kais_planet",
       "music": "buus-fury/vegito-is-born",
       "intro": [
         [

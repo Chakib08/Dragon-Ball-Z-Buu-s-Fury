@@ -60,7 +60,7 @@ class FightListTests(EpicCase):
         self.assertIn(("goku", "ssj3", "kid_buu"), matchups)
         self.assertIn(("goku_log2", None, "frieza"), matchups)
         juniors = epic.by_id("cell_juniors")
-        self.assertEqual(juniors.waves, [["cell_jr"] * 7])
+        self.assertEqual(juniors.waves, [["cell_jr"] * 10])
         self.assertEqual((juniors.hero, juniors.form), ("goku", "ssj"))
         self.assertEqual(juniors.allies, ["vegeta_log2", "trunks", "piccolo", "tien", "yamcha", "krillin"])
         self.assertEqual(epic.by_id("goku_black").boss, "goku_black")
@@ -166,14 +166,14 @@ class EpicGameTests(EpicCase):
         allies = {npc.character_name: npc.form for npc in game.map_manager.get_map().npcs if npc.team == HEROES}
         self.assertEqual(allies, {"vegeta": "base", "vegito": "ssjb"})  # Vegito Blue
 
-    def test_seven_against_seven(self):
+    def test_ten_against_seven(self):
         game = self.game("cell_juniors")
         npcs = game.map_manager.get_map().npcs
         self.assertEqual((game.character.character_name, game.character.form), ("goku", "ssj"))
         allies = {npc.character_name: npc.form for npc in npcs if npc.team == HEROES}
         self.assertEqual(allies, {"vegeta_log2": "ssj", "trunks": "ssj", "piccolo": "base",
                                   "tien": "base", "yamcha": "base", "krillin": "base"})
-        self.assertEqual([npc.character_name for npc in self.enemies(game)], ["cell_jr"] * 7)
+        self.assertEqual([npc.character_name for npc in self.enemies(game)], ["cell_jr"] * 10)
         # Nobody stands in someone else
         bodies = [game.character.body, *(npc.body for npc in npcs)]
         overlapping = sum(1 for i, a in enumerate(bodies) for b in bodies[i + 1:] if a.colliderect(b))
@@ -213,7 +213,7 @@ class EpicGameTests(EpicCase):
         from game import Game
         game = Game((1200, 540), "test", fullscreen=False)
         game.menu = Menu(game.resolution)
-        game.menu.selected_enemies = ["cell_jr"] * 7
+        game.menu.selected_enemies = ["cell_jr"] * 10
         game.menu.selected_allies = ["krillin", "tien", "yamcha", "piccolo"]
         game.start_story()
         npcs = game.map_manager.get_map().npcs

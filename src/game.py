@@ -186,7 +186,7 @@ class Game:
     def select_character(self, name, enemies=(DEFAULT_ENEMY,), allies=(), arena=None, epic=False):
         """Start the world over with the given playable character, the
         enemies to fight and the allies fighting on his side (epic: an Epic
-        Fight's, up to 7 against 7)."""
+        Fight's, up to 10 against 7)."""
         if isinstance(enemies, str):
             enemies = (enemies,)
         self.character = Saiyan(*PLAYER_SPAWN, False, name)
