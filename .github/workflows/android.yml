@@ -1,0 +1,81 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# No workflow artifacts: the APK holds the private sprite sheets, so it only
+# goes to the GitHub release (on a v* tag), straight from the build job.
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      # To attach the APK to the release (on a v* tag)
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check out python-for-android
+        uses: actions/checkout@v4
+        with:
+          repository: kivy/python-for-android
+          ref: 5865575d81d53617784428ee29f57be2716311ea
+          path: .p4a
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Android build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ant autoconf automake autopoint ccache cmake g++ gcc git lbzip2 \
+            libffi-dev libltdl-dev libtool libssl-dev make patch pkg-config \
+            python3-dev unzip wget zip
+
+      - name: Install Buildozer
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install buildozer Cython==0.29.36
+
+      - name: Download sprite sheets
+        run: ./setup.sh
+        env:
+          # A token that can read the private dbz-assets repository (the
+          # workflow's own GITHUB_TOKEN only reaches this repository)
+          GH_TOKEN: ${{ secrets.DBZ_ASSETS_TOKEN }}
+
+      - name: Build debug APK
+        run: buildozer android debug
+        env:
+          VERSION_python3: 3.10.11
+          VERSION_hostpython3: 3.10.11
+
+      - name: Attach APK to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: bin/*.apk
+          generate_release_notes: true

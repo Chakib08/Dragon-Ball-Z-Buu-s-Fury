@@ -1,5 +1,3 @@
-pygame
-pytmx
-pyscroll
-pandas
-pyyaml
+pygame==2.6.1
+pytmx==3.32
+pyscroll==2.31

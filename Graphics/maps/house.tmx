@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.10.1" orientation="orthogonal" renderorder="right-down" width="25" height="25" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="31">
+<map version="1.10" tiledversion="1.10.1" orientation="orthogonal" renderorder="right-down" width="25" height="25" tilewidth="16" tileheight="16" infinite="0" nextlayerid="3" nextobjectid="76">
  <tileset firstgid="1" source="Goku_home.tsx"/>
  <layer id="1" name="principal_room" width="25" height="25">
   <data encoding="csv">
@@ -60,5 +60,20 @@
    <point/>
   </object>
   <object id="30" name="enter_kitchen" x="149.333" y="216" width="19.3333" height="27.3333"/>
+  <object id="61" name="auto_wall" type="collision" x="0" y="0" width="400" height="116"/>
+  <object id="62" name="auto_wall" type="collision" x="0" y="116" width="300" height="52"/>
+  <object id="63" name="auto_wall" type="collision" x="332" y="116" width="68" height="52"/>
+  <object id="64" name="auto_wall" type="collision" x="0" y="168" width="252" height="68"/>
+  <object id="65" name="auto_wall" type="collision" x="376" y="168" width="24" height="172"/>
+  <object id="66" name="auto_wall" type="collision" x="0" y="236" width="148" height="12"/>
+  <object id="67" name="auto_wall" type="collision" x="168" y="236" width="84" height="12"/>
+  <object id="68" name="auto_wall" type="collision" x="0" y="248" width="60" height="92"/>
+  <object id="69" name="auto_wall" type="collision" x="0" y="340" width="80" height="16"/>
+  <object id="70" name="auto_wall" type="collision" x="360" y="340" width="40" height="16"/>
+  <object id="71" name="auto_wall" type="collision" x="0" y="356" width="100" height="12"/>
+  <object id="72" name="auto_wall" type="collision" x="340" y="356" width="60" height="12"/>
+  <object id="73" name="auto_wall" type="collision" x="0" y="368" width="200" height="12"/>
+  <object id="74" name="auto_wall" type="collision" x="232" y="368" width="168" height="12"/>
+  <object id="75" name="auto_wall" type="collision" x="0" y="380" width="400" height="20"/>
  </objectgroup>
 </map>

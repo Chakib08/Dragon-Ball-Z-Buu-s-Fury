@@ -1,0 +1,342 @@
+{
+  "difficulties": {
+    "easy": {
+      "label": "Easy",
+      "color": [
+        110,
+        210,
+        110
+      ],
+      "hp": 0.7,
+      "damage": 0.6,
+      "damage_taken": 1.25,
+      "reaction_ms": 350,
+      "attack_cooldown": 1.3,
+      "guard_after_hits": 4,
+      "speed": 0.9,
+      "power_up_at": 0.35,
+      "technique_every_ms": 8000,
+      "technique_damage": 0.12,
+      "dodge": 0.15,
+      "block_chance": 0.1,
+      "tactics": false
+    },
+    "normal": {
+      "label": "Normal",
+      "color": [
+        240,
+        210,
+        90
+      ],
+      "hp": 1.0,
+      "damage": 1.0,
+      "damage_taken": 1.0,
+      "reaction_ms": 200,
+      "attack_cooldown": 1.0,
+      "guard_after_hits": 2,
+      "speed": 1.0,
+      "power_up_at": 0.5,
+      "technique_every_ms": 5000,
+      "technique_damage": 0.2,
+      "dodge": 0.45,
+      "block_chance": 0.3,
+      "tactics": true
+    },
+    "hard": {
+      "label": "Hard",
+      "color": [
+        235,
+        80,
+        70
+      ],
+      "hp": 1.8,
+      "damage": 2.5,
+      "damage_taken": 0.6,
+      "reaction_ms": 100,
+      "attack_cooldown": 0.75,
+      "guard_after_hits": 2,
+      "guard_ms": 700,
+      "speed": 1.25,
+      "power_up_at": 0.6,
+      "technique_every_ms": 3000,
+      "technique_damage": 0.3,
+      "dodge": 0.75,
+      "block_chance": 0.5,
+      "tactics": true
+    },
+    "ally": {
+      "label": "Ally",
+      "color": [
+        110,
+        190,
+        255
+      ],
+      "hp": 1.0,
+      "damage": 1.0,
+      "damage_taken": 1.0,
+      "reaction_ms": 200,
+      "attack_cooldown": 1.0,
+      "guard_after_hits": 2,
+      "speed": 1.0,
+      "power_up_at": 0.5,
+      "technique_every_ms": 5000,
+      "technique_damage": 0.2,
+      "dodge": 0.5,
+      "block_chance": 0.3,
+      "tactics": true
+    }
+  },
+  "enemies": {
+    "goku": {
+      "difficulty": "normal",
+      "dialog": [
+        "Hey! Let's see how strong you've become!",
+        "Don't hold back!"
+      ]
+    },
+    "gohan": {
+      "difficulty": "normal",
+      "dialog": [
+        "Hey! Let's see how strong you've become!",
+        "I won't hold back this time!"
+      ]
+    },
+    "vegeta": {
+      "difficulty": "normal",
+      "dialog": [
+        "So you dare to challenge the Prince of all Saiyans?",
+        "I'll show you true power!"
+      ]
+    },
+    "trunks": {
+      "difficulty": "normal",
+      "dialog": [
+        "I came from the future to get stronger.",
+        "Let's train together!"
+      ]
+    },
+    "broly": {
+      "difficulty": "normal",
+      "dialog": [
+        "Kakarot...",
+        "I am the Legendary Super Saiyan! Nothing can stop me!"
+      ]
+    },
+    "piccolo": {
+      "difficulty": "normal",
+      "dialog": [
+        "I'll test your strength myself.",
+        "Don't disappoint me."
+      ]
+    },
+    "android17": {
+      "difficulty": "normal",
+      "dialog": [
+        "Let's see if you can keep up.",
+        "This should be fun."
+      ]
+    },
+    "android18": {
+      "difficulty": "normal",
+      "dialog": [
+        "You're in my way.",
+        "Don't think I'll go easy on you."
+      ]
+    },
+    "android16": {
+      "difficulty": "normal",
+      "dialog": [
+        "I don't like fighting... but I was built to destroy Goku."
+      ]
+    },
+    "android19": {
+      "difficulty": "easy",
+      "dialog": [
+        "Your energy will make me stronger."
+      ]
+    },
+    "android20": {
+      "difficulty": "normal",
+      "dialog": [
+        "I am Dr. Gero, the greatest genius of the Red Ribbon Army!",
+        "Goku's death is my life's work."
+      ]
+    },
+    "android13": {
+      "difficulty": "normal",
+      "dialog": [
+        "Mission: kill Goku.",
+        "You are in the way."
+      ]
+    },
+    "goten": {
+      "difficulty": "easy",
+      "dialog": [
+        "Let's spar! It'll be fun!"
+      ]
+    },
+    "kid_trunks": {
+      "difficulty": "easy",
+      "dialog": [
+        "I'm way stronger than Goten!"
+      ]
+    },
+    "gotenks": {
+      "difficulty": "normal",
+      "dialog": [
+        "The great Gotenks is here!",
+        "Prepare for the Super Ghost Kamikaze Attack!"
+      ]
+    },
+    "great_saiyaman": {
+      "difficulty": "normal",
+      "dialog": [
+        "Evildoer! The Great Saiyaman will stop you!"
+      ]
+    },
+    "vegito": {
+      "difficulty": "normal",
+      "dialog": [
+        "You're fighting the strongest warrior in the universe.",
+        "Kakarot and Vegeta, together!"
+      ]
+    },
+    "cell_imperfect": {
+      "difficulty": "normal",
+      "dialog": [
+        "I need the androids to become perfect...",
+        "Your energy will do for now."
+      ]
+    },
+    "cell_semi_perfect": {
+      "difficulty": "normal",
+      "dialog": [
+        "Just one more android and I'll be perfect."
+      ]
+    },
+    "cell_perfect": {
+      "difficulty": "normal",
+      "dialog": [
+        "Behold, perfection!",
+        "Let the Cell Games begin."
+      ]
+    },
+    "buu": {
+      "difficulty": "normal",
+      "dialog": [
+        "Buu turn you into candy!"
+      ]
+    },
+    "super_buu": {
+      "difficulty": "normal",
+      "dialog": [
+        "Now I'll have some fun."
+      ]
+    },
+    "super_buu_gotenks": {
+      "difficulty": "normal",
+      "dialog": [
+        "Gotenks' power is mine now!"
+      ]
+    },
+    "super_buu_gohan": {
+      "difficulty": "normal",
+      "dialog": [
+        "With Gohan's power, nothing can stop me!"
+      ]
+    },
+    "kid_buu": {
+      "difficulty": "normal",
+      "dialog": [
+        "Hehehehe!"
+      ]
+    },
+    "gogeta": {
+      "difficulty": "normal",
+      "dialog": [
+        "I am neither Goku nor Vegeta.",
+        "I am the one who will defeat you!"
+      ]
+    },
+    "goku_log2": {
+      "difficulty": "normal",
+      "dialog": [
+        "Let's see what you've got!"
+      ]
+    },
+    "goku_end_of_z": {
+      "difficulty": "normal",
+      "dialog": [
+        "I've been training hard. Ready?"
+      ]
+    },
+    "vegeta_log2": {
+      "difficulty": "normal",
+      "dialog": [
+        "I am the prince of all Saiyans!"
+      ]
+    },
+    "gohan_teen": {
+      "difficulty": "normal",
+      "dialog": [
+        "I won't let you hurt anyone else!"
+      ]
+    },
+    "gohan_ultimate": {
+      "difficulty": "normal",
+      "dialog": [
+        "Elder Kai unlocked my power. You don't stand a chance."
+      ]
+    },
+    "trunks_future": {
+      "difficulty": "normal",
+      "dialog": [
+        "I came back from the future to stop you."
+      ]
+    },
+    "krillin": {
+      "difficulty": "easy",
+      "dialog": [
+        "Hey, go easy on me!"
+      ]
+    },
+    "tien": {
+      "difficulty": "easy",
+      "dialog": [
+        "My Tri-Beam will stop you."
+      ]
+    },
+    "yamcha": {
+      "difficulty": "easy",
+      "dialog": [
+        "Wolf Fang Fist!"
+      ]
+    },
+    "goku_black": {
+      "difficulty": "normal",
+      "dialog": [
+        "Mortals are a mistake. I will erase you.",
+        "Behold the beauty of Super Saiyan Rosé."
+      ]
+    },
+    "cell_jr": {
+      "difficulty": "easy",
+      "dialog": [
+        "Hee hee hee!"
+      ]
+    },
+    "frieza": {
+      "difficulty": "normal",
+      "dialog": [
+        "You monkeys never learn.",
+        "I'll make you suffer for this!"
+      ]
+    },
+    "cooler": {
+      "difficulty": "normal",
+      "dialog": [
+        "My brother was soft. I am not."
+      ]
+    }
+  }
+}
