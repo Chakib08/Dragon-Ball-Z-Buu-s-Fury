@@ -189,7 +189,7 @@ class GamepadInGameTests(unittest.TestCase):
 
     def start_fight(self):
         self.game.menu.state = State.START
-        self.game.menu.selected_item = 1  # Arcade
+        self.game.menu.selected_item = [item for item, _, _ in Menu.MAIN_ITEMS].index("arcade")
         self.tap("a")                     # Arcade -> character
         self.tap("a")                     # Goku -> allies
         self.tap("a")                     # (none) -> opponents

@@ -5,6 +5,12 @@ Dragon Ball Z Trunks Hope, a Dragon Ball Z fan game in Python (started as a Buu'
 This game is a fan-made project and is not affiliated with or endorsed by Akira Toriyama, Toei Animation, Funimation, Shueisha, Webfoot Technologies, or Atari. Dragon Ball Z and all related characters and elements are trademarks of their respective owners. This project is intended for non-commercial use only and is a tribute to the original "Dragon Ball Z: Buu's Fury" game. Please support the official releases.
 
 
+## Credits
+A huge thank you to **SpYn**, who ripped most of the sprite sheets this game uses from *Dragon Ball Z: The Legacy of Goku II* and *Dragon Ball Z: Buu's Fury* (characters, portraits and maps). Without SpYn's work this game would not exist.
+
+Thanks as well to the other rippers whose sheets are used: Bonzai (Vegito, Gotenks), Grim (Majin Buu), Dx-Yondy (Super Saiyan Vegeta), Omega (Buu's Fury portraits), TheRedHeadHenry and Jenova (Super Android 13), JustOruma (Vegito's effects) and spritedatabase.net. The sound effects come from Buu's Fury, The Legacy of Goku II and Dragon Ball GT: Transformation; thanks to Ariku for the Legacy of Goku Maker Engine. The game's Credits screen (main menu) says the same.
+
+
 ## Description
 The purpose of this repository is to reproduce Dragon Ball Z Buu's Fury from Game Boy Advance, i started the latter to improve my python coding skills firstly, and to remake one of my favorite childhood games from GBA
 
@@ -134,6 +140,6 @@ The match takes place in front of Goku's house with all the usual moves. The fir
 - **Talking to NPCs**: Press **T** while near an NPC (no on-screen button yet).
 - **Full screen**: The game opens full screen at the display's own resolution (always on Android). On desktop, press **F11** to switch between full screen and a window, or set `"fullscreen": false` in `Config/config.json` to start in a window.
 - **Quit or back to the menu**: Press **Esc** (or the Android back button), or tap the **X** button in the top-right corner. While playing it offers **Quit** (Enter), **Main menu** (M) or **No** (Esc); from the main menu it only asks whether to quit. While the question is open the game is paused.
-- **Main menu**: **Story Mode** (still under development: not available yet), **Arcade Mode** (pick your team and fight), **Online Mode** (1v1 on a lobby server) and **Options** (the control guide; Esc or a tap returns). Up/Down or W/S and Enter, the mouse, or a tap. The version is in the bottom-left corner. The background is `Graphics/menu/dbz-game-menu.jpg`.
+- **Main menu**: **Story Mode** (still under development: not available yet), **Epic Fights** (the story's great battles, alone or online: the host plays the heroes, the other player the boss), **Arcade Mode** (pick your team and fight), **Online Mode** (1v1 on a lobby server), **Options** (the control guide; Esc or a tap returns) and **Credits**. Up/Down or W/S and Enter, the mouse, or a tap. The version is in the bottom-left corner. The background is `Graphics/menu/dbz-game-menu.jpg`.
 - **Enemies**: Enemies are tough (they only take 60% of each hit); they flinch when hit but strike back as soon as they can, and guard after a few quick hits. The enemy (Gohan unless you choose another) powers up when his health drops to half (sooner on Hard): his bar's frame turns gold, he moves faster, hits 50% harder and takes half damage.
 - **Combat resources**: The HUD shows HP and KI (mana). Punches and kicks are free; special techniques cost KI, which regenerates over time. Nearby hostile NPCs pursue and attack back.

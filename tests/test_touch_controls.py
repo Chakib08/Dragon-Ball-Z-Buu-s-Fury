@@ -426,21 +426,58 @@ class TouchControlsTests(unittest.TestCase):
         run()
         return menu, run
 
-    def test_main_menu_has_the_four_modes_in_order(self):
+    def test_main_menu_has_the_modes_in_order(self):
         menu, _ = self.main_menu()
-        self.assertEqual([item for item, _, _ in Menu.MAIN_ITEMS], ["story", "arcade", "online", "options"])
+        self.assertEqual([item for item, _, _ in Menu.MAIN_ITEMS],
+                         ["story", "epic", "arcade", "online", "options", "credits"])
         self.assertEqual(Menu.MAIN_ITEMS[menu.selected_item][0], "arcade")  # highlighted at first
         rects = [menu.item_rects[item] for item, _, _ in Menu.MAIN_ITEMS]
         for index, rect in enumerate(rects):
             self.assertEqual(rect.collidelist(rects[index + 1:]), -1)
             self.assertTrue(pygame.Rect(0, 0, 1200, 540).contains(rect))
 
-    def test_story_mode_opens_the_epic_fights(self):
+    def test_story_mode_says_it_is_not_available_yet(self):
+        menu, run = self.main_menu()
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP)] * 2)
+        self.assertEqual(Menu.MAIN_ITEMS[menu.selected_item][0], "story")
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)])
+        self.assertTrue(menu.notice_shown)
+        self.assertEqual(menu.state, State.START)
+        self.assertFalse(menu.isPlaying)
+        # Any key or tap closes it, and does nothing else
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)])
+        self.assertFalse(menu.notice_shown)
+        self.assertEqual(menu.state, State.START)
+
+    def test_epic_fights_and_credits_open_their_screens(self):
         menu, run = self.main_menu()
         run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP)])
+        self.assertEqual(Menu.MAIN_ITEMS[menu.selected_item][0], "epic")
         run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)])
         self.assertEqual(menu.state, State.EPIC_SELECT)
         self.assertFalse(menu.isPlaying)
+        menu.state = State.START
+        menu.choose("credits")
+        self.assertEqual(menu.state, State.CREDITS)
+        run([])
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_ESCAPE)])
+        self.assertEqual(menu.state, State.START)
+        self.assertTrue(any("SpYn" in line for _, lines in Menu.CREDITS for line in lines))
+
+    def test_the_highlight_slides_in(self):
+        menu, run = self.main_menu()
+        for _ in range(30):
+            run([])
+        self.assertEqual(menu.item_glide["arcade"], 1.0)
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN)])
+        run([])
+        # The new entry is on its way, the old one going back
+        self.assertTrue(0 < menu.item_glide["online"] < 1)
+        self.assertTrue(0 < menu.item_glide["arcade"] < 1)
+        for _ in range(30):
+            run([])
+        self.assertEqual(menu.item_glide["online"], 1.0)
+        self.assertEqual(menu.item_glide["arcade"], 0.0)
 
     def test_arcade_online_and_options_open_their_screens(self):
         for item, state, online in (("arcade", State.CHARACTER_SELECT, False),
@@ -455,7 +492,7 @@ class TouchControlsTests(unittest.TestCase):
 
     def test_keyboard_and_mouse_move_the_highlight(self):
         menu, run = self.main_menu()
-        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN)] * 3)  # wraps around
+        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_DOWN)] * 4)  # wraps around
         self.assertEqual(Menu.MAIN_ITEMS[menu.selected_item][0], "story")
         run([pygame.event.Event(pygame.MOUSEMOTION, pos=menu.item_rects["options"].center, rel=(0, 0), buttons=(0, 0, 0))])
         self.assertEqual(Menu.MAIN_ITEMS[menu.selected_item][0], "options")

@@ -86,7 +86,7 @@ class EpicMenuTests(EpicCase):
 
     def test_the_story_entry_lists_the_fights(self):
         menu, run = self.menu()
-        menu.selected_item = 0
+        menu.selected_item = [item for item, _, _ in Menu.MAIN_ITEMS].index("epic")
         run([key(pygame.K_RETURN)])
         self.assertEqual(menu.state, State.EPIC_SELECT)
         run([])

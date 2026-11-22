@@ -1,4 +1,5 @@
 import json
+import math
 import pygame
 
 import sfx
@@ -36,15 +37,40 @@ class State(Enum):
     MAP_SELECT = 7
     # Epic Fights: the story's battles, alone or online
     EPIC_SELECT = 8
+    # Who made the sprites and sounds
+    CREDITS = 9
 
 class Menu:
     # The main menu's entries: id, label, and the line shown under the list
     # while the entry is highlighted
     MAIN_ITEMS = (
-        ("story", "Epic Fights", "The story's great battles: Cell Games, Kid Buu... alone or online"),
+        ("story", "Story Mode", "The story of Trunks' hope (coming soon)"),
+        ("epic", "Epic Fights", "The story's great battles: Cell Games, Kid Buu... alone or online"),
         ("arcade", "Arcade Mode", "Pick your team and fight: from 1v1 up to 4v4"),
         ("online", "Online Mode", "1v1 against another player on a lobby server"),
         ("options", "Options", "Controls and settings"),
+        ("credits", "Credits", "Thanks to SpYn and everyone whose sprites and sounds the game uses"),
+    )
+    # Who the game thanks (Credits): (heading, lines)
+    CREDITS = (
+        ("Sprites", (
+            "A huge thank you to SpYn for the sprite sheets",
+            "ripped from Legacy of Goku 2 and Buu's Fury",
+            "(characters, portraits, maps) used in this game.",
+        )),
+        ("More sprite rippers", (
+            "Bonzai (Vegito, Gotenks), Grim (Majin Buu), Dx-Yondy (SSJ Vegeta),",
+            "Omega (Buu's Fury portraits), TheRedHeadHenry and Jenova (Super Android 13),",
+            "JustOruma (Vegito's effects), spritedatabase.net",
+        )),
+        ("Sounds", (
+            "Buu's Fury, Legacy of Goku 2 and Dragon Ball GT Transformation sound effects;",
+            "Legacy of Goku Maker Engine by Ariku",
+        )),
+        ("Dragon Ball", (
+            "Dragon Ball (c) Akira Toriyama / Bird Studio, Shueisha, Toei Animation.",
+            "A fan game, not for sale.",
+        )),
     )
     GOLD = (255, 205, 60)
     NAME_LENGTH = 16
@@ -57,7 +83,10 @@ class Menu:
         self.controls = controls if controls is not None else Controls()
         self._artwork = pygame.image.load(PathManager.menu_image_path(BACKGROUND_IMAGE))
         # Highlighted entry (Arcade: the one most players want)
-        self.selected_item = 1
+        self.selected_item = [item for item, _, _ in self.MAIN_ITEMS].index("arcade")
+        # How far each entry has stepped forward (0 to 1): the highlight
+        # slides in and out instead of jumping
+        self.item_glide = {}
         # "Not available yet" message (Story mode) until this time
         self.notice_until = 0
         self.isPlaying = False
@@ -190,6 +219,18 @@ class Menu:
                     break
             return
 
+        if self.state == State.CREDITS:
+            self._draw_credits(screen, resolution)
+            for event in events:
+                if event.type == pygame.KEYDOWN and event.key in (pygame.K_ESCAPE, pygame.K_RETURN,
+                                                                   pygame.K_AC_BACK):
+                    self._went_back = True
+                    self.state = State.START
+                elif self._is_tap(event, resolution):
+                    self._went_back = True
+                    self.state = State.START
+            return
+
         if self.state == State.OPTIONS:
             self._draw_options(screen, resolution)
             for event in events:
@@ -240,6 +281,11 @@ class Menu:
     def choose(self, item):
         """Open a main menu entry."""
         if item == "story":
+            # Not there yet: say so instead of doing nothing
+            self.notice_until = pygame.time.get_ticks() + self.NOTICE_MS
+        elif item == "credits":
+            self.state = State.CREDITS
+        elif item == "epic":
             if epic.fights():
                 self.online = False
                 self.epic_online = False
@@ -315,7 +361,7 @@ class Menu:
         self.title_top = int(height * 0.07)
         items_top = self.title_top + self.title_label.get_height() + self.subtitle_label.get_height() \
             + int(height * 0.07)
-        step = int(height * 0.095)
+        step = int(height * min(0.095, 0.5 / len(self.MAIN_ITEMS)))
         self.item_labels = {}
         self.item_rects = {}
         for index, (item, label, _) in enumerate(self.MAIN_ITEMS):
@@ -336,18 +382,38 @@ class Menu:
         screen.blit(self.main_image, (0, 0))
         screen.blit(self.title_label, (self.main_left, self.title_top))
         screen.blit(self.subtitle_label, (self.main_left - 2, self.title_top + self.title_label.get_height() - 4))
+        now = pygame.time.get_ticks()
+        # A slow pulse (0 to 1) for the highlight's glow
+        pulse = 0.5 + 0.5 * math.sin(now / 260)
         for index, (item, _, description) in enumerate(self.MAIN_ITEMS):
             rect = self.item_rects[item]
             selected = index == self.selected_item
-            if selected:
-                # Highlight: a translucent plate and a gold bar on its left
-                plate = pygame.Surface(rect.size, pygame.SRCALPHA)
-                plate.fill((255, 205, 60, 38))
+            # The highlight slides in (and the one left slides back)
+            glide = self.item_glide.get(item, 0.0)
+            glide += ((1.0 if selected else 0.0) - glide) * 0.3
+            if abs(glide - round(glide)) < 0.01:
+                glide = float(round(glide))
+            self.item_glide[item] = glide
+            if glide > 0.02:
+                # A translucent plate growing from the left, glowing
+                plate = pygame.Surface((max(1, int(rect.width * glide)), rect.height), pygame.SRCALPHA)
+                plate.fill((255, 205, 60, int((26 + 30 * pulse) * glide)))
                 screen.blit(plate, rect.topleft)
-                pygame.draw.rect(screen, self.GOLD, (rect.x, rect.y, 5, rect.height))
+                bar = pygame.Rect(rect.x, rect.y, 5, rect.height)
+                pygame.draw.rect(screen, self.GOLD, bar)
+                if selected:
+                    glow = pygame.Surface((14, rect.height), pygame.SRCALPHA)
+                    glow.fill((255, 220, 90, int(70 * pulse)))
+                    screen.blit(glow, (rect.x + 5, rect.y))
             label = self.item_labels[item][selected]
-            offset = 14 if selected else 0  # the highlighted entry steps forward
+            offset = round(14 * glide)  # the highlighted entry steps forward
             screen.blit(label, (self.main_left + offset, rect.centery - label.get_height() // 2))
+            if selected:
+                # A gold arrow bobbing after the entry
+                bob = round(4 * math.sin(now / 140))
+                tip_x = self.main_left + offset + label.get_width() + 18 + bob
+                cy = rect.centery
+                pygame.draw.polygon(screen, self.GOLD, [(tip_x, cy), (tip_x + 12, cy - 9), (tip_x + 12, cy + 9)])
         description = self.MAIN_ITEMS[self.selected_item][2]
         text = self._outlined(self.description_font, description, (210, 210, 220), width=1)
         screen.blit(text, (self.main_left, self.description_top))
@@ -378,6 +444,37 @@ class Menu:
         for line in lines:
             screen.blit(line, line.get_rect(midtop=(panel.centerx, y)))
             y += line.get_height() + 6
+
+    def _draw_credits(self, screen, resolution):
+        """Who made the sprites and sounds the game uses (SpYn first)."""
+        screen.blit(self.menu_image, (0, 0))
+        width, height = resolution
+        title_font = pygame.font.Font(None, max(40, int(height * 0.08)))
+        heading_font = pygame.font.Font(None, max(26, int(height * 0.045)))
+        text_font = pygame.font.Font(None, max(20, int(height * 0.034)))
+        lines = [(title_font, "Credits", self.GOLD)]
+        for heading, rows in self.CREDITS:
+            lines.append((heading_font, heading, (255, 220, 120)))
+            lines += [(text_font, row, (240, 240, 245)) for row in rows]
+        lines.append((text_font, "", (0, 0, 0)))
+        lines.append((text_font, f"{DEVELOPER}  -  Esc or tap to return", (180, 185, 200)))
+        rendered = [(font.render(text, True, colour), font) for font, text, colour in lines]
+        gap = max(4, int(height * 0.008))
+        block = sum(text.get_height() + gap for text, _ in rendered)
+        widest = max(text.get_width() for text, _ in rendered)
+        panel = pygame.Rect(0, 0, min(width - 24, widest + 60), min(height - 24, block + 40))
+        panel.center = (width // 2, height // 2)
+        shade = pygame.Surface(panel.size, pygame.SRCALPHA)
+        pygame.draw.rect(shade, (10, 12, 22, 225), shade.get_rect(), border_radius=14)
+        screen.blit(shade, panel.topleft)
+        # The frame's gold glows slowly
+        glow = 0.5 + 0.5 * math.sin(pygame.time.get_ticks() / 400)
+        frame = tuple(int(c * (0.7 + 0.3 * glow)) for c in self.GOLD)
+        pygame.draw.rect(screen, frame, panel, 2, border_radius=14)
+        y = panel.top + 20
+        for text, font in rendered:
+            screen.blit(text, text.get_rect(midtop=(panel.centerx, y)))
+            y += text.get_height() + gap
 
     @property
     def version_text(self):
@@ -917,8 +1014,13 @@ class Menu:
             plate = pygame.Surface(rect.size, pygame.SRCALPHA)
             plate.fill((40, 50, 90, 220) if focused else (15, 18, 32, 200))
             screen.blit(plate, rect)
-            pygame.draw.rect(screen, self.GOLD if focused else (90, 95, 120), rect, 3 if focused else 1,
-                             border_radius=6)
+            if focused:
+                # The chosen fight's frame glows
+                glow = 0.5 + 0.5 * math.sin(pygame.time.get_ticks() / 220)
+                colour = tuple(int(c * (0.65 + 0.35 * glow)) for c in self.GOLD)
+                pygame.draw.rect(screen, colour, rect.inflate(int(4 * glow), int(4 * glow)), 3, border_radius=6)
+            else:
+                pygame.draw.rect(screen, (90, 95, 120), rect, 1, border_radius=6)
             x = rect.left + 8
             for name in (fight.hero, fight.boss):
                 picture = self._portrait(name, face)
