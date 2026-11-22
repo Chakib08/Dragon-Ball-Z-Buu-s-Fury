@@ -29,7 +29,7 @@
     "vegeta_log2": ["log2", 256, 63],
     "gohan_teen": ["log2", 0, 127],
     "gohan_ultimate": ["bf", 33, 468],
-    "trunks_future": ["log2", 384, 127],
+    "trunks_future": ["log2", 0, 191],
     "krillin": ["log2", 0, 447],
     "tien": ["log2", 64, 447],
     "yamcha": ["log2", 192, 447],
