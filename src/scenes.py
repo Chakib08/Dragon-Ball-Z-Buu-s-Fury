@@ -12,6 +12,9 @@ in SCENES.
 
 import pygame
 
+import epic
+import sfx
+from epic_screens import EpicIntro, WaveBanner
 from menu import State
 from result_screen import ResultScreen
 
@@ -73,7 +76,8 @@ class MenuScene(Scene):
 
 
 class StoryScene(Scene):
-    """An arcade fight, then its result (retry or back to the menu)."""
+    """An arcade fight or an Epic Fight, then its result (retry, the next
+    Epic Fight, or back to the menu)."""
 
     name = "story"
     in_fight = True
@@ -82,10 +86,20 @@ class StoryScene(Scene):
         super().__init__(game)
         # The ResultScreen once the fight is over
         self.result = None
+        # An Epic Fight's versus card (before it starts) and wave banner
+        self.intro = None
+        self.banner = None
+
+    def begin(self, fight=None):
+        """A fight starts: an Epic Fight shows its versus card first."""
+        self.result = None
+        self.banner = None
+        self.intro = EpicIntro(self.game.resolution, fight) if fight is not None else None
 
     def gamepad_presses(self):
         pressed = self.game.gamepad.pressed
-        return (RESULT_KEYS if self.result is not None else FIGHT_KEYS), pressed
+        waiting = self.result is not None or self.intro is not None
+        return (RESULT_KEYS if waiting else FIGHT_KEYS), pressed
 
     def escape_opens_prompt(self):
         # On the result screen Esc means "main menu"
@@ -93,18 +107,46 @@ class StoryScene(Scene):
 
     def frame(self, events, paused):
         game = self.game
+        if self.intro is not None:
+            # The versus card over the frozen fight
+            game.play_frame([], True)
+            self.intro.draw(game.screen)
+            if not paused and self.intro.process(events):
+                self.intro = None
+                game.release_input()
+            return
         if self.result is None:
             game.play_frame(events, paused)
             outcome = game.story_outcome()
+            if outcome == "victory" and game.next_wave():
+                # An Epic Fight's next wave: the fight goes on
+                fight = game.menu.epic
+                self.banner = WaveBanner(game.resolution, game.epic_wave + 1, len(fight.waves))
+                outcome = None
+            if self.banner is not None:
+                self.banner.draw(game.screen)
+                if self.banner.done:
+                    self.banner = None
             if outcome is not None:
                 game.release_input()
-                self.result = ResultScreen(game.resolution, victory=outcome == "victory")
+                fight = getattr(game.menu, "epic", None)
+                following = None
+                if fight is not None and outcome == "victory":
+                    epic.mark_cleared(fight)
+                    following = epic.next_fight(fight)
+                self.result = ResultScreen(game.resolution, victory=outcome == "victory",
+                                           next_label="Next fight" if following is not None else None)
+                self.result.following = following
+                sfx.play("victory" if outcome == "victory" else "ko")
             return
         # The fight is over: the world stays frozen behind the choice
         game.play_frame([], True)
         choice = None if paused else self.result.process(events)
         self.result.draw(game.screen)
         if choice == "retry":
+            following = getattr(self.result, "following", None)
+            if following is not None:
+                game.menu.epic = following  # on to the next Epic Fight
             game.start_story()
         elif choice == "menu":
             game.back_to_menu()
@@ -112,6 +154,8 @@ class StoryScene(Scene):
     def resize(self, size):
         if self.result is not None:
             self.result.resize(size)
+        if self.intro is not None:
+            self.intro.resize(size)
 
 
 class LobbyScene(Scene):

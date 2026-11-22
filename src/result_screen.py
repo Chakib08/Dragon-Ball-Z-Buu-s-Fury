@@ -18,8 +18,10 @@ class ResultScreen:
     gamepad_hints = False
     MENU_KEYS = (pygame.K_ESCAPE, pygame.K_AC_BACK, pygame.K_m)
 
-    def __init__(self, screen_size, victory):
+    def __init__(self, screen_size, victory, next_label=None):
         self.victory = victory
+        # An Epic Fight won, with another after it: the first button goes on
+        self.next_label = next_label
         self.resize(screen_size)
 
     def resize(self, screen_size):
@@ -48,6 +50,8 @@ class ResultScreen:
 
     @property
     def retry_label(self):
+        if self.victory and self.next_label:
+            return self.next_label
         return "Play again" if self.victory else "Retry"
 
     def process(self, events):

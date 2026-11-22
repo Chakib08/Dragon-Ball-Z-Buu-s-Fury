@@ -17,6 +17,7 @@ from stats import character_stats
 import settings as user_settings
 import roster
 import arenas
+import epic
 
 GAME_TITLE = "DRAGON BALL Z"
 GAME_SUBTITLE = "TRUNKS HOPE"
@@ -33,12 +34,14 @@ class State(Enum):
     NAME_ENTRY = 6
     # The arena, after the teams (arcade) or the allies (online)
     MAP_SELECT = 7
+    # Epic Fights: the story's battles, alone or online
+    EPIC_SELECT = 8
 
 class Menu:
     # The main menu's entries: id, label, and the line shown under the list
     # while the entry is highlighted
     MAIN_ITEMS = (
-        ("story", "Story Mode", "The story of Trunks' hope (coming soon)"),
+        ("story", "Epic Fights", "The story's great battles: Cell Games, Kid Buu... alone or online"),
         ("arcade", "Arcade Mode", "Pick your team and fight: from 1v1 up to 4v4"),
         ("online", "Online Mode", "1v1 against another player on a lobby server"),
         ("options", "Options", "Controls and settings"),
@@ -62,6 +65,12 @@ class Menu:
         self.online = False
         self.state = State.START
         self._went_back = False  # this frame (the menu's sounds)
+        # The Epic Fight chosen (epic.Fight), and whether to play it online
+        self.epic = None
+        self.epic_online = False
+        self.epic_focus = 0
+        self.epic_rows = {}
+        self.epic_buttons = {}
         # Every character whose sheets are installed (Config/roster.json)
         self.character_names = roster.characters()
         self.selected_character = "goku"
@@ -138,10 +147,17 @@ class Menu:
 
     def _sound_state(self):
         """(screen, playing, where the cursor is, what is picked)."""
-        return (self.state, self.isPlaying, (self.selected_item, self.focus, self.selected_character),
+        return (self.state, self.isPlaying, (self.selected_item, self.focus, self.selected_character, self.epic_focus),
                 tuple(self.selected_allies), tuple(self.selected_enemies), self.selected_arena)
 
     def _launch_menu(self, screen, resolution, events):
+        if self.state == State.EPIC_SELECT:
+            self._draw_epic_select(screen, resolution)
+            for event in events:
+                self._epic_event(event, resolution)
+                if self.isPlaying or self.state != State.EPIC_SELECT:
+                    break
+            return
         if self.state == State.MAP_SELECT:
             self._draw_map_select(screen, resolution)
             for event in events:
@@ -224,8 +240,13 @@ class Menu:
     def choose(self, item):
         """Open a main menu entry."""
         if item == "story":
-            # Not there yet: say so instead of doing nothing
-            self.notice_until = pygame.time.get_ticks() + self.NOTICE_MS
+            if epic.fights():
+                self.online = False
+                self.epic_online = False
+                self.state = State.EPIC_SELECT
+            else:
+                # Nothing installed to fight with: say so instead of nothing
+                self.notice_until = pygame.time.get_ticks() + self.NOTICE_MS
         elif item == "arcade":
             self.online = False
             self.state = State.CHARACTER_SELECT
@@ -388,6 +409,12 @@ class Menu:
             settings["player_name"] = self.player_name
             user_settings.save(settings)
         pygame.key.stop_text_input()
+        if self.epic_online and self.epic is not None:
+            # An Epic Fight online: the fight says who plays whom
+            self.selected_character, _, self.selected_allies = self.epic.side(0)
+            self.selected_arena = self.epic.arena
+            self.isPlaying = True
+            return
         self.state = State.CHARACTER_SELECT
 
     def _draw_name_entry(self, screen, resolution):
@@ -424,6 +451,12 @@ class Menu:
         """One screen back (Esc or the Back button): opponents -> allies ->
         character -> main menu."""
         self._went_back = True
+        if self.state == State.NAME_ENTRY and self.epic_online:
+            pygame.key.stop_text_input()
+            self.online = False
+            self.epic_online = False
+            self.state = State.EPIC_SELECT
+            return
         if self.state == State.MAP_SELECT:
             self.state = State.ALLY_SELECT if self.online else State.ENEMY_SELECT
         elif self.state == State.ENEMY_SELECT:
@@ -805,6 +838,117 @@ class Menu:
         screen.blit(text, text.get_rect(center=self.continue_rect.center))
 
     # ---- Arena screen -------------------------------------------------------------
+    # ---- Epic Fights ---------------------------------------------------------------
+    def _epic_list(self):
+        return epic.fights()
+
+    def start_epic(self, fight, online=False):
+        """Fight it (alone), or take it online (name, then the lobby)."""
+        self.epic = fight
+        if online:
+            self.epic_online = True
+            self.open_online()
+        else:
+            self.online = False
+            self.epic_online = False
+            self.isPlaying = True
+
+    def _epic_event(self, event, resolution):
+        fights = self._epic_list()
+        if not fights:
+            return
+        self.epic_focus = max(0, min(self.epic_focus, len(fights) - 1))
+        if event.type == pygame.KEYDOWN:
+            if event.key in (pygame.K_UP, pygame.K_w):
+                self.epic_focus = (self.epic_focus - 1) % len(fights)
+            elif event.key in (pygame.K_DOWN, pygame.K_s):
+                self.epic_focus = (self.epic_focus + 1) % len(fights)
+            elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                self.start_epic(fights[self.epic_focus])
+            elif event.key in (pygame.K_o, pygame.K_SPACE):
+                self.start_epic(fights[self.epic_focus], online=True)
+            elif event.key in (pygame.K_ESCAPE, pygame.K_AC_BACK):
+                self._went_back = True
+                self.state = State.START
+        elif self._is_tap(event, resolution):
+            position = self._event_position(event, resolution)
+            if self.back_rect is not None and self.back_rect.collidepoint(position):
+                self._went_back = True
+                self.state = State.START
+                return
+            for action, rect in self.epic_buttons.items():
+                if rect.collidepoint(position):
+                    self.start_epic(fights[self.epic_focus], online=action == "online")
+                    return
+            for index, rect in self.epic_rows.items():
+                if rect.collidepoint(position):
+                    if index == self.epic_focus:
+                        self.start_epic(fights[index])  # a second tap: fight
+                    else:
+                        self.epic_focus = index
+                    return
+
+    def _draw_epic_select(self, screen, resolution):
+        screen.blit(self.menu_image, (0, 0))
+        width, height = resolution
+        fights = self._epic_list()
+        done = epic.cleared()
+        shade = pygame.Surface(resolution, pygame.SRCALPHA)
+        shade.fill((0, 0, 0, 120))
+        screen.blit(shade, (0, 0))
+        title = self.character_title_font.render("Epic Fights", True, (255, 230, 120))
+        screen.blit(title, title.get_rect(midtop=(width / 2, 12)))
+        top = 18 + title.get_height()
+        buttons_height = max(48, int(height * 0.09))
+        bottom = height - buttons_height - 24
+        row_height = max(54, int(height * 0.1))
+        visible = max(1, (bottom - top) // (row_height + 6))
+        self.epic_focus = max(0, min(self.epic_focus, len(fights) - 1))
+        first = min(max(0, self.epic_focus - visible // 2), max(0, len(fights) - visible))
+        row_width = min(width - 40, 900)
+        self.epic_rows = {}
+        face = row_height - 12
+        for slot, index in enumerate(range(first, min(len(fights), first + visible))):
+            fight = fights[index]
+            rect = pygame.Rect(0, top + slot * (row_height + 6), row_width, row_height)
+            rect.centerx = width // 2
+            self.epic_rows[index] = rect
+            focused = index == self.epic_focus
+            plate = pygame.Surface(rect.size, pygame.SRCALPHA)
+            plate.fill((40, 50, 90, 220) if focused else (15, 18, 32, 200))
+            screen.blit(plate, rect)
+            pygame.draw.rect(screen, self.GOLD if focused else (90, 95, 120), rect, 3 if focused else 1,
+                             border_radius=6)
+            x = rect.left + 8
+            for name in (fight.hero, fight.boss):
+                picture = self._portrait(name, face)
+                if picture is not None:
+                    screen.blit(picture, (x, rect.top + 6))
+                x += face + 6
+            name = self.character_font.render(fight.title, True, (255, 230, 120) if focused else (240, 240, 245))
+            screen.blit(name, (x + 6, rect.top + 6))
+            under = self.difficulty_font.render(fight.subtitle, True, (200, 205, 220))
+            screen.blit(under, (x + 6, rect.bottom - under.get_height() - 6))
+            if fight.id in done:
+                mark = self.difficulty_font.render("Cleared", True, (130, 220, 130))
+                screen.blit(mark, mark.get_rect(topright=(rect.right - 10, rect.top + 8)))
+        # Fight! / Play online
+        self.epic_buttons = {}
+        button_width = min(300, (width - 60) // 2)
+        for offset, (action, label, colour, key) in zip((-1, 1), (
+                ("fight", "Fight!", (50, 130, 70), "Enter"), ("online", "Play online", (60, 110, 190), "O"))):
+            rect = pygame.Rect(0, 0, button_width, buttons_height)
+            rect.midbottom = (width // 2 + offset * (button_width // 2 + 10), height - 12)
+            self.epic_buttons[action] = rect
+            pygame.draw.rect(screen, colour, rect, border_radius=10)
+            pygame.draw.rect(screen, (245, 245, 245), rect, 2, border_radius=10)
+            hint = "A" if action == "fight" else "X"
+            text = self.button_font.render(label, True, (255, 255, 255))
+            screen.blit(text, text.get_rect(center=rect.center))
+            badge = self.difficulty_font.render(hint if self.gamepad_hints else key, True, (230, 230, 240))
+            screen.blit(badge, badge.get_rect(topleft=(rect.left + 6, rect.top + 2)))
+        self._draw_back_button(screen, resolution)
+
     def _arena_list(self):
         return arenas.available()
 

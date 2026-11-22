@@ -321,6 +321,19 @@ class MapManager:
             ally.save_location()
             taken.append(ally.body)
 
+    def add_enemies(self, names):
+        """A new wave: these enemies join the fight on the world map, on its
+        patrol points (the way the first ones came). Returns them."""
+        game_map = self.load_map("map")
+        enemies = [npc for npc in _world_npcs(tuple(names), ()) if npc.team != HEROES]
+        for npc in enemies:
+            npc.load_points(game_map)
+            npc.teleport_spawn()
+        self._free_spawns(enemies, game_map.collisions)
+        game_map.npcs.extend(enemies)
+        game_map.group.add(*enemies)
+        return enemies
+
     # ---- Accessors --------------------------------------------------------------
     def get_map(self):
         return self.maps[self.current_map]

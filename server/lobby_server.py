@@ -25,9 +25,12 @@ Client -> server
                                         a game of another version gets an
                                         error and may not create or join
     {"t": "list"}                       ask for the room list
-    {"t": "create", "mode": "1v1" | "team", "map": str}   open a room and wait
-                                        in it, on that arena (in a
-                                        team match each player brings its allies)
+    {"t": "create", "mode": "1v1" | "team", "map": str, "epic": str}
+                                        open a room and wait in it, on that
+                                        arena (in a team match each player
+                                        brings its allies); "epic": an Epic
+                                        Fight's id (a team match: the host
+                                        plays the heroes, the other the boss)
     {"t": "join", "room": int}          join a waiting room
     {"t": "leave"}                      leave the room (cancel or quit a match)
     {"t": "state" | "hit" | "tech" | "ko", ...}   relayed to the opponent
@@ -39,9 +42,9 @@ Client -> server, UDP (the token of its "start" message in "tok")
 
 Server -> client
     {"t": "welcome", "id": int, "version": int, "server_version": str}
-    {"t": "rooms", "rooms": [{"id", "host", "character", "mode", "allies", "map"}]}
+    {"t": "rooms", "rooms": [{"id", "host", "character", "mode", "allies", "map", "epic"}]}
     {"t": "waiting", "room": int}       room created, waiting for an opponent
-    {"t": "start", "room": int, "slot": 0 | 1, "mode": "1v1" | "team", "map": str,
+    {"t": "start", "room": int, "slot": 0 | 1, "mode": "1v1" | "team", "map": str, "epic": str,
      "opponent": {"name", "character", "allies"},   (allies: team matches)
      "udp": {"token": str, "port": int}}   (no "udp" if UDP is not open)
     {"t": "opponent_left"}
@@ -62,7 +65,8 @@ import time
 SERVER_VERSION = "0.0.17"
 # 2: names, team matches (allies in the states, hits for any fighter)
 # 3: the room's arena ("map")
-PROTOCOL_VERSION = 3
+# 4: Epic Fights ("epic": the fight a room is for)
+PROTOCOL_VERSION = 4
 DEFAULT_PORT = 5050
 # Messages forwarded as they are from one player of a match to the other
 RELAYED = {"state", "hit", "tech", "ko"}
@@ -125,13 +129,18 @@ class Player:
 
 
 class Room:
-    def __init__(self, room_id, host, mode="1v1", arena="map"):
+    def __init__(self, room_id, host, mode="1v1", arena="map", epic=None):
         self.id = room_id
         self.players = [host]
         self.mode = mode if mode in MODES else "1v1"
         # An arena id: letters, digits and _ only (the games look it up)
         arena = str(arena or "map")[:40]
         self.map = arena if arena.replace("_", "").isalnum() else "map"
+        # An Epic Fight's id (the games know who plays whom), same rules
+        epic = str(epic)[:40] if epic else None
+        self.epic = epic if epic and epic.replace("_", "").isalnum() else None
+        if self.epic is not None:
+            self.mode = "team"
 
     @property
     def waiting(self):
@@ -208,7 +217,7 @@ class LobbyServer:
         elif kind == "list":
             player.send(self.room_list())
         elif kind == "create":
-            self.create_room(player, message.get("mode"), message.get("map"))
+            self.create_room(player, message.get("mode"), message.get("map"), message.get("epic"))
         elif kind == "join":
             self.join_room(player, message.get("room"))
         elif kind == "leave":
@@ -258,7 +267,7 @@ class LobbyServer:
             "rooms": [
                 {"id": room.id, "host": room.players[0].name, "character": room.players[0].character,
                  "mode": room.mode, "allies": room.players[0].allies if room.mode == "team" else [],
-                 "map": room.map}
+                 "map": room.map, **({"epic": room.epic} if room.epic else {})}
                 for room in self.rooms.values()
                 if room.waiting
             ],
@@ -271,9 +280,9 @@ class LobbyServer:
             if player.room is None:
                 player.send(rooms)
 
-    def create_room(self, player, mode=None, arena=None):
+    def create_room(self, player, mode=None, arena=None, epic=None):
         self.leave_room(player)
-        room = Room(next(self._room_ids), player, mode, arena)
+        room = Room(next(self._room_ids), player, mode, arena, epic)
         self.rooms[room.id] = room
         player.room = room
         player.send({"t": "waiting", "room": room.id})
@@ -301,6 +310,8 @@ class LobbyServer:
                 "opponent": {"name": opponent.name, "character": opponent.character,
                              "allies": opponent.allies if room.mode == "team" else []},
             }
+            if room.epic:
+                start["epic"] = room.epic  # slot 0 plays the heroes, slot 1 the boss
             if self.udp is not None:
                 self._end_udp(member)
                 member.udp_token = secrets.token_hex(8)

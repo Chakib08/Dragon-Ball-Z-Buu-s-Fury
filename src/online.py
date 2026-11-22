@@ -23,6 +23,7 @@ import settings as user_settings
 from taps import tap_position
 from utils import timing
 import arenas
+import epic
 import roster
 from roster import display_name
 
@@ -227,8 +228,19 @@ class OnlineMatch:
         slot = 1 if start.get("slot") == 1 else 0
         opponent = start.get("opponent") or {}
 
+        # An Epic Fight: the fight says who plays whom (the host the heroes,
+        # the other player the boss), whatever they had picked
+        fight = epic.by_id(start.get("epic")) if isinstance(start.get("epic"), str) else None
+        if fight is not None and not epic.playable(fight):
+            fight = None
+        self.epic = fight
+        if fight is not None:
+            my_character, my_form, epic_allies = fight.side(slot)
+            their_character, their_form, epic_their_allies = fight.side(1 - slot)
+        else:
+            my_character, my_form = game.menu.selected_character, None
         x, y, facing = self.SPAWNS[slot]
-        self.player = Saiyan(x, y, False, game.menu.selected_character)
+        self.player = Saiyan(x, y, False, my_character)
         # Online share of each hit (kept if the player becomes someone else)
         self.player.base_damage_taken = self.DAMAGE_TAKEN
         self.player.damage_taken = self.DAMAGE_TAKEN / self.player.stats.defense
@@ -239,14 +251,20 @@ class OnlineMatch:
         if character not in names:
             character = "goku"
         opponent_name = str(opponent.get("name", "Opponent"))
-        self.mode = "team" if start.get("mode") == "team" else "1v1"
-        if self.mode == "team":
+        self.mode = "team" if start.get("mode") == "team" or fight is not None else "1v1"
+        if fight is not None:
+            character = their_character
+            my_allies, their_allies = epic_allies, epic_their_allies
+        elif self.mode == "team":
             my_allies = [name for name in game.menu.selected_allies if name in names][:MAX_ALLIES]
             their_allies = opponent.get("allies") if isinstance(opponent.get("allies"), list) else []
             their_allies = [name for name in their_allies if name in names][:MAX_ALLIES]
         else:
             my_allies, their_allies = [], []
         self.opponent = RemoteFighter(character, opponent_name, net.send)
+        if fight is not None:
+            epic.start_in_form(self.player, my_form)
+            epic.start_in_form(self.opponent, their_form)
         # The other side: its player first, then its allies (their index in
         # the hits and states)
         self.opponents = [self.opponent] + [
@@ -267,7 +285,7 @@ class OnlineMatch:
 
         game.character = self.player
         # The room's arena (its host chose it), if this game has it too
-        arena = start.get("map")
+        arena = fight.arena if fight is not None else start.get("map")
         self.arena = arena if isinstance(arena, str) and arena in arenas.available() else arenas.DEFAULT
         game.map_manager = MapManager(game.screen, self.player, versus=True, opponents=self.opponents,
                                       allies=my_allies, arena_name=self.arena)
@@ -433,8 +451,12 @@ class LobbyScreen:
     ACCENT = (255, 220, 90)
     MAX_ROOMS_SHOWN = 5
 
-    def __init__(self, net, screen_size, character, background=None, name=None, allies=(), arena=None):
+    def __init__(self, net, screen_size, character, background=None, name=None, allies=(), arena=None,
+                 epic=None):
         self.net = net
+        # An Epic Fight to play online (epic.Fight): the rooms this player
+        # opens are for it (the host plays the heroes, the other player the boss)
+        self.epic = epic
         self.screen_size = screen_size
         self.character = character
         self.allies = list(allies)[:MAX_ALLIES]
@@ -512,7 +534,12 @@ class LobbyScreen:
     def create_room(self, mode="1v1"):
         """mode: "1v1", or "team" (each player with its allies)."""
         if self.net.connected and self.room_id is None:
-            self.net.send({"t": "create", "mode": mode, "map": self.arena})
+            if self.epic is not None:
+                # Both sides bring the fight's teams
+                mode = "team"
+                self.net.send({"t": "create", "mode": mode, "map": self.epic.arena, "epic": self.epic.id})
+            else:
+                self.net.send({"t": "create", "mode": mode, "map": self.arena})
             self.room_mode = mode
 
     def join_room(self, room_id):
@@ -635,6 +662,11 @@ class LobbyScreen:
 
     @staticmethod
     def room_label(room):
+        fight = epic.by_id(room.get("epic")) if isinstance(room.get("epic"), str) else None
+        if fight is not None:
+            # Joining it: playing the boss's side
+            return (f"Epic: {fight.title} - {room.get('host', '?')} plays the heroes, "
+                    f"you play {display_name(fight.boss)}")
         label = LobbyScreen._room_players(room)
         arena = room.get("map")
         if isinstance(arena, str) and arena != arenas.DEFAULT:

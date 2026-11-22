@@ -435,17 +435,12 @@ class TouchControlsTests(unittest.TestCase):
             self.assertEqual(rect.collidelist(rects[index + 1:]), -1)
             self.assertTrue(pygame.Rect(0, 0, 1200, 540).contains(rect))
 
-    def test_story_mode_says_it_is_not_available_yet(self):
+    def test_story_mode_opens_the_epic_fights(self):
         menu, run = self.main_menu()
         run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_UP)])
         run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)])
-        self.assertTrue(menu.notice_shown)
-        self.assertEqual(menu.state, State.START)
+        self.assertEqual(menu.state, State.EPIC_SELECT)
         self.assertFalse(menu.isPlaying)
-        # Any key or tap closes it, and does nothing else
-        run([pygame.event.Event(pygame.KEYDOWN, key=pygame.K_RETURN)])
-        self.assertFalse(menu.notice_shown)
-        self.assertEqual(menu.state, State.START)
 
     def test_arcade_online_and_options_open_their_screens(self):
         for item, state, online in (("arcade", State.CHARACTER_SELECT, False),

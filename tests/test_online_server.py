@@ -104,6 +104,40 @@ class LobbyServerTests(unittest.TestCase):
         guest.send({"t": "leave"})
         wait_for(host, "opponent_left")
 
+    def test_an_epic_fight_online(self):
+        """A host opens an Epic Fight's room; whoever joins plays the boss,
+        whatever both had picked."""
+        import pygame
+        import epic
+        import online
+        from test_online_match import FakeNet, fake_game
+        from utils.config import Config
+        pygame.init()
+        Config.init()
+        pygame.display.set_mode((1200, 540))
+        fight = epic.by_id("cell_games")
+        if fight is None or not epic.playable(fight):
+            self.skipTest("characters not installed (setup.sh)")
+        host = self.client("Alice", "gohan_teen")
+        guest = self.client("Bob", "goku")
+        host.send({"t": "create", "mode": "team", "map": fight.arena, "epic": fight.id})
+        room = wait_for(host, "waiting")["room"]
+        rooms = wait_for(guest, "rooms", where=lambda message: message["rooms"])["rooms"]
+        self.assertEqual(rooms[0]["epic"], "cell_games")
+        self.assertIn("you play Perfect Cell", online.LobbyScreen.room_label(rooms[0]))
+        guest.send({"t": "join", "room": room})
+        host_start, guest_start = wait_for(host, "start"), wait_for(guest, "start")
+        self.assertEqual((host_start["epic"], guest_start["epic"]), ("cell_games", "cell_games"))
+        self.assertEqual(host_start["mode"], "team")
+        # Each game makes its side from the start message
+        hero = online.OnlineMatch(fake_game("gohan_teen"), FakeNet(), host_start)
+        boss = online.OnlineMatch(fake_game("goku"), FakeNet(), guest_start)
+        self.assertEqual((hero.player.character_name, hero.player.form), ("gohan_teen", "ssj2"))
+        self.assertEqual(hero.opponent.character_name, "cell_perfect")
+        self.assertEqual(boss.player.character_name, "cell_perfect")
+        self.assertEqual(boss.opponent.character_name, "gohan_teen")
+        self.assertEqual((hero.arena, boss.arena), ("cell_games", "cell_games"))
+
     def test_a_disconnect_ends_the_match_and_full_rooms_are_hidden(self):
         host = self.client("Alice", "goku")
         guest = self.client("Bob", "gohan")

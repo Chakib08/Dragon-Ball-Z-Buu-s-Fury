@@ -14,6 +14,8 @@ from gamepad import Gamepad
 import settings as user_settings
 from map import DEFAULT_ENEMY, MapManager
 from npc import HEROES
+import epic
+import sfx
 import smoke
 from menu import Menu, State
 from net import NetClient
@@ -329,14 +331,43 @@ class Game:
     # ---- Scenes -------------------------------------------------------------------
     def start_story(self):
         """Start (or restart, for Retry) the fight with the team chosen in
-        the menu."""
+        the menu (an Epic Fight's when one was chosen: its heroes' forms,
+        its music, its enemies in waves)."""
         self.result = None
         self.release_input()
+        fight = getattr(self.menu, "epic", None)
+        if fight is not None:
+            self.menu.selected_character = fight.hero
+            self.menu.selected_allies = list(fight.allies)
+            self.menu.selected_enemies = list(fight.waves[0])
+            self.menu.selected_arena = fight.arena
         self.select_character(self.menu.selected_character, tuple(self.menu.selected_enemies),
                               tuple(self.menu.selected_allies), self.menu.selected_arena)
+        self.epic_wave = 0
+        if fight is not None:
+            epic.start_in_form(self.character, fight.form)
+            enemies = [npc for npc in self.map_manager.get_map().npcs if npc.team != HEROES]
+            if enemies:
+                epic.start_in_form(enemies[0], fight.boss_form)
+            if fight.music:
+                music = PathManager.soundtrack(fight.music)
+                if os.path.exists(music):
+                    self.map_manager.get_map().music = music
+                    self.map_manager.current_music = music
         self.play_music(self.map_manager.current_music)
+        self.scenes["story"].begin(fight)
         self.scene = "story"
         smoke.report("fight started")
+
+    def next_wave(self):
+        """An Epic Fight's next wave of enemies, if it has one (True)."""
+        fight = getattr(self.menu, "epic", None)
+        if fight is None or self.epic_wave + 1 >= len(fight.waves):
+            return False
+        self.epic_wave += 1
+        self.map_manager.add_enemies(fight.waves[self.epic_wave])
+        sfx.play("powerup")
+        return True
 
     def open_lobby(self):
         self.menu.isPlaying = False
@@ -344,6 +375,7 @@ class Game:
         self.lobby = LobbyScreen(
             self.net, self.resolution, self.menu.selected_character, self.menu.menu_image,
             name=self.menu.player_name, allies=self.menu.selected_allies, arena=self.menu.selected_arena,
+            epic=self.menu.epic if self.menu.epic_online else None,
         )
         self.scene = "lobby"
 
@@ -360,6 +392,7 @@ class Game:
 
     def back_to_menu(self):
         self.result = None
+        self.menu.epic = None
         self.net.close()
         self.lobby = None
         self.match = None

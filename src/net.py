@@ -23,7 +23,7 @@ CONNECT_TIMEOUT = 4
 # The online mode's message format; the server says its own in "welcome"
 # and refuses games that speak another (see server/lobby_server.py)
 # 2: names, team matches; 3: the room's arena (see server/lobby_server.py)
-PROTOCOL_VERSION = 3
+PROTOCOL_VERSION = 4
 # Datagrams bigger than this are not ours (a state is about 200 bytes)
 MAX_DATAGRAM = 2048
 # How often to knock on the server's UDP port until it answers
