@@ -65,6 +65,65 @@ class Spark(Effect):
         self.rect = self.image.get_rect(center=self.center)
 
 
+class Explosion(Effect):
+    """A fighter blowing up (a Cell Jr. knocked out): sparks, then a big
+    yellow blast growing and fading where it stood. Its frames: the hit
+    sparks of Vegito's and the blasts of Gotenks' Buu's Fury sheets."""
+
+    SPARKS = ("Graphics/assets/effects/vegito_fx.gif", (13, 107, 247),
+              ((290, 298, 14, 15), (340, 294, 14, 15), (362, 294, 16, 16)))
+    BLASTS = ("Graphics/assets/effects/gotenks_fx.gif", (13, 107, 247),
+              ((199, 466, 32, 32), (250, 447, 32, 32), (330, 449, 32, 32), (370, 448, 32, 32)))
+    FRAME_TICKS = 4
+    _frames = None
+
+    @classmethod
+    def frames(cls):
+        """Sparks then blasts, or [] when the sheets are missing."""
+        if cls._frames is None:
+            from animation import load_sheet
+            frames = []
+            try:
+                for path, background, boxes in (cls.SPARKS, cls.BLASTS):
+                    sheet = load_sheet(path)
+                    for x, y, width, height in boxes:
+                        frame = pygame.Surface((width, height))
+                        frame.blit(sheet, (0, 0), (x, y, width, height))
+                        frame.set_colorkey(background)
+                        frames.append(frame)
+            except (pygame.error, FileNotFoundError, OSError):
+                frames = []
+            cls._frames = frames
+        return cls._frames
+
+    def __init__(self, center, size=48):
+        """center: where it blows up; size: the blast's width at its biggest."""
+        super().__init__()
+        self.center = center
+        self.size = size
+        if not self.frames():
+            self.done = True
+            return
+        self.update_effect(())
+
+    def update_effect(self, targets):
+        self.tick()
+        frames = self.frames()
+        index = self.frame_number()
+        if index >= len(frames) + 2:
+            self.done = True
+            return
+        frame = frames[min(index, len(frames) - 1)]
+        # It swells as it goes, and fades over its last frames
+        growth = 0.6 + 0.6 * min(1.0, index / max(1, len(frames) - 1))
+        side = max(8, round(self.size * growth * frame.get_width() / 32))
+        self.image = pygame.transform.scale(frame, (side, round(side * frame.get_height() / frame.get_width())))
+        self.image.set_colorkey(frame.get_colorkey())
+        if index >= len(frames) - 1:
+            self.image.set_alpha(max(0, 255 - 85 * (index - len(frames) + 2)))
+        self.rect = self.image.get_rect(center=self.center)
+
+
 def chest_origin(caster, direction):
     """Where an effect leaves the body: its edge, at chest height."""
     dx, dy = DIRECTION_VECTORS[direction]

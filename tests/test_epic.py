@@ -181,6 +181,34 @@ class EpicGameTests(EpicCase):
         for _ in range(60):
             game.loop_once([])
 
+    def test_a_cell_jr_explodes_and_vanishes_when_knocked_out(self):
+        from effects import Explosion
+        game = self.game("cell_juniors")
+        game.scenes["story"].intro = None
+        junior = self.enemies(game)[0]
+        group = game.map_manager.get_map().group
+        self.assertIn(junior, group)
+        junior.take_damage(10_000)
+        game.loop_once([])
+        explosions = [e for e in game.map_manager.combat.effects if isinstance(e, Explosion)]
+        self.assertEqual(len(explosions), 1)
+        self.assertTrue(junior.vanished and junior.faint_finished)
+        game.loop_once([])
+        self.assertNotIn(junior, group)  # gone from the map
+        for _ in range(60):
+            game.loop_once([])
+        self.assertNotIn(explosions[0], game.map_manager.combat.effects)
+        # The others knocked out the usual way still lie on the ground
+        from game import Game
+        other = Game((1200, 540), "test", fullscreen=False)
+        other.menu = Menu(other.resolution)
+        other.start_story()
+        gohan = self.enemies(other)[0]
+        gohan.take_damage(10_000)
+        other.loop_once([])
+        self.assertFalse(getattr(gohan, "vanished", False))
+        self.assertIn(gohan, other.map_manager.get_map().group)
+
     def test_arcade_keeps_its_limits(self):
         from game import Game
         game = Game((1200, 540), "test", fullscreen=False)

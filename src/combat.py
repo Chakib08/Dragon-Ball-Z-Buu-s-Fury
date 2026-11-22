@@ -13,7 +13,7 @@ import pygame
 import sfx
 from character import DIRECTION_VECTORS
 from contact import character_touches
-from effects import Aura, ChargeGlow, build_effect, effect_origin
+from effects import Aura, ChargeGlow, Explosion, build_effect, effect_origin
 from evolution import Defusion, Evolution
 from hud import CombatHud
 from movement import solid_bodies
@@ -109,7 +109,22 @@ class CombatSystem:
 
         for npc in tuple(npcs):
             self.ai.update(npc, now, collisions)
+        self._explode_knocked_out(npcs)
 
+    # Fighters that blow up when knocked out instead of falling (and vanish)
+    EXPLODING = ("cell_jr",)
+
+    def _explode_knocked_out(self, npcs):
+        """A knocked-out Cell Jr. explodes and disappears (the map stops
+        drawing a fighter once it has vanished); it still counts as beaten."""
+        for npc in npcs:
+            if npc.hp > 0 or getattr(npc, "vanished", False) or npc.character_name not in self.EXPLODING:
+                continue
+            npc.vanished = True
+            npc.faint_finished = True
+            npc.action = None
+            self.add_effect(Explosion(npc.rect.center, size=max(40, npc.rect.height * 1.6)))
+            sfx.play("explode")
     def _update_auras(self):
         """A fighter starting a Super Saiyan transformation (or powering up
         when it is always one) gets the golden aura, with its sound."""

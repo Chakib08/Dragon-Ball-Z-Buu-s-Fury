@@ -419,9 +419,10 @@ class MapManager:
             game_map.group.add(effect, layer=getattr(effect, "layer", EFFECT_LAYER))
         self.combat.new_effects.clear()
         for loaded in self.maps.values():  # finished effects, on any map
-            for effect in loaded.group.sprites():
-                if getattr(effect, "done", False):
-                    loaded.group.remove(effect)
+            for sprite in loaded.group.sprites():
+                # Finished effects, and fighters that blew up (a Cell Jr.)
+                if getattr(sprite, "done", False) or getattr(sprite, "vanished", False):
+                    loaded.group.remove(sprite)
 
         self.current_music = game_map.music
         self.isMusicChanged = self.current_music != previous_music
