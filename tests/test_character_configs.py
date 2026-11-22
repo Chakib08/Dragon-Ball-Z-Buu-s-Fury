@@ -130,7 +130,7 @@ class CharacterConfigTests(unittest.TestCase):
                 path = os.path.join(Config.CONFIG_DIR, name, f"{form}.json")
                 if not os.path.exists(path):
                     continue
-                with open(path) as file:
+                with open(path, encoding="utf-8") as file:
                     data = json.load(file)
                 with self.subTest(character=name, form=form):
                     self.assertEqual(data["Character"], name)

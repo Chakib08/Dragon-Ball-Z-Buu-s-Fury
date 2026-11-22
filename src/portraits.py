@@ -23,7 +23,7 @@ def _load_layout():
     if _layout is None:
         path = os.path.join(Config.ROOT_DIR, "Config", "portraits.json")
         try:
-            with open(path) as file:
+            with open(path, encoding="utf-8") as file:
                 _layout = json.load(file)
         except (OSError, ValueError):
             _layout = {}

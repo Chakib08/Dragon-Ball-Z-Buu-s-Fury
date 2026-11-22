@@ -322,7 +322,8 @@ class MapManager:
             taken.append(fighter.body)
 
     # Where allies appear, around the player's feet
-    ALLY_SPOTS = ((-26, 8), (26, 8), (0, 22), (-26, -12), (26, -12), (0, -24))
+    ALLY_SPOTS = ((-26, 8), (26, 8), (0, 22), (-26, -12), (26, -12), (0, -24),
+                  (-52, 8), (52, 8), (-26, 30), (26, 30), (-52, -12), (52, -12))
 
     def _place_allies(self, allies, collisions, others=()):
         """Next to the player, on free ground (no wall, nobody else: the

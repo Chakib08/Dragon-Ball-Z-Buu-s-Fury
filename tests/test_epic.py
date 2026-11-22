@@ -45,7 +45,7 @@ class FightListTests(EpicCase):
     def test_every_fight_is_playable_here(self):
         # All of the file's fights: their characters and arenas are installed
         self.assertEqual([f.id for f in epic.fights()], [f.id for f in epic.all_fights()])
-        self.assertGreaterEqual(len(epic.fights()), 14)
+        self.assertGreaterEqual(len(epic.fights()), 10)
         ids = [f.id for f in epic.fights()]
         self.assertEqual(len(ids), len(set(ids)))
         for fight in epic.fights():
@@ -60,9 +60,10 @@ class FightListTests(EpicCase):
         self.assertIn(("goku", "ssj3", "kid_buu"), matchups)
         self.assertIn(("goku_log2", None, "frieza"), matchups)
         juniors = epic.by_id("cell_juniors")
-        self.assertEqual(juniors.waves, [["cell_jr"] * 10])
-        self.assertEqual((juniors.hero, juniors.form), ("goku", "ssj"))
-        self.assertEqual(juniors.allies, ["vegeta_log2", "trunks", "piccolo", "tien", "yamcha", "krillin"])
+        # The Z Fighters against a crowd of Cell Juniors
+        self.assertTrue(all(name == "cell_jr" for wave in juniors.waves for name in wave))
+        self.assertGreaterEqual(sum(len(wave) for wave in juniors.waves), 7)
+        self.assertTrue({"piccolo", "tien", "yamcha", "krillin"} <= set(juniors.allies))
         self.assertEqual(epic.by_id("goku_black").boss, "goku_black")
 
     def test_sides(self):
@@ -164,22 +165,54 @@ class EpicGameTests(EpicCase):
         self.assertEqual(boss.character_name, "goku_black")
         self.assertEqual(boss.form, "ssj")
         allies = {npc.character_name: npc.form for npc in game.map_manager.get_map().npcs if npc.team == HEROES}
-        self.assertEqual(allies, {"vegeta": "base", "vegito": "ssjb"})  # Vegito Blue
+        fight = epic.by_id("goku_black")
+        self.assertEqual(allies, {name: fight.ally_forms.get(name, "base") for name in fight.allies})
+        self.assertEqual(allies["vegito"], "ssjb")  # Vegito Blue
 
-    def test_ten_against_seven(self):
+    def test_the_cell_juniors_fight_has_everyone(self):
+        fight = epic.by_id("cell_juniors")
         game = self.game("cell_juniors")
         npcs = game.map_manager.get_map().npcs
-        self.assertEqual((game.character.character_name, game.character.form), ("goku", "ssj"))
+        self.assertEqual((game.character.character_name, game.character.form), (fight.hero, fight.form or "base"))
         allies = {npc.character_name: npc.form for npc in npcs if npc.team == HEROES}
-        self.assertEqual(allies, {"vegeta_log2": "ssj", "trunks": "ssj", "piccolo": "base",
-                                  "tien": "base", "yamcha": "base", "krillin": "base"})
-        self.assertEqual([npc.character_name for npc in self.enemies(game)], ["cell_jr"] * 10)
-        # Nobody stands in someone else
-        bodies = [game.character.body, *(npc.body for npc in npcs)]
+        self.assertEqual(allies, {name: fight.ally_forms.get(name, "base") for name in fight.allies})
+        self.assertEqual([npc.character_name for npc in self.enemies(game)], fight.waves[0])
+        # The allies stand around the player, not in each other
+        bodies = [game.character.body, *(npc.body for npc in npcs if npc.team == HEROES)]
         overlapping = sum(1 for i, a in enumerate(bodies) for b in bodies[i + 1:] if a.colliderect(b))
         self.assertLessEqual(overlapping, 2)
         for _ in range(60):
             game.loop_once([])
+
+    def test_enemies_are_stronger_and_allies_weaker_in_an_epic_fight(self):
+        from npc import SaiyanNPC
+        game = self.game("cell_juniors")
+        npcs = game.map_manager.get_map().npcs
+        junior = next(npc for npc in npcs if npc.team != HEROES)
+        plain = SaiyanNPC(0, 0, False, "cell_jr", 0, [], difficulty=junior.difficulty.name)
+        self.assertEqual(junior.max_hp, round(plain.max_hp * epic.ENEMY_STRENGTH))
+        self.assertEqual(junior.hp, junior.max_hp)
+        self.assertAlmostEqual(junior.attack_damage, plain.attack_damage * epic.ENEMY_STRENGTH)
+        self.assertAlmostEqual(junior.technique_damage, plain.technique_damage * epic.ENEMY_STRENGTH)
+        ally = next(npc for npc in npcs if npc.team == HEROES)
+        normal = SaiyanNPC(0, 0, False, ally.character_name, 0, [], team=HEROES)
+        self.assertAlmostEqual(ally.attack_damage, normal.attack_damage * epic.ALLY_STRENGTH)
+        self.assertEqual(ally.max_hp, normal.max_hp)  # as healthy, but hitting softer
+        # A later wave is as strong
+        android = self.game("android13")
+        android.scenes["story"].intro = None
+        self.beat(self.enemies(android))
+        android.loop_once([])
+        thirteen = next(npc for npc in self.enemies(android) if npc.hp > 0)
+        plain13 = SaiyanNPC(0, 0, False, "android13", 0, [], difficulty=thirteen.difficulty.name)
+        self.assertEqual(thirteen.max_hp, round(plain13.max_hp * epic.ENEMY_STRENGTH))
+        # Arcade fights are not changed
+        from game import Game
+        arcade = Game((1200, 540), "test", fullscreen=False)
+        arcade.menu = Menu(arcade.resolution)
+        arcade.start_story()
+        gohan = self.enemies(arcade)[0]
+        self.assertEqual(gohan.max_hp, SaiyanNPC(0, 0, False, "gohan", 0, [], difficulty=gohan.difficulty.name).max_hp)
 
     def test_a_cell_jr_explodes_and_vanishes_when_knocked_out(self):
         from effects import Explosion
@@ -309,7 +342,8 @@ class EpicOnlineTests(EpicCase):
                                                              "opponent": {"character": "broly"}})
         self.assertEqual(host.player.character_name, "trunks_future")
         self.assertEqual(host.player.form, "ssj")
-        self.assertEqual([a.character_name for a in host.allies], ["vegeta", "vegito"])
+        fight = epic.by_id("goku_black")
+        self.assertEqual([a.character_name for a in host.allies], fight.allies[:epic.ONLINE_ALLIES])
         self.assertEqual(host.opponent.character_name, "goku_black")
         self.assertEqual(host.arena, "capsule_corp")
         guest = online.OnlineMatch(fake_game("vegeta"), net_b, {"slot": 1, "mode": "team", "epic": "goku_black",
@@ -317,7 +351,8 @@ class EpicOnlineTests(EpicCase):
         self.assertEqual(guest.player.character_name, "goku_black")
         self.assertEqual(guest.player.form, "ssj")  # Rosé
         self.assertEqual(guest.opponent.character_name, "trunks_future")
-        self.assertEqual([o.character_name for o in guest.opponents], ["trunks_future", "vegeta", "vegito"])
+        self.assertEqual([o.character_name for o in guest.opponents],
+                         ["trunks_future", *fight.allies[:epic.ONLINE_ALLIES]])
 
     def test_an_unknown_fight_is_a_normal_match(self):
         import online

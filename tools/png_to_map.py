@@ -392,9 +392,9 @@ def convert(picture_path, name, out_dir=MAP_DIR, tile=16, cell=8, threshold=0.5,
 
     os.makedirs(out_dir, exist_ok=True)
     pygame.image.save(sheet, os.path.join(out_dir, f"{name}_tiles.png"))
-    with open(os.path.join(out_dir, f"{name}.tsx"), "w") as file:
+    with open(os.path.join(out_dir, f"{name}.tsx"), "w", encoding="utf-8") as file:
         file.write(tsx_text(name, tile, len(tiles), columns, sheet.get_size()))
-    with open(tmx_path, "w") as file:
+    with open(tmx_path, "w", encoding="utf-8") as file:
         file.write(tmx_text(name, (size[0] // tile, size[1] // tile), tile, grid, objects, next_id))
     if preview:
         save_preview(preview, picture, collisions, start, patrol)

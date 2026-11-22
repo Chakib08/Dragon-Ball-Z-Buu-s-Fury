@@ -524,7 +524,7 @@ class TouchControlsTests(unittest.TestCase):
         spec = configparser.ConfigParser()
         spec.read(os.path.join(root, "buildozer.spec"))
         self.assertFalse(spec.has_option("app", "version"))
-        with open(os.path.join(root, "src", "version.py")) as file:
+        with open(os.path.join(root, "src", "version.py"), encoding="utf-8") as file:
             found = re.search(spec.get("app", "version.regex"), file.read())
         self.assertEqual(found.group(1), __version__)
 

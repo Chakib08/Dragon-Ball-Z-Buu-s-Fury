@@ -73,7 +73,7 @@ def _load():
     global _data
     if _data is None:
         path = os.path.join(os.path.dirname(os.path.normpath(Config.CONFIG_DIR)), "enemies.json")
-        with open(path) as file:
+        with open(path, encoding="utf-8") as file:
             _data = json.load(file)
     return _data
 

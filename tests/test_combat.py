@@ -698,7 +698,7 @@ class CombatTests(unittest.TestCase):
         # stats, Config/stats.json, still make them stronger)
         broly = SaiyanNPC(0, 0, False, "broly", 0, [])
         self.assertEqual(broly.difficulty.name, "normal")
-        with open(os.path.join(Config.ROOT_DIR, "Config", "enemies.json")) as file:
+        with open(os.path.join(Config.ROOT_DIR, "Config", "enemies.json"), encoding="utf-8") as file:
             enemies = json.load(file)["enemies"]
         self.assertNotIn("hard", {enemy.get("difficulty") for enemy in enemies.values()})
 

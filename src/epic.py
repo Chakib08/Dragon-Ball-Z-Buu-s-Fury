@@ -60,7 +60,7 @@ _fights = None
 def _load():
     path = os.path.join(Config.ROOT_DIR, "Config", "epic_fights.json")
     try:
-        with open(path) as file:
+        with open(path, encoding="utf-8") as file:
             entries = json.load(file).get("fights", [])
     except (OSError, ValueError):
         return []
@@ -138,6 +138,22 @@ def start_in_form(character, form):
     if form in levels:
         character.selected_level = levels.index(form)
     character.face_idle()
+
+
+# In an Epic Fight the enemies are stronger (more HP, harder hits) and the
+# player's allies a little weaker: they cannot win it alone
+ENEMY_STRENGTH = 1.5
+ALLY_STRENGTH = 0.8
+
+
+def strengthen(fighter, factor, health=True):
+    """Make an NPC factor times as strong: its hits and techniques (and its
+    health, when health)."""
+    fighter.attack_damage *= factor
+    fighter.technique_damage = getattr(fighter, "technique_damage", 1.0) * factor
+    if health:
+        fighter.max_hp = round(fighter.max_hp * factor)
+        fighter.hp = fighter.max_hp
 
 
 def reset():

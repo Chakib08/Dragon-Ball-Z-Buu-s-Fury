@@ -350,7 +350,10 @@ class Game:
             for ally in self.map_manager.get_map().npcs:
                 if ally.team == HEROES:
                     epic.start_in_form(ally, fight.ally_forms.get(ally.character_name))
+                    epic.strengthen(ally, epic.ALLY_STRENGTH, health=False)
             enemies = [npc for npc in self.map_manager.get_map().npcs if npc.team != HEROES]
+            for enemy in enemies:
+                epic.strengthen(enemy, epic.ENEMY_STRENGTH)
             if enemies:
                 epic.start_in_form(enemies[0], fight.boss_form)
             if fight.music:
@@ -369,7 +372,8 @@ class Game:
         if fight is None or self.epic_wave + 1 >= len(fight.waves):
             return False
         self.epic_wave += 1
-        self.map_manager.add_enemies(fight.waves[self.epic_wave])
+        for enemy in self.map_manager.add_enemies(fight.waves[self.epic_wave]):
+            epic.strengthen(enemy, epic.ENEMY_STRENGTH)
         sfx.play("powerup")
         return True
 

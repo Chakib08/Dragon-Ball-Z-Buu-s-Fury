@@ -20,7 +20,7 @@ def _load():
     global _entries
     if _entries is None:
         try:
-            with open(os.path.join(Config.ROOT_DIR, "Config", "roster.json")) as file:
+            with open(os.path.join(Config.ROOT_DIR, "Config", "roster.json"), encoding="utf-8") as file:
                 _entries = [entry for entry in json.load(file)["characters"] if entry.get("id")]
         except (OSError, ValueError, KeyError):
             _entries = []

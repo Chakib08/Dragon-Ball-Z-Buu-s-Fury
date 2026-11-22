@@ -14,7 +14,7 @@ class Config:
         # Next to the game's other files, wherever it is started from
         config_path = os.path.join(cls.root_dir(), cls.CONFIG_FILE)
         if os.path.exists(config_path):
-            with open(config_path, 'r') as file:
+            with open(config_path, 'r', encoding='utf-8') as file:
                 cls.config_data = json.load(file)
         else:
             cls.config_data = {}

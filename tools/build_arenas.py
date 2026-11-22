@@ -27,7 +27,7 @@ MINT = [(71, 255, 187), (52, 188, 136), (46, 165, 121)]
 
 
 def arenas():
-    with open(os.path.join(ROOT, "Config", "arenas.json")) as file:
+    with open(os.path.join(ROOT, "Config", "arenas.json"), encoding="utf-8") as file:
         return json.load(file)["arenas"]
 
 

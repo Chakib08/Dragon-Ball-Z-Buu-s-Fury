@@ -128,11 +128,11 @@ class IosTests(unittest.TestCase):
 
     def test_the_ios_recipe_names_pygames_modules_for_kivy_ios(self):
         project = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        with open(os.path.join(project, "ios", "recipes", "pygame", "__init__.py")) as file:
+        with open(os.path.join(project, "ios", "recipes", "pygame", "__init__.py"), encoding="utf-8") as file:
             source = file.read()
         self.assertIn("PyInit_pygame_##mod_name", source)
         self.assertIn('version = "2.6.1"', source)
-        with open(os.path.join(project, "requirements.txt")) as file:
+        with open(os.path.join(project, "requirements.txt"), encoding="utf-8") as file:
             self.assertIn("pygame==2.6.1", file.read())  # the same pygame as on desktop
 
 

@@ -119,7 +119,7 @@ class StatsTests(unittest.TestCase):
         self.assertGreater(goku.power, trunks.power)
         self.assertGreater(trunks.walk_speed, goku.walk_speed)
 
-    def test_goku_usually_beats_trunks_in_a_duel(self):
+    def test_goku_usually_beats_krillin_in_a_duel(self):
         """Same AI and difficulty on both sides: the stats decide."""
         import random
         wins = 0
@@ -129,17 +129,17 @@ class StatsTests(unittest.TestCase):
             player.update()
             combat = CombatSystem(player, (1200, 540))
             goku = SaiyanNPC(0, 0, False, "goku", 0, [], team=HEROES)
-            trunks = SaiyanNPC(0, 0, False, "trunks", 0, [], difficulty="normal")
-            goku.position, trunks.position = ([100, 100], [130, 100]) if seed % 2 else ([130, 100], [100, 100])
-            for fighter in (goku, trunks):
+            krillin = SaiyanNPC(0, 0, False, "krillin", 0, [], difficulty="normal")
+            goku.position, krillin.position = ([100, 100], [130, 100]) if seed % 2 else ([130, 100], [100, 100])
+            for fighter in (goku, krillin):
                 fighter.update()
                 fighter.save_location()
             for _ in range(60 * 400):
-                if goku.hp <= 0 or trunks.hp <= 0:
+                if goku.hp <= 0 or krillin.hp <= 0:
                     break
                 self.now += 17
-                combat.update([goku, trunks], [])
-            wins += trunks.hp <= 0 < goku.hp
+                combat.update([goku, krillin], [])
+            wins += krillin.hp <= 0 < goku.hp
         self.assertGreaterEqual(wins, 3)
 
 

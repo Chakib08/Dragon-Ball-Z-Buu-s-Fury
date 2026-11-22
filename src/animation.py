@@ -44,7 +44,7 @@ class SpriteForm:
     _cache = {}
 
     def __init__(self, json_file):
-        with open(json_file) as file:
+        with open(json_file, encoding="utf-8") as file:
             data = json.load(file)
         self.character_name = data["Character"]
         self.sheet = load_sheet(data["Image path"])
@@ -70,7 +70,7 @@ class SpriteForm:
     def sheet_exists(json_file):
         """Whether the image this form is cut from is present (sheets are
         downloaded by setup.sh, so one may be missing)."""
-        with open(json_file) as file:
+        with open(json_file, encoding="utf-8") as file:
             image_path = json.load(file)["Image path"]
         return os.path.exists(os.path.join(Config.ROOT_DIR, image_path))
 

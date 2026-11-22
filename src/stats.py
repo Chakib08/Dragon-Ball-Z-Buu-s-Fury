@@ -45,7 +45,7 @@ def _load():
     if _stats is None:
         path = os.path.join(os.path.dirname(os.path.normpath(Config.CONFIG_DIR)), "stats.json")
         try:
-            with open(path) as file:
+            with open(path, encoding="utf-8") as file:
                 data = json.load(file)
         except (OSError, ValueError):
             data = {}

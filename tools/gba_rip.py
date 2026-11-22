@@ -233,7 +233,7 @@ def write_index(out_dir, entries, title):
 <h1>{html.escape(title)}</h1>
 {rows}
 """
-    with open(os.path.join(out_dir, "index.html"), "w") as file:
+    with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as file:
         file.write(page)
 
 

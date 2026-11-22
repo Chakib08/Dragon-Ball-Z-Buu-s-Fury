@@ -62,7 +62,7 @@ import time
 
 # The server's own version: the game's it ships with (src/version.py; a
 # test keeps them in step). The release page has this file for each version
-SERVER_VERSION = "0.0.17"
+SERVER_VERSION = "1.0.6"
 # 2: names, team matches (allies in the states, hits for any fighter)
 # 3: the room's arena ("map")
 # 4: Epic Fights ("epic": the fight a room is for)

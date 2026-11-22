@@ -786,7 +786,7 @@ EVOLVE = {
 def borrowed_effects(key):
     character, technique_id = BORROWED[key]
     path = os.path.join(ROOT, "Config", "characters", character, "specials.json")
-    with open(path) as file:
+    with open(path, encoding="utf-8") as file:
         specials = json.load(file)
     technique = next(t for t in specials["techniques"] if t["id"] == technique_id)
     form = next(iter(technique["forms"].values()))
@@ -1045,7 +1045,7 @@ def build_form(spec):
     if "clear" in spec:
         config["Clear"] = [list(colour) for colour in spec["clear"]]
     path = os.path.join(ROOT, "Config", "characters", spec["character"], f"{spec['form']}.json")
-    with open(path, "w") as file:
+    with open(path, "w", encoding="utf-8") as file:
         json.dump(config, file, indent=2)
         file.write("\n")
 
@@ -1083,7 +1083,7 @@ def effects_only(form_data):
 
 def write_specials(character, specials):
     path = os.path.join(ROOT, "Config", "characters", character, "specials.json")
-    with open(path, "w") as file:
+    with open(path, "w", encoding="utf-8") as file:
         json.dump(specials, file, indent=2)
         file.write("\n")
 
@@ -1091,7 +1091,7 @@ def write_specials(character, specials):
 def update_specials(character, form_poses, effects):
     """Techniques with spritedatabase.net effects: new poses, same effects."""
     path = os.path.join(ROOT, "Config", "characters", character, "specials.json")
-    with open(path) as file:
+    with open(path, encoding="utf-8") as file:
         specials = json.load(file)
     for technique in specials["techniques"]:
         if "forms" not in technique:

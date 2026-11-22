@@ -224,7 +224,7 @@ def write_objects(text, named_rects):
 
 def build(name, check=False):
     path = os.path.join(MAP_DIR, f"{name}.tmx")
-    with open(path) as file:
+    with open(path, encoding="utf-8") as file:
         text = file.read()
     size = map_size(text)
     if name == "map":
@@ -232,7 +232,7 @@ def build(name, check=False):
     else:
         named = [("auto_wall", rect) for rect in room_rects(size, ROOMS[name])]
     if not check:
-        with open(path, "w") as file:
+        with open(path, "w", encoding="utf-8") as file:
             file.write(write_objects(text, named))
     return len(named)
 

@@ -241,7 +241,7 @@ def load_techniques(character):
     path = PathManager.character_json_path(character.character_name, "specials")
     if not os.path.exists(path):
         return []
-    with open(path) as file:
+    with open(path, encoding="utf-8") as file:
         data = json.load(file)
     techniques = [Technique(entry, character) for entry in data.get("techniques", [])]
     return [technique for technique in techniques if technique.forms

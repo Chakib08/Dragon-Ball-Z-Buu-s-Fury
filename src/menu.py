@@ -768,7 +768,7 @@ class Menu:
         if key not in self._fitted_previews:
             names = []
             try:
-                with open(PathManager.character_json_path(character_name, "specials")) as file:
+                with open(PathManager.character_json_path(character_name, "specials"), encoding="utf-8") as file:
                     names = [entry["name"] for entry in json.load(file).get("techniques", [])]
             except (OSError, ValueError, KeyError):
                 pass

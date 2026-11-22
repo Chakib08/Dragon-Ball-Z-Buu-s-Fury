@@ -30,7 +30,7 @@ def load():
         "server_port": Config.get_config_value("server.port", default_value=DEFAULT_SERVER_PORT),
     }
     try:
-        with open(settings_path()) as file:
+        with open(settings_path(), encoding="utf-8") as file:
             saved = json.load(file)
         if isinstance(saved, dict):
             settings.update(saved)
@@ -41,7 +41,7 @@ def load():
 
 def save(settings):
     try:
-        with open(settings_path(), "w") as file:
+        with open(settings_path(), "w", encoding="utf-8") as file:
             json.dump(settings, file, indent=2)
     except OSError:
         pass  # not being able to remember a setting must not stop the game
