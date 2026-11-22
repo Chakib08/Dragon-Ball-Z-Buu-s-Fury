@@ -269,8 +269,9 @@ YAMCHA = dict(run=NO_RUN, attack=[6, 7, 7, 8, 8, 9, 10, 11, 11, 12, 12, 13], hur
               special=[15, 16, 16], faint=[25, 26, 27, 28],
               techniques=techniques(("energy_blast", [15, 16, 16], 1), ("spirit_ball", [15, 16, 16], 2),
                                     ("wolf_fang_fist", [7, 8, 9, 10, 11, 12], None)))
-# Cell Jr: idle, walk and four strikes only
-CELL_JR = dict(run=NO_RUN, attack=[6, 7, 7, 8, 8, 9, 9, 6, 7, 7, 8, 9], hurt=[0, 1], block=0,
+# Cell Jr: idle, walk and four strikes only (column 1 is empty in his back
+# row): each move winds up (6) then strikes; hit, he leans back (6)
+CELL_JR = dict(run=NO_RUN, attack=[6, 7, 7, 6, 8, 8, 6, 9, 9, 7, 8, 9], hurt=[6, 0], block=0,
                special=[6, 7, 7], techniques=techniques(("energy_blast", [6, 7, 7], 1),
                                                         ("kamehameha", [6, 6, 7, 7], 2)))
 # Frieza (final form) and Cooler (final form, a big 64 px sheet): the
