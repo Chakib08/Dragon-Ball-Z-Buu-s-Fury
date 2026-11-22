@@ -129,6 +129,10 @@
           "cell_jr",
           "cell_jr",
           "cell_jr",
+          "cell_jr",
+          "cell_jr",
+          "cell_jr",
+          "cell_jr",
           "cell_jr"
         ]
       ],
@@ -214,7 +218,7 @@
           "super_buu"
         ]
       ],
-      "arena": "king_kais_planet",
+      "arena": "kamis_lookout",
       "music": "buus-fury/super-buu",
       "intro": [
         [

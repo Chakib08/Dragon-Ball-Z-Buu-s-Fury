@@ -45,7 +45,7 @@ class FightListTests(EpicCase):
     def test_every_fight_is_playable_here(self):
         # All of the file's fights: their characters and arenas are installed
         self.assertEqual([f.id for f in epic.fights()], [f.id for f in epic.all_fights()])
-        self.assertGreaterEqual(len(epic.fights()), 10)
+        self.assertGreaterEqual(len(epic.fights()), 14)
         ids = [f.id for f in epic.fights()]
         self.assertEqual(len(ids), len(set(ids)))
         for fight in epic.fights():

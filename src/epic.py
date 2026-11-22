@@ -21,7 +21,7 @@ from utils.config import Config
 
 # At most this many enemies at once (map.EPIC_MAX_ENEMIES), allies
 # (EPIC_MAX_ALLIES); online, a side has at most ONLINE_ALLIES allies
-MAX_WAVE = 10
+MAX_WAVE = 14
 MAX_ALLIES = 7
 ONLINE_ALLIES = 3
 CLEARED_KEY = "epic_cleared"

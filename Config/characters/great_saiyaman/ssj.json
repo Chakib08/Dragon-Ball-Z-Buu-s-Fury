@@ -1,6 +1,6 @@
 {
-  "Character": "great_saiyaman",
-  "Image path": "Graphics/assets/great_saiyaman/ssj.png",
+  "Character": "gohan_great_saiyaman",
+  "Image path": "Graphics/assets/gohan_great_saiyaman/ssj.png",
   "Animations": [
     {
       "AnimationName": "IDLE Down",

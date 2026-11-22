@@ -52,7 +52,7 @@ EXPECTED = {
     "goten": ["Energy Blast", "Kamehameha", "Ki Burst", "Fusion Dance"],
     "kid_trunks": ["Energy Blast", "Burning Attack", "Ki Burst", "Fusion Dance"],
     "gotenks": ["Energy Blast", "Super Ghost Kamikaze Attack", "Galactic Donut"],
-    "great_saiyaman": ["Energy Blast", "Kamehameha", "Ki Burst"],
+    "gohan_great_saiyaman": ["Energy Blast", "Kamehameha", "Ki Burst"],
     "vegito": ["Energy Blast", "Final Kamehameha", "Spirit Sword"],
     "gogeta": ["Energy Blast", "Big Bang Kamehameha", "Soul Punisher"],
     "cell_imperfect": ["Energy Blast", "Kamehameha", "Absorb Android 17"],
