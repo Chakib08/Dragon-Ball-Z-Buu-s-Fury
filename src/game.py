@@ -183,14 +183,15 @@ class Game:
             scene.resize(self.resolution)
         self.release_input()
 
-    def select_character(self, name, enemies=(DEFAULT_ENEMY,), allies=(), arena=None):
+    def select_character(self, name, enemies=(DEFAULT_ENEMY,), allies=(), arena=None, epic=False):
         """Start the world over with the given playable character, the
-        enemies to fight and the allies fighting on his side."""
+        enemies to fight and the allies fighting on his side (epic: an Epic
+        Fight's, up to 7 against 7)."""
         if isinstance(enemies, str):
             enemies = (enemies,)
         self.character = Saiyan(*PLAYER_SPAWN, False, name)
         self.map_manager = MapManager(self.screen, self.character, enemies=enemies, allies=allies,
-                                      arena_name=arena)
+                                      arena_name=arena, epic=epic)
 
     def play_music(self, music):
         pygame.mixer.music.stop()
@@ -342,10 +343,13 @@ class Game:
             self.menu.selected_enemies = list(fight.waves[0])
             self.menu.selected_arena = fight.arena
         self.select_character(self.menu.selected_character, tuple(self.menu.selected_enemies),
-                              tuple(self.menu.selected_allies), self.menu.selected_arena)
+                              tuple(self.menu.selected_allies), self.menu.selected_arena, epic=fight is not None)
         self.epic_wave = 0
         if fight is not None:
             epic.start_in_form(self.character, fight.form)
+            for ally in self.map_manager.get_map().npcs:
+                if ally.team == HEROES:
+                    epic.start_in_form(ally, fight.ally_forms.get(ally.character_name))
             enemies = [npc for npc in self.map_manager.get_map().npcs if npc.team != HEROES]
             if enemies:
                 epic.start_in_form(enemies[0], fight.boss_form)

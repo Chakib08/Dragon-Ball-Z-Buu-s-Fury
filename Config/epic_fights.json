@@ -6,12 +6,22 @@
       "title": "The Legendary Super Saiyan",
       "subtitle": "Goku vs Frieza",
       "hero": "goku_log2",
-      "waves": [["frieza"]],
+      "waves": [
+        [
+          "frieza"
+        ]
+      ],
       "arena": "diablo_desert",
       "music": "buus-fury/dangerous-standoff",
       "intro": [
-        ["frieza", "You monkeys never learn. I will destroy you and this planet!"],
-        ["goku_log2", "You've hurt too many people, Frieza. I won't forgive you!"]
+        [
+          "frieza",
+          "You monkeys never learn. I will destroy you and this planet!"
+        ],
+        [
+          "goku_log2",
+          "You've hurt too many people, Frieza. I won't forgive you!"
+        ]
       ]
     },
     {
@@ -20,12 +30,22 @@
       "subtitle": "Goku vs Cooler",
       "hero": "goku_log2",
       "form": "ssj",
-      "waves": [["cooler"]],
+      "waves": [
+        [
+          "cooler"
+        ]
+      ],
       "arena": "southwest_forest",
       "music": "buus-fury/vegetas-theme",
       "intro": [
-        ["cooler", "My little brother was a disgrace. Watch the true power of our family."],
-        ["goku_log2", "Then I'll beat you the same way I beat him!"]
+        [
+          "cooler",
+          "My little brother was a disgrace. Watch the true power of our family."
+        ],
+        [
+          "goku_log2",
+          "Then I'll beat you the same way I beat him!"
+        ]
       ]
     },
     {
@@ -34,13 +54,26 @@
       "subtitle": "Future Trunks vs Androids 17 and 18",
       "hero": "trunks_future",
       "form": "ssj",
-      "allies": ["gohan_teen"],
-      "waves": [["android17", "android18"]],
+      "allies": [
+        "gohan_teen"
+      ],
+      "waves": [
+        [
+          "android17",
+          "android18"
+        ]
+      ],
       "arena": "hercule_city",
       "music": "buus-fury/turned-to-stone",
       "intro": [
-        ["android17", "Another one who wants to play? Fine, it's been boring lately."],
-        ["trunks_future", "This time I'll end your reign of terror!"]
+        [
+          "android17",
+          "Another one who wants to play? Fine, it's been boring lately."
+        ],
+        [
+          "trunks_future",
+          "This time I'll end your reign of terror!"
+        ]
       ]
     },
     {
@@ -48,28 +81,73 @@
       "title": "Super Android 13!",
       "subtitle": "Goku, Vegeta and Trunks vs Androids 19, 20 and 13",
       "hero": "goku_log2",
-      "allies": ["vegeta_log2", "trunks_future"],
-      "waves": [["android19", "android20"], ["android13"]],
+      "allies": [
+        "vegeta_log2",
+        "trunks_future"
+      ],
+      "waves": [
+        [
+          "android19",
+          "android20"
+        ],
+        [
+          "android13"
+        ]
+      ],
       "arena": "nataday_village",
       "music": "buus-fury/battlefield-royale",
       "intro": [
-        ["android20", "Dr. Gero's last creation will finish what I started."],
-        ["goku_log2", "Everybody, together! We can't let them win!"]
+        [
+          "android20",
+          "Dr. Gero's last creation will finish what I started."
+        ],
+        [
+          "goku_log2",
+          "Everybody, together! We can't let them win!"
+        ]
       ]
     },
     {
       "id": "cell_juniors",
       "title": "Seven Little Monsters",
-      "subtitle": "The Z Fighters vs the Cell Juniors",
-      "hero": "gohan_teen",
-      "allies": ["krillin", "tien", "yamcha"],
-      "waves": [["cell_jr", "cell_jr", "cell_jr", "cell_jr"], ["cell_jr", "cell_jr", "cell_jr"]],
+      "subtitle": "Goku, Vegeta, Trunks and the Z Fighters vs the seven Cell Juniors",
+      "hero": "goku",
+      "allies": [
+        "vegeta_log2",
+        "trunks_future",
+        "piccolo",
+        "tien",
+        "yamcha",
+        "krillin"
+      ],
+      "waves": [
+        [
+          "cell_jr",
+          "cell_jr",
+          "cell_jr",
+          "cell_jr",
+          "cell_jr",
+          "cell_jr",
+          "cell_jr"
+        ]
+      ],
       "arena": "cell_games",
       "music": "legacy-of-goku-II/The Legacy Of Goku 2 OST - The Imperfect Cell",
       "intro": [
-        ["cell_jr", "Hee hee! Papa said we can play with you!"],
-        ["krillin", "There's seven of them! Gohan, we'll hold them off!"]
-      ]
+        [
+          "cell_jr",
+          "Hee hee! Papa said we can play with you! All seven of us!"
+        ],
+        [
+          "goku",
+          "Everybody, one each! Don't let them get past you!"
+        ]
+      ],
+      "form": "ssj",
+      "ally_forms": {
+        "vegeta_log2": "ssj",
+        "trunks_future": "ssj"
+      }
     },
     {
       "id": "cell_games",
@@ -77,12 +155,22 @@
       "subtitle": "Teen Gohan vs Perfect Cell",
       "hero": "gohan_teen",
       "form": "ssj2",
-      "waves": [["cell_perfect"]],
+      "waves": [
+        [
+          "cell_perfect"
+        ]
+      ],
       "arena": "cell_games",
       "music": "custom/DBZ-Perfect-Cell-Theme",
       "intro": [
-        ["cell_perfect", "So this is the power you were hiding. Show me everything!"],
-        ["gohan_teen", "I'm going to make you suffer, Cell."]
+        [
+          "cell_perfect",
+          "So this is the power you were hiding. Show me everything!"
+        ],
+        [
+          "gohan_teen",
+          "I'm going to make you suffer, Cell."
+        ]
       ]
     },
     {
@@ -91,13 +179,26 @@
       "subtitle": "Gohan, Goten and Trunks vs Broly",
       "hero": "gohan",
       "form": "ssj",
-      "allies": ["goten", "kid_trunks"],
-      "waves": [["broly"]],
+      "allies": [
+        "goten",
+        "kid_trunks"
+      ],
+      "waves": [
+        [
+          "broly"
+        ]
+      ],
       "arena": "volcano",
       "music": "buus-fury/majin-buu-returns",
       "intro": [
-        ["broly", "Kakarot... Kakarooot!"],
-        ["gohan", "Goten, Trunks, stay together! We'll beat him as a team!"]
+        [
+          "broly",
+          "Kakarot... Kakarooot!"
+        ],
+        [
+          "gohan",
+          "Goten, Trunks, stay together! We'll beat him as a team!"
+        ]
       ]
     },
     {
@@ -106,12 +207,22 @@
       "subtitle": "Gotenks vs Super Buu",
       "hero": "gotenks",
       "form": "ssj3",
-      "waves": [["super_buu"]],
+      "waves": [
+        [
+          "super_buu"
+        ]
+      ],
       "arena": "kamis_lookout",
       "music": "buus-fury/super-buu",
       "intro": [
-        ["super_buu", "I'm bored. Entertain me, or I'll eat you."],
-        ["gotenks", "The Grim Reaper of Justice has arrived! Super Ghost Kamikaze Attack!"]
+        [
+          "super_buu",
+          "I'm bored. Entertain me, or I'll eat you."
+        ],
+        [
+          "gotenks",
+          "The Grim Reaper of Justice has arrived! Super Ghost Kamikaze Attack!"
+        ]
       ]
     },
     {
@@ -119,12 +230,22 @@
       "title": "The Ultimate Warrior",
       "subtitle": "Ultimate Gohan vs Super Buu (Gotenks)",
       "hero": "gohan_ultimate",
-      "waves": [["super_buu_gotenks"]],
+      "waves": [
+        [
+          "super_buu_gotenks"
+        ]
+      ],
       "arena": "kamis_lookout",
       "music": "buus-fury/gohans-hidden-power",
       "intro": [
-        ["super_buu_gotenks", "I absorbed Gotenks. Now I'm even stronger!"],
-        ["gohan_ultimate", "That won't be enough. Your time is up, Buu."]
+        [
+          "super_buu_gotenks",
+          "I absorbed Gotenks. Now I'm even stronger!"
+        ],
+        [
+          "gohan_ultimate",
+          "That won't be enough. Your time is up, Buu."
+        ]
       ]
     },
     {
@@ -133,12 +254,22 @@
       "subtitle": "Vegito vs Super Buu (Gohan)",
       "hero": "vegito",
       "form": "ssj",
-      "waves": [["super_buu_gohan"]],
+      "waves": [
+        [
+          "super_buu_gohan"
+        ]
+      ],
       "arena": "kamis_lookout",
       "music": "buus-fury/vegito-is-born",
       "intro": [
-        ["super_buu_gohan", "With Gohan inside me, nobody can stop me."],
-        ["vegito", "I'm not Goku, I'm not Vegeta. I'm the one who's going to beat you."]
+        [
+          "super_buu_gohan",
+          "With Gohan inside me, nobody can stop me."
+        ],
+        [
+          "vegito",
+          "I'm not Goku, I'm not Vegeta. I'm the one who's going to beat you."
+        ]
       ]
     },
     {
@@ -147,13 +278,25 @@
       "subtitle": "Goku SSJ3 vs Kid Buu",
       "hero": "goku",
       "form": "ssj3",
-      "allies": ["vegeta"],
-      "waves": [["kid_buu"]],
+      "allies": [
+        "vegeta"
+      ],
+      "waves": [
+        [
+          "kid_buu"
+        ]
+      ],
       "arena": "king_kais_planet",
       "music": "buus-fury/kid-buu",
       "intro": [
-        ["kid_buu", "Hehehe... boom!"],
-        ["goku", "Vegeta, buy me some time. This ends here!"]
+        [
+          "kid_buu",
+          "Hehehe... boom!"
+        ],
+        [
+          "goku",
+          "Vegeta, buy me some time. This ends here!"
+        ]
       ]
     },
     {
@@ -162,14 +305,26 @@
       "subtitle": "Future Trunks and Vegeta vs Goku Black",
       "hero": "trunks_future",
       "form": "ssj",
-      "allies": ["vegeta"],
-      "waves": [["goku_black"]],
+      "allies": [
+        "vegeta"
+      ],
+      "waves": [
+        [
+          "goku_black"
+        ]
+      ],
       "boss_form": "ssj",
       "arena": "capsule_corp",
       "music": "buus-fury/daburas-theme",
       "intro": [
-        ["goku_black", "Mortals are a mistake. Behold the beauty of Super Saiyan Rosé."],
-        ["trunks_future", "You took everything from my world. I'll never forgive you!"]
+        [
+          "goku_black",
+          "Mortals are a mistake. Behold the beauty of Super Saiyan Rosé."
+        ],
+        [
+          "trunks_future",
+          "You took everything from my world. I'll never forgive you!"
+        ]
       ]
     }
   ]

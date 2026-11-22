@@ -19,9 +19,11 @@ import roster
 import settings as user_settings
 from utils.config import Config
 
-# At most this many enemies at once (map.MAX_ENEMIES), allies (MAX_ALLIES)
-MAX_WAVE = 4
-MAX_ALLIES = 3
+# At most this many enemies at once (map.EPIC_MAX_ENEMIES), allies
+# (EPIC_MAX_ALLIES); online, a side has at most ONLINE_ALLIES allies
+MAX_WAVE = 7
+MAX_ALLIES = 6
+ONLINE_ALLIES = 3
 CLEARED_KEY = "epic_cleared"
 
 
@@ -36,6 +38,8 @@ class Fight:
     form: str = None
     allies: list = field(default_factory=list)
     boss_form: str = None
+    # The allies' starting Super Saiyan levels ({name: form})
+    ally_forms: dict = field(default_factory=dict)
     music: str = None
     intro: list = field(default_factory=list)
 
@@ -47,7 +51,7 @@ class Fight:
         """(character, form, allies) of a side: 0 the hero's, 1 the boss's."""
         if slot == 0:
             return self.hero, self.form, list(self.allies)
-        return self.boss, self.boss_form, list(self.waves[0][1:1 + MAX_ALLIES])
+        return self.boss, self.boss_form, list(self.waves[0][1:1 + ONLINE_ALLIES])
 
 
 _fights = None
@@ -68,6 +72,7 @@ def _load():
                           hero=str(entry["hero"]), waves=waves, arena=str(entry.get("arena", arenas.DEFAULT)),
                           form=entry.get("form"), allies=[str(name) for name in entry.get("allies", [])][:MAX_ALLIES],
                           boss_form=entry.get("boss_form"), music=entry.get("music"),
+                          ally_forms={str(k): str(v) for k, v in entry.get("ally_forms", {}).items()},
                           intro=[(str(who), str(line)) for who, line in entry.get("intro", [])])
         except (KeyError, TypeError, ValueError):
             continue

@@ -60,8 +60,9 @@ class FightListTests(EpicCase):
         self.assertIn(("goku", "ssj3", "kid_buu"), matchups)
         self.assertIn(("goku_log2", None, "frieza"), matchups)
         juniors = epic.by_id("cell_juniors")
-        self.assertEqual(sum(len(wave) for wave in juniors.waves), 7)
-        self.assertEqual(set(juniors.allies), {"krillin", "tien", "yamcha"})
+        self.assertEqual(juniors.waves, [["cell_jr"] * 7])
+        self.assertEqual((juniors.hero, juniors.form), ("goku", "ssj"))
+        self.assertEqual(juniors.allies, ["vegeta_log2", "trunks_future", "piccolo", "tien", "yamcha", "krillin"])
         self.assertEqual(epic.by_id("goku_black").boss, "goku_black")
 
     def test_sides(self):
@@ -165,29 +166,54 @@ class EpicGameTests(EpicCase):
         self.assertEqual(sorted(npc.character_name for npc in game.map_manager.get_map().npcs
                                 if npc.team == HEROES), ["vegeta"])
 
-    def test_waves_then_victory_then_the_next_fight(self):
+    def test_seven_against_seven(self):
         game = self.game("cell_juniors")
+        npcs = game.map_manager.get_map().npcs
+        self.assertEqual((game.character.character_name, game.character.form), ("goku", "ssj"))
+        allies = {npc.character_name: npc.form for npc in npcs if npc.team == HEROES}
+        self.assertEqual(allies, {"vegeta_log2": "ssj", "trunks_future": "ssj", "piccolo": "base",
+                                  "tien": "base", "yamcha": "base", "krillin": "base"})
+        self.assertEqual([npc.character_name for npc in self.enemies(game)], ["cell_jr"] * 7)
+        # Nobody stands in someone else
+        bodies = [game.character.body, *(npc.body for npc in npcs)]
+        overlapping = sum(1 for i, a in enumerate(bodies) for b in bodies[i + 1:] if a.colliderect(b))
+        self.assertLessEqual(overlapping, 2)
+        for _ in range(60):
+            game.loop_once([])
+
+    def test_arcade_keeps_its_limits(self):
+        from game import Game
+        game = Game((1200, 540), "test", fullscreen=False)
+        game.menu = Menu(game.resolution)
+        game.menu.selected_enemies = ["cell_jr"] * 7
+        game.menu.selected_allies = ["krillin", "tien", "yamcha", "piccolo"]
+        game.start_story()
+        npcs = game.map_manager.get_map().npcs
+        self.assertEqual(len([n for n in npcs if n.team == HEROES]), 3)
+        self.assertEqual(len([n for n in npcs if n.team != HEROES]), 4)
+
+    def test_waves_then_victory_then_the_next_fight(self):
+        game = self.game("android13")
         story = game.scenes["story"]
         story.intro = None
         first = self.enemies(game)
-        self.assertEqual(len(first), 4)
+        self.assertEqual([npc.character_name for npc in first], ["android19", "android20"])
         self.beat(first)
         game.loop_once([])
         # The second wave arrives instead of the victory
         self.assertIsNone(story.result)
         self.assertIsNotNone(story.banner)
         alive = [npc for npc in self.enemies(game) if npc.hp > 0]
-        self.assertEqual(len(alive), 3)
-        self.assertTrue(all(npc.character_name == "cell_jr" for npc in alive))
+        self.assertEqual([npc.character_name for npc in alive], ["android13"])
         self.beat(alive)
         game.loop_once([])
         self.assertIsNotNone(story.result)
         self.assertTrue(story.result.victory)
-        self.assertIn("cell_juniors", epic.cleared())
+        self.assertIn("android13", epic.cleared())
         self.assertEqual(story.result.retry_label, "Next fight")
         # On to the next fight
         game.loop_once([key(pygame.K_RETURN)])
-        self.assertEqual(game.menu.epic.id, epic.next_fight(epic.by_id("cell_juniors")).id)
+        self.assertEqual(game.menu.epic.id, epic.next_fight(epic.by_id("android13")).id)
         self.assertEqual(game.character.character_name, game.menu.epic.hero)
         self.assertIsNotNone(story.intro)
 

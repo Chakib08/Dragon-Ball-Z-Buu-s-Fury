@@ -254,7 +254,8 @@ class OnlineMatch:
         self.mode = "team" if start.get("mode") == "team" or fight is not None else "1v1"
         if fight is not None:
             character = their_character
-            my_allies, their_allies = epic_allies, epic_their_allies
+            my_allies = epic_allies[:epic.ONLINE_ALLIES]
+            their_allies = epic_their_allies[:epic.ONLINE_ALLIES]
         elif self.mode == "team":
             my_allies = [name for name in game.menu.selected_allies if name in names][:MAX_ALLIES]
             their_allies = opponent.get("allies") if isinstance(opponent.get("allies"), list) else []

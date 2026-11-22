@@ -97,22 +97,25 @@ DEFAULT_ENEMY = "gohan"
 # allies against 4 enemies), 8 on the field
 MAX_ENEMIES = 4
 MAX_ALLIES = 3
+# An Epic Fight can be bigger: 7 against 7
+EPIC_MAX_ENEMIES = 7
+EPIC_MAX_ALLIES = 6
 ALLY_LINES = ["I've got your back!", "Let's beat them together!"]
 
 
-def _world_npcs(enemies=(DEFAULT_ENEMY,), allies=()):
+def _world_npcs(enemies=(DEFAULT_ENEMY,), allies=(), max_enemies=MAX_ENEMIES, max_allies=MAX_ALLIES):
     """The fighters of the world map: the enemies, with the strength and
     lines Config/enemies.json gives them, walking the route the map calls
     "vegeta_path" (each from another of its points), and the player's allies
     (MapManager places them next to the player)."""
     npcs = []
-    for index, name in enumerate(enemies[:MAX_ENEMIES]):
+    for index, name in enumerate(enemies[:max_enemies]):
         profile = enemy_profile(name)
         dialog = profile.dialog or ["Let's fight!"]
         enemy = SaiyanNPC(99, 345, False, name, 4, dialog, path_name="vegeta", difficulty=profile.difficulty)
         enemy.current_point = index % 4
         npcs.append(enemy)
-    for name in allies[:MAX_ALLIES]:
+    for name in allies[:max_allies]:
         npcs.append(SaiyanNPC(0, 0, False, name, 0, ALLY_LINES, team=HEROES))
     return npcs
 
@@ -153,12 +156,13 @@ def world_music(world_file):
     return PathManager.soundtrack(WORLD_MUSIC)
 
 
-def map_definitions(enemies=(DEFAULT_ENEMY,), allies=(), world_file=None):
+def map_definitions(enemies=(DEFAULT_ENEMY,), allies=(), world_file=None, epic=False):
     world = world_music(world_file)
+    limits = (EPIC_MAX_ENEMIES, EPIC_MAX_ALLIES) if epic else (MAX_ENEMIES, MAX_ALLIES)
     home = PathManager.soundtrack(HOME_MUSIC)
     return [
         MapDefinition("map", world, [Portal("map", "enter_house", "house", "spawn_house")],
-                      lambda: _world_npcs(enemies, allies), file=world_file),
+                      lambda: _world_npcs(enemies, allies, *limits), file=world_file),
         MapDefinition("house", home, [
             Portal("house", "exit_house", "map", "spawn_world"),
             Portal("house", "enter_hall", "hall", "spawn_from_house_to_hall"),
@@ -188,11 +192,13 @@ class MapManager:
     FADE_SPEED = 10
 
     def __init__(self, screen, character, default_map="map", versus=False, opponents=(),
-                 enemies=(DEFAULT_ENEMY,), allies=(), arena_name=None) -> None:
+                 enemies=(DEFAULT_ENEMY,), allies=(), arena_name=None, epic=False) -> None:
         """versus: an online match on this map, without enemies or doors, the
         opponents (the remote player and its allies) drawn alongside the
         player. enemies: the characters the player fights on the world map;
-        allies: the ones who fight on his side (online too)."""
+        allies: the ones who fight on his side (online too). epic: an Epic
+        Fight's teams (bigger: 7 against 7)."""
+        self.epic = epic
         self.screen = screen
         self.character = character
         self.versus = versus
@@ -207,7 +213,8 @@ class MapManager:
         else:
             self.world_file = "map" if versus else arena()
         self.definitions = {definition.name: definition
-                            for definition in map_definitions(self.enemies, self.allies, self.world_file)}
+                            for definition in map_definitions(self.enemies, self.allies, self.world_file,
+                                                              epic)}
         self.maps = {}
 
         # Fade to black between two maps
@@ -337,7 +344,7 @@ class MapManager:
         """A new wave: these enemies join the fight on the world map, on its
         patrol points (the way the first ones came). Returns them."""
         game_map = self.load_map("map")
-        enemies = [npc for npc in _world_npcs(tuple(names), ()) if npc.team != HEROES]
+        enemies = [npc for npc in _world_npcs(tuple(names), (), EPIC_MAX_ENEMIES) if npc.team != HEROES]
         for npc in enemies:
             npc.load_points(game_map)
             npc.teleport_spawn()
