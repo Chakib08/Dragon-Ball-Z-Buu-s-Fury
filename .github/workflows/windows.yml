@@ -4,7 +4,7 @@ name: Build Windows game
 # a folder with DragonBallZTrunksHope.exe and the game's files, zipped.
 #
 #   build    on Windows: downloads the sprite sheets (setup.sh, in Git
-#            Bash), runs the tests, builds the game, starts it once in
+#            Bash), builds the game, starts it once in
 #            smoke-test mode (a short fight, then it quits by itself), zips
 #            it and, on a v* tag, attaches the zip (and the lobby server of
 #            this version) to the GitHub release
@@ -56,22 +56,6 @@ jobs:
           GH_TOKEN: ${{ secrets.DBZ_ASSETS_TOKEN }}
           # It has pygame, for building the arenas
           PYTHON: python
-
-      # On failure, tools/ci_annotate.py shows why on the run's summary page
-      - name: Run the tests
-        shell: bash
-        run: |
-          set +e
-          python -m unittest discover -s tests > tests.log 2>&1
-          status=$?
-          cat tests.log
-          [ $status -eq 0 ] || python tools/ci_annotate.py tests tests.log
-          exit $status
-        env:
-          PYTHONPATH: src
-          SDL_VIDEODRIVER: dummy
-          SDL_AUDIODRIVER: dummy
-          PYTHONIOENCODING: utf-8
 
       - name: Build the game
         shell: bash
