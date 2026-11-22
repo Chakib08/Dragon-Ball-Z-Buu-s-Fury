@@ -257,6 +257,86 @@
         "I am neither Goku nor Vegeta.",
         "I am the one who will defeat you!"
       ]
+    },
+    "goku_log2": {
+      "difficulty": "normal",
+      "dialog": [
+        "Let's see what you've got!"
+      ]
+    },
+    "goku_end_of_z": {
+      "difficulty": "normal",
+      "dialog": [
+        "I've been training hard. Ready?"
+      ]
+    },
+    "vegeta_log2": {
+      "difficulty": "normal",
+      "dialog": [
+        "I am the prince of all Saiyans!"
+      ]
+    },
+    "gohan_teen": {
+      "difficulty": "normal",
+      "dialog": [
+        "I won't let you hurt anyone else!"
+      ]
+    },
+    "gohan_ultimate": {
+      "difficulty": "normal",
+      "dialog": [
+        "Elder Kai unlocked my power. You don't stand a chance."
+      ]
+    },
+    "trunks_future": {
+      "difficulty": "normal",
+      "dialog": [
+        "I came back from the future to stop you."
+      ]
+    },
+    "krillin": {
+      "difficulty": "easy",
+      "dialog": [
+        "Hey, go easy on me!"
+      ]
+    },
+    "tien": {
+      "difficulty": "easy",
+      "dialog": [
+        "My Tri-Beam will stop you."
+      ]
+    },
+    "yamcha": {
+      "difficulty": "easy",
+      "dialog": [
+        "Wolf Fang Fist!"
+      ]
+    },
+    "goku_black": {
+      "difficulty": "normal",
+      "dialog": [
+        "Mortals are a mistake. I will erase you.",
+        "Behold the beauty of Super Saiyan Rosé."
+      ]
+    },
+    "cell_jr": {
+      "difficulty": "easy",
+      "dialog": [
+        "Hee hee hee!"
+      ]
+    },
+    "frieza": {
+      "difficulty": "normal",
+      "dialog": [
+        "You monkeys never learn.",
+        "I'll make you suffer for this!"
+      ]
+    },
+    "cooler": {
+      "difficulty": "normal",
+      "dialog": [
+        "My brother was soft. I am not."
+      ]
     }
   }
 }

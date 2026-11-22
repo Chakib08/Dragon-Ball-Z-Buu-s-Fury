@@ -13,8 +13,8 @@ class SuperSaiyanMixin:
     TRANSFORM_CLOCK_SPEED = 20
     TRANSFORM_HOLD_TICKS = 10
     # Ki needed to transform into each level
-    TRANSFORM_MIN_KI = {"ssj": 20, "ssj3": 35}
-    LEVEL_NAMES = {"ssj": "SSJ", "ssj3": "SSJ3"}
+    TRANSFORM_MIN_KI = {"ssj": 20, "ssj2": 28, "ssj3": 35}
+    LEVEL_NAMES = {"ssj": "SSJ", "ssj2": "SSJ2", "ssj3": "SSJ3"}
 
     can_transform = True
 

@@ -97,31 +97,39 @@ class Aura(Effect):
     Its frames are the three aura flames of Vegeta's Buu's Fury sheet,
     sized to the fighter (bigger around Cell or Majin Buu)."""
 
-    SHEET = "Graphics/assets/effects/fusion_dance.png"
-    BACKGROUND = (0, 128, 0)
-    BOXES = ((321, 353, 32, 32), (360, 353, 32, 32), (397, 353, 32, 32))
+    # The golden flames (Vegeta's sheet), and the auras of their own: Goku
+    # Black's pink one (Super Saiyan Rosé)
+    STYLES = {
+        "gold": {"sheet": "Graphics/assets/effects/fusion_dance.png", "background": (0, 128, 0),
+                 "boxes": ((321, 353, 32, 32), (360, 353, 32, 32), (397, 353, 32, 32)), "height": 1.35},
+        "rose": {"sheet": "Graphics/assets/effects/goku_black_fx.png", "background": (87, 137, 170),
+                 "boxes": ((437, 72, 96, 78), (547, 72, 96, 78), (657, 72, 96, 78)), "height": 1.5},
+    }
+    CHARACTER_STYLES = {"goku_black": "rose"}
     FRAME_TICKS = 5
     FADE_TICKS = 24
     layer = CHARACTER_LAYER
-    _frames = None
+    _frames = {}
 
     @classmethod
-    def frames(cls):
-        """The flames, or [] when the sheet is missing."""
-        if cls._frames is None:
+    def frames(cls, style="gold"):
+        """The flames of a style, or [] when its sheet is missing."""
+        if style not in cls._frames:
             from animation import load_sheet
+            info = cls.STYLES[style]
             try:
-                sheet = load_sheet(cls.SHEET)
+                sheet = load_sheet(info["sheet"])
             except (pygame.error, FileNotFoundError, OSError):
-                cls._frames = []
-                return cls._frames
-            cls._frames = []
-            for x, y, width, height in cls.BOXES:
+                cls._frames[style] = []
+                return cls._frames[style]
+            frames = []
+            for x, y, width, height in info["boxes"]:
                 frame = pygame.Surface((width, height))
                 frame.blit(sheet, (0, 0), (x, y, width, height))
-                frame.set_colorkey(cls.BACKGROUND)
-                cls._frames.append(frame)
-        return cls._frames
+                frame.set_colorkey(info["background"])
+                frames.append(frame)
+            cls._frames[style] = frames
+        return cls._frames[style]
 
     def __init__(self, fighter, action="transform", at_least=50):
         """Around fighter while its action is action (and at_least ticks)."""
@@ -131,7 +139,10 @@ class Aura(Effect):
         self.at_least = at_least
         self.fading = 0.0
         self._offset = (0, 0)
-        if not self.frames():
+        self.style = self.CHARACTER_STYLES.get(fighter.character_name, "gold")
+        if not self.frames(self.style):
+            self.style = "gold"
+        if not self.frames(self.style):
             self.done = True
             return
         self.update_effect(())
@@ -149,14 +160,14 @@ class Aura(Effect):
             if self.fading >= self.FADE_TICKS:
                 self.done = True
                 return
-        frames = self.frames()
+        frames = self.frames(self.style)
         frame = frames[self.frame_number() % len(frames)]
         body = drawn_rect(self.fighter)
         # Taller than the fighter, a little wider than tall: flames all round
-        height = max(30, round(body.height * 1.35))
-        width = max(26, round(max(body.width * 1.3, height * 0.85)))
+        height = max(30, round(body.height * self.STYLES[self.style]["height"]))
+        width = max(26, round(max(body.width * 1.3, height * frame.get_width() / frame.get_height() * 0.85)))
         self.image = pygame.transform.scale(frame, (width, height))
-        self.image.set_colorkey(self.BACKGROUND)
+        self.image.set_colorkey(self.STYLES[self.style]["background"])
         if self.fading:
             self.image.set_alpha(round(255 * (1 - self.fading / self.FADE_TICKS)))
         drawn = self.image.get_rect(midbottom=(body.centerx, body.bottom + 3))

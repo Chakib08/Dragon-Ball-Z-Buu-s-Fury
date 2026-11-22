@@ -29,7 +29,7 @@ def _load():
 
 def installed(name):
     """Whether the character's sheets are there (one form is enough)."""
-    for form in ("base", "ssj", "ssj3"):
+    for form in ("base", "ssj", "ssj2", "ssj3"):
         try:
             path = PathManager.character_json_path(name, form)
         except ValueError:

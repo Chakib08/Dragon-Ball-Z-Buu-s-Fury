@@ -53,6 +53,9 @@ class SpriteForm:
         self.attack_moves = data.get("Attack moves", self.DEFAULT_ATTACK_MOVES)
         # Sheets drawn bigger than the others: every frame is shrunk this much
         self.scale = float(data.get("Scale", 1.0))
+        # Colours that are never the character (a sheet whose frames sit in
+        # boxes on another background): made transparent in every frame
+        self.clear = [tuple(colour) for colour in data.get("Clear", [])]
         # The first definition of a name wins, as it did with a list search
         self.frames_by_name = {}
         for frame in self.animations:
@@ -142,6 +145,11 @@ class SpriteForm:
             (0, 0),
             (frame["x"], frame["y"], frame["Area Width"], frame["Area Height"]),
         )
+        if self.clear:
+            pixels = pygame.PixelArray(image)
+            for other in self.clear:
+                pixels.replace(other, colour)
+            del pixels
         image.set_colorkey(colour)
         if self.scale != 1.0:
             # Smoothly, with see-through edges (not a fringe of the
@@ -167,9 +175,10 @@ class Animator:
 
     BASE_FORM = "base"
     SUPER_FORM = "ssj"
+    SUPER_2_FORM = "ssj2"
     SUPER_3_FORM = "ssj3"
     # Super Saiyan levels, weakest first
-    SUPER_FORMS = (SUPER_FORM, SUPER_3_FORM)
+    SUPER_FORMS = (SUPER_FORM, SUPER_2_FORM, SUPER_3_FORM)
 
     def __init__(self, name):
         # Every form uses the same animation names, so switching form only

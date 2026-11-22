@@ -256,12 +256,112 @@ ANDROID_13 = dict(cell=64, rows={"Down": 32, "Left": 32, "Right": 32, "Up": 32},
                               "ki_burst": {"pose": [55, 51, 47], "row": "Down"}})
 CELL_TECHNIQUES = (("energy_blast", [20, 21, 22], 1), ("kamehameha", [21, 22, 23], 2))
 
+# ---- Third batch: Legacy of Goku 2 / Buu's Fury fighters, Goku Black ---------------
+# Small LoG2 sheets: idle, walk 2-5, punches and kicks from 6, then hurt,
+# guard, a pose for blasts, knocked out lying (no run: they walk faster)
+KRILLIN = dict(run=NO_RUN, attack=[6, 7, 7, 8, 8, 9, 9, 10, 11, 11, 12, 12], hurt=[13, 14], block=16,
+               special=[11, 12, 12], faint=[21, 22, 23, 24],
+               techniques=techniques(("energy_blast", [11, 12, 12], 1), ("kamehameha", [11, 11, 12, 12], 2),
+                                     ("destructo_disc", [18, 20, 20], 2)))
+TIEN = dict(run=NO_RUN, attack=[6, 7, 7, 8, 8, 9, 10, 11, 11, 12, 12, 13], hurt=[17, 18], block=14,
+            special=[15, 16, 16], faint=[25, 26, 27, 28],
+            techniques=techniques(("energy_blast", [15, 16, 16], 1), ("dodon_ray", [15, 15, 16], 2),
+                                  ("tri_beam", [16, 16, 16, 16], 2)))
+YAMCHA = dict(run=NO_RUN, attack=[6, 7, 7, 8, 8, 9, 10, 11, 11, 12, 12, 13], hurt=[18, 19], block=17,
+              special=[15, 16, 16], faint=[25, 26, 27, 28],
+              techniques=techniques(("energy_blast", [15, 16, 16], 1), ("spirit_ball", [15, 16, 16], 2),
+                                    ("wolf_fang_fist", [7, 8, 9, 10, 11, 12], None)))
+# Cell Jr: idle, walk and four strikes only
+CELL_JR = dict(run=NO_RUN, attack=[6, 7, 7, 8, 8, 9, 9, 6, 7, 7, 8, 9], hurt=[0, 1], block=0,
+               special=[6, 7, 7], techniques=techniques(("energy_blast", [6, 7, 7], 1),
+                                                        ("kamehameha", [6, 6, 7, 7], 2)))
+# Frieza (final form) and Cooler (final form, a big 64 px sheet): the
+# Death Beam from a fingertip (column 11 / 12), a ball held up (19)
+FRIEZA = dict(run=NO_RUN, attack=[6, 7, 7, 8, 8, 9, 10, 12, 12, 15, 16, 17], hurt=[21, 22], block=23,
+              special=[18, 20, 20],
+              techniques=techniques(("energy_blast", [18, 20, 20], 1), ("death_beam", [11, 11, 11], 1),
+                                    ("death_ball", [19, 19, 19, 20], 3)))
+COOLER = dict(run=NO_RUN, attack=[6, 7, 7, 8, 8, 9, 10, 11, 12, 14, 15, 16], hurt=[21, 22], block=23,
+              special=[18, 20, 20],
+              techniques=techniques(("energy_blast", [18, 20, 20], 1), ("death_beam", [12, 12, 12], 1),
+                                    ("supernova", [19, 19, 19, 20], 3)))
+# Goku at the end of Z (Buu's Fury): an arm raised for the Spirit Bomb (18)
+GOKU_END_OF_Z = dict(run=NO_RUN, attack=[6, 7, 7, 8, 8, 9, 10, 11, 11, 12, 12, 13], hurt=[15, 16], block=14,
+                     special=[6, 7, 7], faint=[20, 21, 22, 23],
+                     techniques=techniques(("energy_blast", [6, 7, 7], 1), ("kamehameha", [6, 6, 7, 7], 2),
+                                           ("spirit_bomb", [18, 18, 18, 18], 3)))
+# Big LoG2 sheets: run 6-9, twelve strikes from 10, then their own moves;
+# their transformation is in the front row
+LOG2_STRIKES = list(range(10, 22))
+GOHAN_TEEN = dict(run=[6, 7, 8, 9], attack=LOG2_STRIKES, hurt=[35, 36], block=37, special=[28, 29, 30],
+                  faint=[42, 43, 44, 45],
+                  techniques=techniques(("energy_blast", [28, 29, 30], 1), ("kamehameha", [28, 28, 32, 33], 2),
+                                        ("masenko", [39, 41, 30], 2)))
+GOHAN_ULTIMATE = dict(run=[6, 7, 8, 9], attack=[10, 11, 11, 12, 12, 13, 14, 15, 15, 16, 16, 17], hurt=[28, 29],
+                      block=30, special=[24, 25, 26], faint=[36, 37, 38, 39],
+                      techniques=techniques(("energy_blast", [24, 25, 26], 1),
+                                            ("kamehameha", [24, 24, 25, 26], 2), ("masenko", [31, 31, 26], 2)))
+GOKU_LOG2 = dict(run=[6, 7, 8, 9], attack=LOG2_STRIKES, hurt=[39, 40], block=41, special=[35, 36, 37],
+                 faint=[46, 47, 48, 49],
+                 techniques={**techniques(("energy_blast", [35, 36, 37], 1), ("kamehameha", [28, 28, 29, 30], 2),
+                                          ("spirit_bomb", [34, 34, 34, 34], 3)),
+                             "instant_transmission": {"vanish": [23, 23, 23]}})
+TRUNKS_FUTURE = dict(run=[6, 7, 8, 9], attack=LOG2_STRIKES, hurt=[36, 37], block=38, special=[29, 30, 31],
+                     faint=[44, 45, 46, 47],
+                     techniques=techniques(("energy_blast", [29, 30, 31], 1), ("burning_attack", [30, 31, 31], 1),
+                                           ("sword_slash", [23, 24, 27, 33, 34, 35], None)))
+VEGETA_LOG2 = dict(run=[6, 7, 8, 9], attack=LOG2_STRIKES, hurt=[35, 36], block=37, special=[28, 29, 29],
+                   faint=[43, 44, 45, 46],
+                   techniques=techniques(("energy_blast", [28, 29, 29], 1), ("big_bang", [27, 28, 29], 2),
+                                         ("final_flash", [30, 31, 32, 33], 2)))
+# Goku Black: no grid, each frame in a box of its own (detect_cells), rows
+# front / right / left / back and one of his moves ("Extra": Kamehameha,
+# Instant Transmission); Super Saiyan Rosé below, laid out the same
+GOKU_BLACK_SHEET = "Graphics/assets/goku_black/sheet.png"
+_BLACK_STRIKES = [6, 7, 7, 8, 8, 9, 10, 11, 11, 12, 13, 14]
+
+
+def goku_black(top):
+    """One form of Goku Black, its rows from y=top on his sheet."""
+    bands = {"Down": (top, top + 33), "Right": (top + 34, top + 67), "Up": (top + 118, top + 151),
+             "Extra": (top + 157, top + 190)}
+    return dict(sheet=GOKU_BLACK_SHEET, cells={"bands": bands, "background": (0, 128, 128),
+                                               "cell_background": (0, 64, 64)},
+                clear=[(0, 128, 128), (0, 64, 64), (0, 80, 80)],
+                walk=[1, 2, 3, 4], run=[1, 2, 3, 4], attack=_BLACK_STRIKES,
+                hurt={"Down": [15, 16], "Right": [15, 16], "Up": [15, 15]},
+                block={"Down": 17, "Right": 14, "Up": 16}, special=[6, 7, 7],
+                techniques={**techniques(("energy_blast", [1, 4, 4], 1, "Extra"),
+                                         ("black_kamehameha", [2, 3, 5, 6], 2, "Extra"),
+                                         ("rose_sphere", [2, 3, 5, 6], 2, "Extra")),
+                            "instant_transmission": {"vanish": [7, 8, 8], "row": "Extra"}})
+
 NEW_SHEETS = [
     {"character": "piccolo", "form": "base", "transform": [56, 57, 57, 58, 59], **PICCOLO},
     {"character": "piccolo", "form": "ssj", **PICCOLO},
     {"character": "android17", "form": "base", **ANDROID},
     {"character": "android18", "form": "base", **ANDROID},
     {"character": "android13", "form": "base", **ANDROID_13},
+    {"character": "krillin", "form": "base", **KRILLIN},
+    {"character": "tien", "form": "base", **TIEN},
+    {"character": "yamcha", "form": "base", **YAMCHA},
+    {"character": "cell_jr", "form": "base", **CELL_JR},
+    {"character": "frieza", "form": "base", **FRIEZA},
+    # Drawn on 64 px cells at twice the others' size: shown a little bigger than Frieza
+    {"character": "cooler", "form": "base", **BIG, **COOLER, "scale": 0.7},
+    {"character": "goku_end_of_z", "form": "base", **GOKU_END_OF_Z},
+    {"character": "gohan_teen", "form": "base", "transform": [57, 58, 59, 60], **GOHAN_TEEN},
+    {"character": "gohan_teen", "form": "ssj", "transform": [56, 57, 58, 59], **GOHAN_TEEN},
+    {"character": "gohan_teen", "form": "ssj2", **{**GOHAN_TEEN, "faint": [43, 44, 45, 45]}},
+    {"character": "gohan_ultimate", "form": "base", **GOHAN_ULTIMATE},
+    {"character": "goku_log2", "form": "base", "transform": [60, 61, 62, 63], **GOKU_LOG2},
+    {"character": "goku_log2", "form": "ssj", **GOKU_LOG2},
+    {"character": "trunks_future", "form": "base", "transform": [58, 59, 60, 61], **TRUNKS_FUTURE},
+    {"character": "trunks_future", "form": "ssj", **TRUNKS_FUTURE},
+    {"character": "vegeta_log2", "form": "base", "transform": [57, 58, 59, 60], **VEGETA_LOG2},
+    {"character": "vegeta_log2", "form": "ssj", **VEGETA_LOG2},
+    {"character": "goku_black", "form": "base", **goku_black(4)},
+    {"character": "goku_black", "form": "ssj", **goku_black(204)},
     {"character": "android16", "form": "base", **ANDROID_16},
     {"character": "android19", "form": "base", **GERO_ANDROID},
     {"character": "android20", "form": "base", **GERO_ANDROID},
@@ -505,6 +605,72 @@ NEW_CHARACTER_SPECIALS = {
                 "rage": ("Steam Rage", "burst", {"rings": WHITE_RINGS})},
 }
 NEW_CHARACTER_SPECIALS["android20"] = NEW_CHARACTER_SPECIALS["android19"]
+
+# Goku Black's effects sheet (one background colour): a pink ki blast, the
+# black and pink Kamehameha, a pink ki sphere; drawn at about twice the
+# game's size ("scale")
+GOKU_BLACK_FX = f"{EFFECTS}/goku_black_fx.png"
+BLACK_BLUE = (87, 137, 170)
+PINK_SPARK = [[651, 601, 13, 14], [672, 605, 6, 6]]
+GOKU_BLACK_EFFECTS = {
+    "energy_blast": {"projectile": [[414, 300, 82, 21]], "hit": PINK_SPARK, "scale": 0.45},
+    "black_kamehameha": {"beam": {"start": [190, 448, 68, 62], "bodies": [[261, 463, 31, 32], [295, 464, 36, 30]],
+                                  "head": [[333, 455, 65, 48], [401, 456, 60, 46]], "tile": True},
+                         "scale": 0.5},
+    "rose_sphere": {"grow": PINK_SPARK[::-1], "projectile": [[535, 564, 88, 89]],
+                    "hit": [[377, 553, 112, 111], [92, 553, 112, 111]], "scale": 0.35},
+}
+FIRE_BALL = {"grow": [[8, 8, 16, 16], [24, 8, 16, 16]], "projectile": [[40, 8, 16, 16]], "hit": FIRE_EXPLOSION}
+NEW_CHARACTER_SPECIALS.update({
+    "krillin": {"energy_blast": ENERGY_BLAST,
+                "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam")),
+                "destructo_disc": ("Destructo Disc", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
+                                                             "hit": YELLOW_BLAST})},
+    "tien": {"energy_blast": ENERGY_BLAST,
+             "dodon_ray": ("Dodon Ray", "projectile", {"projectile": YELLOW_BALL[-1:], "hit": YELLOW_BLAST}),
+             "tri_beam": ("Tri-Beam", "beam", ("borrow", "final_flash"), SIGNATURE)},
+    "yamcha": {"energy_blast": ENERGY_BLAST,
+               "spirit_ball": ("Spirit Ball", "ball", {"grow": YELLOW_BALL, "projectile": YELLOW_BALL[-1:],
+                                                      "hit": YELLOW_BLAST}),
+               "wolf_fang_fist": ("Wolf Fang Fist", "burst", {"rings": CROSS_SLASH})},
+    "cell_jr": {"energy_blast": ENERGY_BLAST,
+                "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"))},
+    "frieza": {"energy_blast": ("Energy Blast", "projectile", {"projectile": PURPLE_SPARK, "hit": STAR_EXPLOSION}),
+               "death_beam": ("Death Beam", "projectile", {"projectile": PURPLE_SPARK, "hit": PURPLE_SPARK}),
+               "death_ball": ("Death Ball", "ball", FIRE_BALL, SIGNATURE)},
+    "cooler": {"energy_blast": ("Energy Blast", "projectile", {"projectile": PURPLE_SPARK, "hit": STAR_EXPLOSION}),
+               "death_beam": ("Death Beam", "projectile", {"projectile": PURPLE_SPARK, "hit": PURPLE_SPARK}),
+               "supernova": ("Supernova", "ball", FIRE_BALL, SIGNATURE)},
+    "goku_end_of_z": {"energy_blast": ENERGY_BLAST,
+                      "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+                      "spirit_bomb": ("Spirit Bomb", "ball", ("borrow", "big_bang"), SIGNATURE)},
+    "gohan_teen": {"energy_blast": ("Energy Blast", "projectile", ("borrow", "gohan_blast")),
+                   "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+                   "masenko": ("Masenko", "beam", ("borrow", "final_flash"))},
+    "gohan_ultimate": {"energy_blast": ("Energy Blast", "projectile", ("borrow", "gohan_blast")),
+                       "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+                       "masenko": ("Masenko", "beam", ("borrow", "final_flash"))},
+    "goku_log2": {"energy_blast": ENERGY_BLAST,
+                  "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
+                  "spirit_bomb": ("Spirit Bomb", "ball", ("borrow", "big_bang"), SIGNATURE),
+                  "instant_transmission": ("Instant Transmission", "teleport", {})},
+    "trunks_future": {"energy_blast": ENERGY_BLAST,
+                      "burning_attack": ("Burning Attack", "ball", {"grow": YELLOW_BALL,
+                                                                   "projectile": YELLOW_BALL[-1:],
+                                                                   "hit": YELLOW_BLAST}),
+                      "sword_slash": ("Sword Slash", "burst", {"rings": CROSS_SLASH})},
+    "vegeta_log2": {"energy_blast": ENERGY_BLAST,
+                    "big_bang": ("Big Bang Attack", "ball", ("borrow", "big_bang"), SIGNATURE),
+                    "final_flash": ("Final Flash", "beam", ("borrow", "final_flash"), SIGNATURE)},
+    "goku_black": {
+        "energy_blast": ("Energy Blast", "projectile",
+                         ("sheet", GOKU_BLACK_FX, BLACK_BLUE, GOKU_BLACK_EFFECTS["energy_blast"])),
+        "black_kamehameha": ("Black Kamehameha", "beam",
+                             ("sheet", GOKU_BLACK_FX, BLACK_BLUE, GOKU_BLACK_EFFECTS["black_kamehameha"]), SIGNATURE),
+        "rose_sphere": ("Rosé Ki Sphere", "ball",
+                        ("sheet", GOKU_BLACK_FX, BLACK_BLUE, GOKU_BLACK_EFFECTS["rose_sphere"])),
+        "instant_transmission": ("Instant Transmission", "teleport", {})},
+})
 for _buu in ("super_buu", "super_buu_gotenks", "super_buu_gohan"):
     NEW_CHARACTER_SPECIALS[_buu] = {
         "energy_blast": ("Energy Blast", "projectile", {"projectile": FIREBALL, "hit": FIRE_EXPLOSION}),
@@ -588,8 +754,61 @@ def sheet_path(character, form):
     return f"Graphics/assets/{character}/{form}.png"
 
 
+def _inside(image, box, colour, background):
+    """box tightened to where colour is (a frame's own box on a sheet; a
+    box of another shade: its own most common colour but the sheet's)."""
+    x, y, width, height = box
+    pixels = [(i, j, tuple(image.get_at((x + i, y + j)))[:3]) for j in range(height) for i in range(width)]
+    if not any(c == colour for _, _, c in pixels):
+        others = [c for _, _, c in pixels if c != background]
+        if not others:
+            return box
+        colour = max(set(others), key=others.count)
+    points = [(i, j) for i, j, c in pixels if c == colour]
+    if not points:
+        return box
+    left, top = min(i for i, _ in points), min(j for _, j in points)
+    right, bottom = max(i for i, _ in points), max(j for _, j in points)
+    return [x + left, y + top, right - left + 1, bottom - top + 1]
+
+
+def detect_cells(image, bands, background, cell_background=None):
+    """{row: [[x, y, width, height]]}: the frames of a sheet that is no grid
+    (each frame in a box of its own, of cell_background, on the
+    background), row by row from the bands of rows they are in ({row: (top,
+    bottom)}). Two touching boxes, too wide for one frame, are split in
+    halves."""
+    background = tuple(background)[:3]
+    width = image.get_width()
+    cells = {}
+    for row, (top, bottom) in bands.items():
+        filled = [any(tuple(image.get_at((x, y)))[:3] != background for y in range(top, bottom))
+                  for x in range(width)]
+        boxes = []
+        x = 0
+        while x < width:
+            if not filled[x]:
+                x += 1
+                continue
+            start = x
+            while x < width and filled[x]:
+                x += 1
+            ys = [y for y in range(top, bottom) for column in range(start, x)
+                  if tuple(image.get_at((column, y)))[:3] != background]
+            box = [start, min(ys), x - start, max(ys) - min(ys) + 1]
+            if box[2] > 40:
+                half = box[2] // 2
+                boxes += [[box[0], box[1], half, box[3]], [box[0] + half, box[1], box[2] - half, box[3]]]
+            else:
+                boxes.append(box)
+        if cell_background is not None:
+            boxes = [_inside(image, box, tuple(cell_background), background) for box in boxes]
+        cells[row] = boxes
+    return cells
+
+
 class Sheet:
-    def __init__(self, path, cell, rows, grid=None):
+    def __init__(self, path, cell, rows, grid=None, cells=None):
         self.image = pygame.image.load(os.path.join(ROOT, path))
         self.path = path
         self.cell = cell
@@ -597,15 +816,30 @@ class Sheet:
         # A sheet of numbered cells instead of one row per direction: cell
         # n is column n % grid of row n // grid (from the direction's row)
         self.grid = grid
+        # A sheet that is no grid at all: {row: [boxes]}, column n of a row
+        # is its n-th box (see detect_cells)
+        self.cells = detect_cells(self.image, cells["bands"], cells["background"],
+                                  cells.get("cell_background")) if cells else None
+
+    def box(self, column, row):
+        """[x, y, width, height] of a frame of a sheet that is no grid."""
+        return list(self.cells[row][column])
 
     def origin(self, column, row):
         """Top left corner of a cell."""
+        if self.cells:
+            return tuple(self.cells[row][column][:2])
         if self.grid:
             return (column % self.grid) * self.cell, self.rows[row] + (column // self.grid) * self.cell
         return column * self.cell, self.rows[row]
 
     def background(self, column, row):
         """The cell's own colour (the cells alternate two shades)."""
+        if self.cells:
+            x, y, width, height = self.cells[row][column]
+            corners = [tuple(self.image.get_at((x + dx, y + dy)))[:3] for dx in (0, width - 1)
+                       for dy in (0, height - 1)]
+            return max(set(corners), key=corners.count)
         (x, y), size = self.origin(column, row), self.cell
         corners = [tuple(self.image.get_at((x + dx, y + dy)))[:3] for dx in (0, size - 1) for dy in (0, size - 1)]
         return max(set(corners), key=corners.count)
@@ -688,8 +922,9 @@ def technique_cells(technique):
 
 
 def build_form(spec):
-    sheet = Sheet(sheet_path(spec["character"], spec["form"]), spec.get("cell", CELL), spec.get("rows", ROWS),
-                  spec.get("grid"))
+    sheet = Sheet(spec.get("sheet") or sheet_path(spec["character"], spec["form"]), spec.get("cell", CELL),
+                  spec.get("rows", ROWS),
+                  spec.get("grid"), spec.get("cells"))
     # Sheets drawing the side frames facing left: the game's "Right" frames
     # are those, mirrored
     flip_right = spec.get("flip_right", False)
@@ -700,13 +935,17 @@ def build_form(spec):
             cells |= set(pose_cells)
     # One crop for the whole sheet, so every frame lines up (feet on the
     # same row) and nothing jumps from one frame to the next
-    bounds = [b for b in (sheet.bounds(c, row) for c, row in cells) if b]
-    top = min(b[0] for b in bounds)
-    bottom = max(b[1] for b in bounds)
+    if sheet.cells:
+        # Frames in boxes of their own: each box as it is
+        box = sheet.box
+    else:
+        bounds = [b for b in (sheet.bounds(c, row) for c, row in cells) if b]
+        top = min(b[0] for b in bounds)
+        bottom = max(b[1] for b in bounds)
 
-    def box(column, row):
-        x, y = sheet.origin(column, row)
-        return [x, y + top, sheet.cell, bottom - top + 1]
+        def box(column, row):
+            x, y = sheet.origin(column, row)
+            return [x, y + top, sheet.cell, bottom - top + 1]
 
     animations = [frame(name, box(c, row), sheet.background(c, row),
                         {"Flip": True} if flip_right and row == "Right" else None) for name, c, row in frames]
@@ -717,6 +956,8 @@ def build_form(spec):
     config = {"Character": spec["character"], "Image path": sheet.path, "Animations": animations}
     if "scale" in spec:
         config["Scale"] = spec["scale"]
+    if "clear" in spec:
+        config["Clear"] = [list(colour) for colour in spec["clear"]]
     path = os.path.join(ROOT, "Config", "characters", spec["character"], f"{spec['form']}.json")
     with open(path, "w") as file:
         json.dump(config, file, indent=2)

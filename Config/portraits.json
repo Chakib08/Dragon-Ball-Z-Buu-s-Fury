@@ -2,7 +2,9 @@
   "sheets": {
     "bf": {"path": "Graphics/assets/portraits/bf.png", "size": 64, "transparent_corners": true},
     "log2": {"path": "Graphics/assets/portraits/log2.png", "size": 64},
-    "android13": {"path": "Graphics/assets/android13/base.png", "size": 32, "scale": 2}
+    "android13": {"path": "Graphics/assets/android13/base.png", "size": 32, "scale": 2},
+    "cell_jr": {"path": "Graphics/assets/cell_jr/base.png", "size": 20, "scale": 3.2},
+    "goku_black": {"path": "Graphics/assets/goku_black/sheet.png", "size": 64}
   },
   "characters": {
     "goku": ["bf", 33, 54],
@@ -22,6 +24,19 @@
     "android19": ["log2", 256, 255],
     "android20": ["log2", 320, 255],
     "android13": ["android13", 16, 34],
+    "goku_log2": ["log2", 0, 63],
+    "goku_end_of_z": ["bf", 33, 54],
+    "vegeta_log2": ["log2", 256, 63],
+    "gohan_teen": ["log2", 0, 127],
+    "gohan_ultimate": ["log2", 128, 127],
+    "trunks_future": ["log2", 384, 127],
+    "krillin": ["log2", 0, 447],
+    "tien": ["log2", 64, 447],
+    "yamcha": ["log2", 192, 447],
+    "frieza": ["log2", 192, 319],
+    "cooler": ["log2", 320, 319],
+    "cell_jr": ["cell_jr", 6, 34],
+    "goku_black": ["goku_black", 481, 96],
     "cell_imperfect": ["log2", 0, 319],
     "cell_semi_perfect": ["log2", 64, 319],
     "cell_perfect": ["log2", 128, 319],
