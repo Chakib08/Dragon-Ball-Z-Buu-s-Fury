@@ -370,10 +370,12 @@ class LookTests(unittest.TestCase):
         self.assertGreater(super_.effect_scale, normal.effect_scale)
         self.assertGreater(super_.stats["range"], normal.stats["range"])
 
-    def test_android_13_is_drawn_smaller_than_his_sheet(self):
-        # His sheet is drawn at twice the others' size
-        android = Saiyan(200, 200, False, "android13")
-        self.assertLess(android.animator.image_by_name("IDLE Down").get_height(), 56)
+    def test_android_13_and_cooler_are_drawn_at_their_sheets_size(self):
+        # Big, as their sheets draw them (not shrunk)
+        for name in ("android13", "cooler"):
+            with self.subTest(character=name):
+                fighter = Saiyan(200, 200, False, name)
+                self.assertGreater(fighter.animator.image_by_name("IDLE Down").get_height(), 50)
 
     def test_vegito_keeps_his_feet_in_place_swinging_his_sword(self):
         vegito = Saiyan(200, 200, False, "vegito")

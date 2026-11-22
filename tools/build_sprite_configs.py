@@ -238,11 +238,9 @@ GERO_ANDROID = dict(run=NO_RUN, attack=LOG2_ATTACK[:-1] + [17], hurt=[21, 22], b
 # Punches to the side (drawn facing left), uppercuts and swings facing front
 _A13_SIDE_ATTACK = [22, 23, 23, 36, 29, 29, 53, 49, 49, 90, 91, 92]
 _A13_FRONT_ATTACK = [24, 25, 26, 33, 34, 35, 28, 30, 31, 14, 18, 19]
-# Drawn at twice the others' size: shown at three quarters (as tall as
-# Cell or Majin Buu). Hurt: shaking, sparks at his feet; knocked out: he
-# breaks apart (his destruction frames)
+# Shown as big as his sheet draws him. Hurt: shaking, sparks at his feet;
+# knocked out: he breaks apart (his destruction frames)
 ANDROID_13 = dict(cell=64, rows={"Down": 32, "Left": 32, "Right": 32, "Up": 32}, grid=10, flip_right=True,
-                  scale=0.75,
                   idle={"Down": 0, "Right": 12, "Up": 10},
                   walk={"Down": [3, 4, 5, 6], "Right": [12, 13, 12, 13], "Up": [10, 11, 10, 60]},
                   run={"Down": [3, 4, 5, 6], "Right": [63, 64, 63, 64], "Up": [10, 11, 10, 60]},
@@ -347,8 +345,7 @@ NEW_SHEETS = [
     {"character": "yamcha", "form": "base", **YAMCHA},
     {"character": "cell_jr", "form": "base", **CELL_JR},
     {"character": "frieza", "form": "base", **FRIEZA},
-    # Drawn on 64 px cells at twice the others' size: shown a little bigger than Frieza
-    {"character": "cooler", "form": "base", **BIG, **COOLER, "scale": 0.7},
+    {"character": "cooler", "form": "base", **BIG, **COOLER},
     {"character": "goku_end_of_z", "form": "base", **GOKU_END_OF_Z},
     {"character": "gohan_teen", "form": "base", "transform": [57, 58, 59, 60], **GOHAN_TEEN},
     {"character": "gohan_teen", "form": "ssj", "transform": [56, 57, 58, 59], **GOHAN_TEEN},
