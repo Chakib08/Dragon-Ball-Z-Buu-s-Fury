@@ -114,7 +114,7 @@
       "hero": "goku",
       "allies": [
         "vegeta_log2",
-        "trunks_future",
+        "trunks",
         "piccolo",
         "tien",
         "yamcha",
@@ -146,7 +146,7 @@
       "form": "ssj",
       "ally_forms": {
         "vegeta_log2": "ssj",
-        "trunks_future": "ssj"
+        "trunks": "ssj"
       }
     },
     {
