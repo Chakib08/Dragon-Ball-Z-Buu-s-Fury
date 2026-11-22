@@ -14,7 +14,7 @@ import pygame
 
 import epic
 import sfx
-from epic_screens import EpicIntro, WaveBanner
+from epic_screens import AllClearedScreen, EpicIntro, WaveBanner
 from menu import State
 from result_screen import ResultScreen
 
@@ -86,19 +86,22 @@ class StoryScene(Scene):
         super().__init__(game)
         # The ResultScreen once the fight is over
         self.result = None
-        # An Epic Fight's versus card (before it starts) and wave banner
+        # An Epic Fight's versus card (before it starts) and wave banner;
+        # the victory animation once every Epic Fight is won
         self.intro = None
         self.banner = None
+        self.celebration = None
 
     def begin(self, fight=None):
         """A fight starts: an Epic Fight shows its versus card first."""
         self.result = None
         self.banner = None
+        self.celebration = None
         self.intro = EpicIntro(self.game.resolution, fight) if fight is not None else None
 
     def gamepad_presses(self):
         pressed = self.game.gamepad.pressed
-        waiting = self.result is not None or self.intro is not None
+        waiting = self.result is not None or self.intro is not None or self.celebration is not None
         return (RESULT_KEYS if waiting else FIGHT_KEYS), pressed
 
     def escape_opens_prompt(self):
@@ -132,8 +135,13 @@ class StoryScene(Scene):
                 fight = getattr(game.menu, "epic", None)
                 following = None
                 if fight is not None and outcome == "victory":
+                    before = epic.cleared()
                     epic.mark_cleared(fight)
                     following = epic.next_fight(fight)
+                    everything = {f.id for f in epic.fights()}
+                    if not everything <= before and everything <= epic.cleared():
+                        # The last one: every Epic Fight is won
+                        self.celebration = AllClearedScreen(game.resolution)
                 self.result = ResultScreen(game.resolution, victory=outcome == "victory",
                                            next_label="Next fight" if following is not None else None)
                 self.result.following = following
@@ -141,6 +149,12 @@ class StoryScene(Scene):
             return
         # The fight is over: the world stays frozen behind the choice
         game.play_frame([], True)
+        if self.celebration is not None:
+            self.celebration.draw(game.screen)
+            if not paused and self.celebration.process(events):
+                self.celebration = None
+                game.release_input()
+            return
         choice = None if paused else self.result.process(events)
         self.result.draw(game.screen)
         if choice == "retry":
@@ -156,6 +170,8 @@ class StoryScene(Scene):
             self.result.resize(size)
         if self.intro is not None:
             self.intro.resize(size)
+        if self.celebration is not None:
+            self.celebration.resize(size)
 
 
 class LobbyScene(Scene):

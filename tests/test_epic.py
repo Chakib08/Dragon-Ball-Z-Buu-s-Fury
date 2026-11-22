@@ -62,7 +62,7 @@ class FightListTests(EpicCase):
         juniors = epic.by_id("cell_juniors")
         self.assertEqual(juniors.waves, [["cell_jr"] * 7])
         self.assertEqual((juniors.hero, juniors.form), ("goku", "ssj"))
-        self.assertEqual(juniors.allies, ["vegeta_log2", "trunks_future", "piccolo", "tien", "yamcha", "krillin"])
+        self.assertEqual(juniors.allies, ["vegeta_log2", "trunks", "piccolo", "tien", "yamcha", "krillin"])
         self.assertEqual(epic.by_id("goku_black").boss, "goku_black")
 
     def test_sides(self):
@@ -163,15 +163,15 @@ class EpicGameTests(EpicCase):
         boss = self.enemies(game)[0]
         self.assertEqual(boss.character_name, "goku_black")
         self.assertEqual(boss.form, "ssj")
-        self.assertEqual(sorted(npc.character_name for npc in game.map_manager.get_map().npcs
-                                if npc.team == HEROES), ["vegeta"])
+        allies = {npc.character_name: npc.form for npc in game.map_manager.get_map().npcs if npc.team == HEROES}
+        self.assertEqual(allies, {"vegeta": "base", "vegito": "ssjb"})  # Vegito Blue
 
     def test_seven_against_seven(self):
         game = self.game("cell_juniors")
         npcs = game.map_manager.get_map().npcs
         self.assertEqual((game.character.character_name, game.character.form), ("goku", "ssj"))
         allies = {npc.character_name: npc.form for npc in npcs if npc.team == HEROES}
-        self.assertEqual(allies, {"vegeta_log2": "ssj", "trunks_future": "ssj", "piccolo": "base",
+        self.assertEqual(allies, {"vegeta_log2": "ssj", "trunks": "ssj", "piccolo": "base",
                                   "tien": "base", "yamcha": "base", "krillin": "base"})
         self.assertEqual([npc.character_name for npc in self.enemies(game)], ["cell_jr"] * 7)
         # Nobody stands in someone else
@@ -245,6 +245,38 @@ class EpicGameTests(EpicCase):
         self.assertEqual(game.character.character_name, game.menu.epic.hero)
         self.assertIsNotNone(story.intro)
 
+    def test_winning_the_last_fight_shows_the_victory_animation(self):
+        from epic_screens import VictoryAnimation
+        if not VictoryAnimation.frames():
+            self.skipTest("Graphics/victory_frames.png missing")
+        for fight in epic.fights()[:-1]:
+            epic.mark_cleared(fight)
+        last = epic.fights()[-1]
+        game = self.game(last.id)
+        story = game.scenes["story"]
+        story.intro = None
+        self.beat(self.enemies(game))
+        game.loop_once([])
+        self.assertIsNotNone(story.celebration)
+        self.assertEqual(len(VictoryAnimation.frames()), 24)
+        self.assertIsNotNone(story.celebration.animation.frame(400))
+        # A key goes on to the result
+        story.celebration.shown_at -= 10_000
+        game.loop_once([key(pygame.K_RETURN)])
+        self.assertIsNone(story.celebration)
+        self.assertTrue(story.result.victory)
+        # Winning it again: no second celebration
+        game.loop_once([key(pygame.K_RETURN)])
+        story.intro = None
+        self.beat(self.enemies(game))
+        game.loop_once([])
+        self.assertIsNone(story.celebration)
+        # The Epic Fights list shows it by its title
+        menu = Menu((1200, 540))
+        menu.state = State.EPIC_SELECT
+        menu.launch_menu(pygame.Surface((1200, 540)), (1200, 540), [])
+        self.assertIsNotNone(menu.victory_animation)
+
     def test_losing_offers_a_retry_of_the_same_fight(self):
         game = self.game("namek")
         story = game.scenes["story"]
@@ -277,7 +309,7 @@ class EpicOnlineTests(EpicCase):
                                                              "opponent": {"character": "broly"}})
         self.assertEqual(host.player.character_name, "trunks_future")
         self.assertEqual(host.player.form, "ssj")
-        self.assertEqual([a.character_name for a in host.allies], ["vegeta"])
+        self.assertEqual([a.character_name for a in host.allies], ["vegeta", "vegito"])
         self.assertEqual(host.opponent.character_name, "goku_black")
         self.assertEqual(host.arena, "capsule_corp")
         guest = online.OnlineMatch(fake_game("vegeta"), net_b, {"slot": 1, "mode": "team", "epic": "goku_black",
@@ -285,7 +317,7 @@ class EpicOnlineTests(EpicCase):
         self.assertEqual(guest.player.character_name, "goku_black")
         self.assertEqual(guest.player.form, "ssj")  # Rosé
         self.assertEqual(guest.opponent.character_name, "trunks_future")
-        self.assertEqual([o.character_name for o in guest.opponents], ["trunks_future", "vegeta"])
+        self.assertEqual([o.character_name for o in guest.opponents], ["trunks_future", "vegeta", "vegito"])
 
     def test_an_unknown_fight_is_a_normal_match(self):
         import online

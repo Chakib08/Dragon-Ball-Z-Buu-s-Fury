@@ -19,6 +19,7 @@ import settings as user_settings
 import roster
 import arenas
 import epic
+from epic_screens import VictoryAnimation
 
 GAME_TITLE = "DRAGON BALL Z"
 GAME_SUBTITLE = "TRUNKS HOPE"
@@ -100,6 +101,7 @@ class Menu:
         self.epic_focus = 0
         self.epic_rows = {}
         self.epic_buttons = {}
+        self.victory_animation = None
         # Every character whose sheets are installed (Config/roster.json)
         self.character_names = roster.characters()
         self.selected_character = "goku"
@@ -994,7 +996,15 @@ class Menu:
         shade.fill((0, 0, 0, 120))
         screen.blit(shade, (0, 0))
         title = self.character_title_font.render("Epic Fights", True, (255, 230, 120))
-        screen.blit(title, title.get_rect(midtop=(width / 2, 12)))
+        title_rect = title.get_rect(midtop=(width / 2, 12))
+        screen.blit(title, title_rect)
+        if fights and {fight.id for fight in fights} <= done:
+            # Every fight won: the victory animation by the title
+            if self.victory_animation is None:
+                self.victory_animation = VictoryAnimation()
+            picture = self.victory_animation.frame(max(60, title_rect.height * 498 // 286))
+            if picture is not None:
+                screen.blit(picture, picture.get_rect(midleft=(title_rect.right + 14, title_rect.centery)))
         top = 18 + title.get_height()
         buttons_height = max(48, int(height * 0.09))
         bottom = height - buttons_height - 24
@@ -1030,6 +1040,10 @@ class Menu:
             name = self.character_font.render(fight.title, True, (255, 230, 120) if focused else (240, 240, 245))
             screen.blit(name, (x + 6, rect.top + 6))
             under = self.difficulty_font.render(fight.subtitle, True, (200, 205, 220))
+            # Cut short before the Completed badge
+            room = rect.right - (x + 6) - (self.button_font.size("Completed")[0] + 66 if fight.id in done else 10)
+            if under.get_width() > room > 0:
+                under = under.subsurface((0, 0, room, under.get_height()))
             screen.blit(under, (x + 6, rect.bottom - under.get_height() - 6))
             if fight.id in done:
                 # Won before (saved with the settings): a green badge on the right

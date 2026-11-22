@@ -149,3 +149,99 @@ class WaveBanner:
         center = (self.screen_size[0] // 2, int(self.screen_size[1] * 0.3))
         screen.blit(shadow, shadow.get_rect(center=(center[0] + 3, center[1] + 3)))
         screen.blit(label, label.get_rect(center=center))
+
+
+class VictoryAnimation:
+    """Graphics/victory.gif, played: its frames are a grid in
+    Graphics/victory_frames.png (tools/gif_to_frames.py: pygame only loads
+    a GIF's first frame)."""
+
+    PATH = "Graphics/victory_frames.png"
+    FRAME_SIZE = (498, 286)
+    COLUMNS = 6
+    COUNT = 24
+    FRAME_MS = 50
+    _frames = None
+
+    @classmethod
+    def frames(cls):
+        """Its frames, or [] when the picture is missing."""
+        if cls._frames is None:
+            import os
+            from utils.config import Config
+            try:
+                sheet = pygame.image.load(os.path.join(Config.ROOT_DIR, cls.PATH))
+            except (pygame.error, FileNotFoundError, OSError):
+                cls._frames = []
+                return cls._frames
+            width, height = cls.FRAME_SIZE
+            cls._frames = [sheet.subsurface(((index % cls.COLUMNS) * width, (index // cls.COLUMNS) * height,
+                                              width, height)).copy() for index in range(cls.COUNT)]
+        return cls._frames
+
+    def __init__(self):
+        self.started = pygame.time.get_ticks()
+        self._scaled = {}
+
+    def frame(self, width=None):
+        """The frame to show now (scaled to width, kept for reuse), or None."""
+        frames = self.frames()
+        if not frames:
+            return None
+        index = (pygame.time.get_ticks() - self.started) // self.FRAME_MS % len(frames)
+        if width is None:
+            return frames[index]
+        key = (index, width)
+        if key not in self._scaled:
+            height = round(width * self.FRAME_SIZE[1] / self.FRAME_SIZE[0])
+            # Smooth scaling needs 32 bits (the frames have a palette)
+            full = pygame.Surface(frames[index].get_size(), pygame.SRCALPHA)
+            full.blit(frames[index], (0, 0))
+            self._scaled[key] = pygame.transform.smoothscale(full, (width, height))
+        return self._scaled[key]
+
+
+class AllClearedScreen:
+    """Every Epic Fight won: the victory animation, until a key or a tap."""
+
+    MIN_MS = 1200
+
+    def __init__(self, screen_size):
+        self.animation = VictoryAnimation()
+        self.shown_at = pygame.time.get_ticks()
+        self.resize(screen_size)
+
+    def resize(self, screen_size):
+        self.screen_size = screen_size
+        shortest = min(screen_size)
+        self.title_font = pygame.font.Font(None, max(40, int(shortest * 0.09)))
+        self.text_font = pygame.font.Font(None, max(22, int(shortest * 0.045)))
+        self.shade = pygame.Surface(screen_size, pygame.SRCALPHA)
+        self.shade.fill((0, 0, 0, 200))
+
+    def process(self, events):
+        """True once the player moves on."""
+        if pygame.time.get_ticks() - self.shown_at < self.MIN_MS:
+            return False
+        for event in events:
+            if event.type == pygame.KEYDOWN or tap_position(event, self.screen_size) is not None:
+                return True
+        return False
+
+    def draw(self, screen):
+        width, height = self.screen_size
+        screen.blit(self.shade, (0, 0))
+        title = self.title_font.render("All Epic Fights completed!", True, (255, 220, 90))
+        screen.blit(title, title.get_rect(midtop=(width // 2, int(height * 0.06))))
+        picture = self.animation.frame(min(width - 40, int((height * 0.62) * 498 / 286)))
+        top = int(height * 0.06) + title.get_height() + 12
+        if picture is not None:
+            rect = picture.get_rect(midtop=(width // 2, top))
+            screen.blit(picture, rect)
+            pygame.draw.rect(screen, (255, 205, 60), rect.inflate(6, 6), 3, border_radius=6)
+            top = rect.bottom + 12
+        for line, colour in (("Congratulations, you saved the world!", (240, 240, 245)),
+                             ("Press any key or tap to continue", (180, 185, 200))):
+            text = self.text_font.render(line, True, colour)
+            screen.blit(text, text.get_rect(midtop=(width // 2, top)))
+            top += text.get_height() + 6
