@@ -54,9 +54,6 @@
       "subtitle": "Future Trunks vs Androids 17 and 18",
       "hero": "trunks_future",
       "form": "ssj",
-      "allies": [
-        "gohan_teen"
-      ],
       "waves": [
         [
           "android17",
@@ -306,7 +303,6 @@
       "hero": "trunks_future",
       "form": "ssj",
       "allies": [
-        "vegeta",
         "vegito"
       ],
       "waves": [
@@ -324,7 +320,7 @@
         ],
         [
           "vegito",
-          "A god? Then you're about to meet Super Saiyan Blue."
+          "Then you're about to meet Super Saiyan Blue."
         ],
         [
           "trunks_future",
