@@ -1032,8 +1032,17 @@ class Menu:
             under = self.difficulty_font.render(fight.subtitle, True, (200, 205, 220))
             screen.blit(under, (x + 6, rect.bottom - under.get_height() - 6))
             if fight.id in done:
-                mark = self.difficulty_font.render("Cleared", True, (130, 220, 130))
-                screen.blit(mark, mark.get_rect(topright=(rect.right - 10, rect.top + 8)))
+                # Won before (saved with the settings): a green badge on the right
+                label = self.button_font.render("Completed", True, (255, 255, 255))
+                badge = pygame.Rect(0, 0, label.get_width() + 46, min(rect.height - 12, label.get_height() + 14))
+                badge.midright = (rect.right - 10, rect.centery)
+                pygame.draw.rect(screen, (40, 150, 70), badge, border_radius=8)
+                pygame.draw.rect(screen, (150, 240, 160), badge, 2, border_radius=8)
+                # A check mark, then the word
+                cx, cy, size = badge.left + 18, badge.centery, max(5, badge.height // 5)
+                pygame.draw.lines(screen, (255, 255, 255), False,
+                                  [(cx - size, cy), (cx - size // 3, cy + size), (cx + size, cy - size)], 3)
+                screen.blit(label, label.get_rect(midleft=(badge.left + 34, badge.centery)))
         # Fight! / Play online
         self.epic_buttons = {}
         button_width = min(300, (width - 60) // 2)
