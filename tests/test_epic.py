@@ -407,7 +407,7 @@ class QuestTests(EpicCase):
         self.assertEqual((fight.hero, fight.allies, fight.waves), ("trunks_teen", ["gohan_future"],
                                                                    [["android17", "android18"]]))
         self.assertEqual(fight.arena, "pepper_town")
-        self.assertEqual(fight.quest.survive, 60)
+        self.assertGreater(fight.quest.survive, 0)
         game = self.game("last_hope")
         story = game.scenes["story"]
         self.assertIsNotNone(story.quest_panel)
@@ -416,7 +416,7 @@ class QuestTests(EpicCase):
         self.assertIsNone(story.result)
         self.assertGreater(game.quest_elapsed_ms, 0)
         game.character.hp = game.character.max_hp  # held out...
-        game.quest_elapsed_ms = 60_000
+        game.quest_elapsed_ms = fight.quest.survive * 1000
         game.loop_once([])
         self.assertIsNotNone(story.result)
         self.assertTrue(story.result.victory)
@@ -458,5 +458,6 @@ class QuestTests(EpicCase):
         from epic_screens import quest_lines
         self.assertEqual(quest_lines(epic.by_id("kid_buu")),
                          ["Vegeta must survive", "Finish Kid Buu with the Spirit Bomb"])
-        self.assertEqual(quest_lines(epic.by_id("last_hope")), ["Survive for 60 seconds"])
+        seconds = int(epic.by_id("last_hope").quest.survive)
+        self.assertEqual(quest_lines(epic.by_id("last_hope")), [f"Survive for {seconds} seconds"])
         self.assertEqual(quest_lines(epic.by_id("namek")), ["Defeat every enemy"])

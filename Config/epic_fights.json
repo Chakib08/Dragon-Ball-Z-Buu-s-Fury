@@ -49,6 +49,39 @@
       ]
     },
     {
+      "id": "last_hope",
+      "title": "The Last Hope",
+      "subtitle": "Future Gohan and Teen Trunks vs Androids 17 and 18",
+      "hero": "trunks_teen",
+      "allies": [
+        "gohan_future"
+      ],
+      "waves": [
+        [
+          "android17",
+          "android18"
+        ]
+      ],
+      "arena": "pepper_town",
+      "quest": {
+        "survive": 150
+      },
+      "intro": [
+        [
+          "android18",
+          "Two little heroes again? This won't take long."
+        ],
+        [
+          "gohan_future",
+          "Trunks, they're too strong. Hold them off with me, just one minute!"
+        ],
+        [
+          "trunks_teen",
+          "Right, Gohan! I won't let them win!"
+        ]
+      ]
+    },
+    {
       "id": "androids",
       "title": "A Future Without Hope",
       "subtitle": "Future Trunks vs Androids 17 and 18",
@@ -70,39 +103,6 @@
         [
           "trunks_future",
           "This time I'll end your reign of terror!"
-        ]
-      ]
-    },
-    {
-      "id": "last_hope",
-      "title": "The Last Hope",
-      "subtitle": "Future Gohan and Teen Trunks vs Androids 17 and 18",
-      "hero": "trunks_teen",
-      "allies": [
-        "gohan_future"
-      ],
-      "waves": [
-        [
-          "android17",
-          "android18"
-        ]
-      ],
-      "arena": "pepper_town",
-      "quest": {
-        "survive": 60
-      },
-      "intro": [
-        [
-          "android18",
-          "Two little heroes again? This won't take long."
-        ],
-        [
-          "gohan_future",
-          "Trunks, they're too strong. Hold them off with me, just one minute!"
-        ],
-        [
-          "trunks_teen",
-          "Right, Gohan! I won't let them win!"
         ]
       ]
     },
@@ -139,8 +139,8 @@
     },
     {
       "id": "cell_juniors",
-      "title": "Ten Little Monsters",
-      "subtitle": "Goku, Vegeta, Trunks and the Z Fighters vs the ten Cell Juniors",
+      "title": "Seven Little Monsters",
+      "subtitle": "Goku, Vegeta, Trunks and the Z Fighters vs the seven Cell Juniors",
       "hero": "gohan_teen",
       "allies": [
         "goku_log2",
@@ -159,13 +159,6 @@
           "cell_jr",
           "cell_jr",
           "cell_jr",
-          "cell_jr",
-          "cell_jr",
-          "cell_jr",
-          "cell_jr",
-          "cell_jr",
-          "cell_jr",
-          "cell_jr",
           "cell_jr"
         ]
       ],
@@ -174,7 +167,7 @@
       "intro": [
         [
           "cell_jr",
-          "Hee hee! Papa said we can play with you! All ten of us!"
+          "Hee hee! Papa said we can play with you! All seven of us!"
         ],
         [
           "goku",
