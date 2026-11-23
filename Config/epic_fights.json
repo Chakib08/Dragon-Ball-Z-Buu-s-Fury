@@ -135,7 +135,11 @@
           "goku_log2",
           "Everybody, together! We can't let them win!"
         ]
-      ]
+      ],
+      "ally_forms": {
+        "vegeta_log2": "ssj",
+        "trunks": "ssj"
+      }
     },
     {
       "id": "cell_juniors",
