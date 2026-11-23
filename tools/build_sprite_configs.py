@@ -399,7 +399,12 @@ NEW_SHEETS = [
     {"character": "gohan_great_saiyaman", "form": "base", "transform": [57, 57, 58, 59, 60, 61], **SAIYAMAN},
     {"character": "gohan_great_saiyaman", "form": "ssj", **SAIYAMAN},
     {"character": "vegito", "form": "base", "transform": [32, 33, 33, 34, 35, 36], **VEGITO},
-    {"character": "vegito", "form": "ssj", **VEGITO},
+    # Super Saiyan: the effects sheet's sword frames are black-haired, so
+    # his Spirit Sword is his own widest swings
+    {"character": "vegito", "form": "ssj", **{**VEGITO, "techniques": {
+        **VEGITO["techniques"],
+        "spirit_sword": {"pose": {"Down": [11, 12, 16, 16], "Right": [12, 15, 16, 16], "Up": [12, 15, 16, 16]},
+                         "fire_at": 1}}}},
     {"character": "vegito", "form": "ssjb", "sheet": "Graphics/assets/vegito/ssjb.png"},
     # Gogeta is always a Super Saiyan; his black-haired frames are his
     # fusion running out
@@ -575,7 +580,15 @@ VEGITO_BLUE = dict(
         "spirit_sword": {"pose": {"Down": [9, 13, 15], "Right": [11, 14, 15], "Up": [10, 13, 14]}, "fire_at": 1},
     })
 next(s for s in NEW_SHEETS if s["character"] == "vegito" and s["form"] == "ssjb").update(VEGITO_BLUE)
-VEGITO["techniques"]["final_kamehameha"]["pose_sheet"] = VEGITO_KAMEHAMEHA
+# His Final Kamehameha from his own sheets (the effects sheet's poses are
+# black-haired: a Super Saiyan went back to normal while firing): hands
+# cupped at his side, then thrust out, each pose held longer
+# (changed in place: both his forms' specs share it)
+_final_kamehameha = VEGITO["techniques"]["final_kamehameha"]
+_final_kamehameha.clear()
+_final_kamehameha.update({
+    "pose": {"Down": [23, 23, 23, 21, 22, 22], "Right": [18, 18, 18, 30, 31, 31], "Up": [18, 18, 18, 21, 22, 22]},
+    "fire_at": 3})
 next(s for s in NEW_SHEETS if s["character"] == "buu")["techniques"]["rage"]["pose_sheet"] = BUU_STEAM
 # Gogeta's Fusion Dance (Vegeta on the left, Goku on the right): the dance,
 # their fingers meeting, the light, Gogeta's white shape (then the flash)
