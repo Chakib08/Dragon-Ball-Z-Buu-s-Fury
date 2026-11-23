@@ -207,7 +207,7 @@ def strengthen(fighter, factor, health=True):
 # a Cell Jr. is twice as strong as the Z Warriors, Broly four times, as they fight beside the
 # player in an Epic Fight (their hits, techniques, health, defense)
 Z_WARRIORS = ("krillin", "tien", "yamcha")
-STRONGER_THAN = {"cell_jr": (2.0, Z_WARRIORS), "broly": (4.0, Z_WARRIORS)}
+STRONGER_THAN = {"cell_jr": (2.0, Z_WARRIORS), "broly": (8.0, Z_WARRIORS)}
 
 
 def strengthen_enemy(enemy):

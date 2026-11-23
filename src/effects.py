@@ -254,14 +254,22 @@ class Aura(Effect):
         return self._offset
 
 
-class ChargeGlow(Effect):
-    """The ki ball growing in the hands while a technique charges."""
+def above_head(caster, size=0):
+    """Where a ball held up over the head is (a Spirit Bomb): its centre,
+    for a ball of that size."""
+    return caster.rect.centerx, caster.rect.top - size / 2 + 4
 
-    def __init__(self, frames, caster, scale=1.0):
+
+class ChargeGlow(Effect):
+    """The ki ball growing in the hands while a technique charges (above the
+    head for one raised high: a Spirit Bomb)."""
+
+    def __init__(self, frames, caster, scale=1.0, above=False):
         super().__init__()
         self.frames = frames
         self.caster = caster
         self.scale = scale
+        self.above = above
         self.level = 0.0
         self.update_effect(())
 
@@ -271,7 +279,10 @@ class ChargeGlow(Effect):
         # A slight pulse so the charge looks alive
         pulse = 1 + 0.08 * (self.frame_number(3) % 2)
         self.image = scale_frame(self.frames[index], (0.8 + 0.4 * self.level) * pulse * self.scale)
-        self.rect = self.image.get_rect(center=chest_origin(self.caster, self.caster.facing))
+        if self.above:
+            self.rect = self.image.get_rect(center=above_head(self.caster, self.image.get_height()))
+        else:
+            self.rect = self.image.get_rect(center=chest_origin(self.caster, self.caster.facing))
 
 
 class Projectile(Effect):
@@ -511,12 +522,18 @@ def build_effect(technique, sprites, caster, direction, damage, on_hit, spawn, o
         return None
     stats = technique.stats
     kind = technique.kind
-    if origin is None:
-        origin = tuple(caster.rect.center) if kind == "burst" else chest_origin(caster, direction)
-    origin = (float(origin[0]), float(origin[1]))
     scale = 1.0 if power is None else charge_scale(power)
     scale *= sprites.data.get("scale", 1.0)  # e.g. a bigger SSJ3 Kamehameha
     scale *= getattr(technique, "effect_scale", 1.0)  # a signature technique
+    if origin is None:
+        if getattr(technique, "above", False):
+            # Held up over the head (a Spirit Bomb): it leaves from there
+            frames = sprites.cuts("projectile")
+            size = frames[0].get_height() * scale if frames else 0
+            origin = above_head(caster, size)
+        else:
+            origin = tuple(caster.rect.center) if kind == "burst" else chest_origin(caster, direction)
+    origin = (float(origin[0]), float(origin[1]))
     if kind in ("projectile", "ball"):
         frames = [scale_frame(sprites.oriented(image, direction), scale) for image in sprites.cuts("projectile")]
         if not frames:

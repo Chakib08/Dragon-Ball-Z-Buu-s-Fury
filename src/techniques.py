@@ -226,6 +226,8 @@ class Technique:
         self.lasts_s = data.get("lasts_s")
         # Seconds after a fusion splits before the fighter can fuse again
         self.cooldown_s = data.get("cooldown_s")
+        # A ball raised over the head (a Spirit Bomb): it grows and leaves there
+        self.above = bool(data.get("above", False))
         # A fusion's dance, frames of the two together (see evolution.py)
         self.dance = data.get("dance")
 

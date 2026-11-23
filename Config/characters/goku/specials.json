@@ -884,6 +884,7 @@
       "kind": "ball",
       "effect_scale": 3,
       "range_scale": 4,
+      "above": true,
       "forms": {
         "base": {
           "grow": [

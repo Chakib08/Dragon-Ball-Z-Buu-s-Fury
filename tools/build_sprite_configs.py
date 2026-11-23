@@ -729,7 +729,7 @@ NEW_CHARACTER_SPECIALS.update({
                "supernova": ("Supernova", "ball", FIRE_BALL, SIGNATURE)},
     "goku_end_of_z": {"energy_blast": ENERGY_BLAST,
                       "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
-                      "spirit_bomb": ("Spirit Bomb", "ball", ("borrow", "big_bang"), SIGNATURE)},
+                      "spirit_bomb": ("Spirit Bomb", "ball", ("borrow", "big_bang"), {**SIGNATURE, "above": True})},
     "gohan_teen": {"energy_blast": ("Energy Blast", "projectile", ("borrow", "gohan_blast")),
                    "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
                    "masenko": ("Masenko", "beam", ("borrow", "final_flash"))},
@@ -738,7 +738,7 @@ NEW_CHARACTER_SPECIALS.update({
                        "masenko": ("Masenko", "beam", ("borrow", "final_flash"))},
     "goku_log2": {"energy_blast": ENERGY_BLAST,
                   "kamehameha": ("Kamehameha", "beam", ("borrow", "gohan_beam"), SIGNATURE),
-                  "spirit_bomb": ("Spirit Bomb", "ball", ("borrow", "big_bang"), SIGNATURE),
+                  "spirit_bomb": ("Spirit Bomb", "ball", ("borrow", "big_bang"), {**SIGNATURE, "above": True}),
                   "instant_transmission": ("Instant Transmission", "teleport", {})},
     "trunks_future": {"energy_blast": ENERGY_BLAST,
                       "burning_attack": ("Burning Attack", "ball", {"grow": YELLOW_BALL,
@@ -1148,6 +1148,7 @@ def add_spirit_bomb(form_poses):
     if "spirit_bomb" in form_poses.get("ssj3", {}):
         forms["ssj3"] = {**effects, **form_poses["ssj3"]["spirit_bomb"]}
     technique = {"id": "spirit_bomb", "name": "Spirit Bomb", "kind": "ball", "effect_scale": 3, "range_scale": 4,
+                 "above": True,
                  "forms": forms}
     techniques = [t for t in specials["techniques"] if t["id"] != "spirit_bomb"]
     # After his Instant Transmission, before his fusions
