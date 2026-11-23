@@ -107,28 +107,6 @@
       ]
     },
     {
-      "id": "new_hope",
-      "title": "New Hope",
-      "subtitle": "Trunks vs Imperfect Cell",
-      "hero": "trunks",
-      "waves": [
-        [
-          "cell_imperfect"
-        ]
-      ],
-      "arena": "outside_gingertown",
-      "intro": [
-        [
-          "cell_imperfect",
-          "Your energy smells delicious. I'll absorb you, then the androids!"
-        ],
-        [
-          "trunks",
-          "Not while I'm here. You won't reach them, Cell!"
-        ]
-      ]
-    },
-    {
       "id": "android13",
       "title": "Super Android 13!",
       "subtitle": "Goku, Vegeta and Trunks vs Androids 19, 20 and 13",
@@ -229,6 +207,28 @@
         [
           "gohan_teen",
           "I'm going to make you suffer, Cell."
+        ]
+      ]
+    },
+    {
+      "id": "new_hope",
+      "title": "New Hope",
+      "subtitle": "Trunks vs Imperfect Cell",
+      "hero": "trunks",
+      "waves": [
+        [
+          "cell_imperfect"
+        ]
+      ],
+      "arena": "outside_gingertown",
+      "intro": [
+        [
+          "cell_imperfect",
+          "Your energy smells delicious. I'll absorb you, then the androids!"
+        ],
+        [
+          "trunks",
+          "Not while I'm here. You won't reach them, Cell!"
         ]
       ]
     },
