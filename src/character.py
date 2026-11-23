@@ -361,6 +361,10 @@ class Character(pygame.sprite.Sprite):
             amount *= self.SUPER_DAMAGE_TAKEN
         if self.blocking:
             amount *= self.BLOCK_DAMAGE_TAKEN
+        finisher = getattr(self, "finisher", None)
+        if finisher and getattr(self, "hit_by", None) != finisher and self.hp > 0:
+            # Only that technique can beat it (an Epic Fight's quest)
+            amount = min(amount, self.hp - 1)
         alive = self.hp > 0
         self.hp = max(0, self.hp - amount)
         if amount > 0:

@@ -128,6 +128,8 @@ REPO_ASSETS=(
     "maps/west-city.png                   Graphics/assets/maps/west-city.png"
     "maps/hercule-city.png                Graphics/assets/maps/hercule-city.png"
     "maps/cell-game-arena.png          Graphics/assets/maps/cell-game-arena.png"
+    "maps/ginger-town.png              Graphics/assets/maps/ginger-town.png"
+    "maps/pepper-town.png              Graphics/assets/maps/pepper-town.png"
     # Sound effects and voices (src/sfx.py): Buu's Fury, Legacy of Goku 2
     # and Dragon Ball GT Transformation
     "sounds/sfx/buus_fury_sfx-melee-1.wav Sounds/sfx/melee-1.wav"

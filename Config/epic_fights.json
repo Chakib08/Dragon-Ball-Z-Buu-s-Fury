@@ -1,5 +1,5 @@
 {
-  "comment": "Epic Fights (src/epic.py): the story's great battles. hero: the player's character (form: the Super Saiyan level it starts at), allies: who fights with it; waves: the enemies, one wave after the other (up to 4 at once), their leader first; boss_form: the level the leader starts at. Online, the host plays the hero's side and the other player the leader's side (with the rest of the first wave). music: a soundtrack of Sounds/ (without extension).",
+  "comment": "Epic Fights (src/epic.py): the story's great battles. hero: the player's character (form: the Super Saiyan level it starts at), allies: who fights with it; waves: the enemies, one wave after the other (up to 4 at once), their leader first; boss_form: the level the leader starts at. Online, the host plays the hero's side and the other player the leader's side (with the rest of the first wave). music: a soundtrack of Sounds/ (without extension). quest: what it takes besides beating everyone (src/epic.py Quest): survive (seconds), protect (allies who must not fall), finisher (the technique the boss must be beaten with).",
   "fights": [
     {
       "id": "namek",
@@ -70,6 +70,39 @@
         [
           "trunks_future",
           "This time I'll end your reign of terror!"
+        ]
+      ]
+    },
+    {
+      "id": "last_hope",
+      "title": "The Last Hope",
+      "subtitle": "Future Gohan and Teen Trunks vs Androids 17 and 18",
+      "hero": "trunks_teen",
+      "allies": [
+        "gohan_future"
+      ],
+      "waves": [
+        [
+          "android17",
+          "android18"
+        ]
+      ],
+      "arena": "pepper_town",
+      "quest": {
+        "survive": 60
+      },
+      "intro": [
+        [
+          "android18",
+          "Two little heroes again? This won't take long."
+        ],
+        [
+          "gohan_future",
+          "Trunks, they're too strong. Hold them off with me, just one minute!"
+        ],
+        [
+          "trunks_teen",
+          "Right, Gohan! I won't let them win!"
         ]
       ]
     },
@@ -300,10 +333,20 @@
           "Hehehe... boom!"
         ],
         [
+          "vegeta",
+          "Kakarot, I'll hold him off. Gather everyone's energy!"
+        ],
+        [
           "goku",
-          "Vegeta, buy me some time. This ends here!"
+          "Everyone, lend me your energy! Spirit Bomb!"
         ]
-      ]
+      ],
+      "quest": {
+        "protect": [
+          "vegeta"
+        ],
+        "finisher": "spirit_bomb"
+      }
     },
     {
       "id": "goku_black",

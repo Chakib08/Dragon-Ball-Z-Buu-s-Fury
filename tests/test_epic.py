@@ -390,3 +390,73 @@ class EpicServerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class QuestTests(EpicCase):
+    def game(self, fight_id):
+        from game import Game
+        game = Game((1200, 540), "test", fullscreen=False)
+        game.menu = Menu(game.resolution)
+        game.menu.epic = epic.by_id(fight_id)
+        game.start_story()
+        game.scenes["story"].intro = None
+        return game
+
+    def test_surviving_sixty_seconds_wins_the_last_hope(self):
+        fight = epic.by_id("last_hope")
+        self.assertEqual((fight.hero, fight.allies, fight.waves), ("trunks_teen", ["gohan_future"],
+                                                                   [["android17", "android18"]]))
+        self.assertEqual(fight.arena, "pepper_town")
+        self.assertEqual(fight.quest.survive, 60)
+        game = self.game("last_hope")
+        story = game.scenes["story"]
+        self.assertIsNotNone(story.quest_panel)
+        for _ in range(30):
+            game.loop_once([])
+        self.assertIsNone(story.result)
+        self.assertGreater(game.quest_elapsed_ms, 0)
+        game.character.hp = game.character.max_hp  # held out...
+        game.quest_elapsed_ms = 60_000
+        game.loop_once([])
+        self.assertIsNotNone(story.result)
+        self.assertTrue(story.result.victory)
+
+    def test_the_timer_stands_still_on_the_versus_card(self):
+        game = self.game("last_hope")
+        game.scenes["story"].begin(epic.by_id("last_hope"))  # the card again
+        for _ in range(20):
+            game.loop_once([])
+        self.assertEqual(game.quest_elapsed_ms, 0)
+
+    def test_kid_buu_falls_to_the_spirit_bomb_only(self):
+        fight = epic.by_id("kid_buu")
+        self.assertEqual(fight.quest.protect, ["vegeta"])
+        self.assertEqual(fight.quest.finisher, "spirit_bomb")
+        game = self.game("kid_buu")
+        combat = game.map_manager.combat
+        buu = next(npc for npc in game.map_manager.get_map().npcs if npc.team != HEROES)
+        self.assertEqual(buu.finisher, "spirit_bomb")
+        buu.take_damage(100_000)  # a punch
+        self.assertEqual(buu.hp, 1)
+        combat._hit_target(buu, 100_000, buu.feet.center, 1.0, "kamehameha")
+        self.assertEqual(buu.hp, 1)
+        self.assertIsNone(game.story_outcome())
+        combat._hit_target(buu, 100_000, buu.feet.center, 1.0, "spirit_bomb")
+        self.assertEqual(buu.hp, 0)
+        # Goku has it, as a Super Saiyan 3 too
+        self.assertEqual(game.character.form, "ssj3")
+        self.assertIn("spirit_bomb", [t.id for t in game.character.techniques])
+        self.assertTrue(game.character.has_animation("Tech spirit_bomb Right 0"))
+
+    def test_vegeta_falling_loses_the_kid_buu_fight(self):
+        game = self.game("kid_buu")
+        vegeta = next(npc for npc in game.map_manager.get_map().npcs if npc.character_name == "vegeta")
+        vegeta.take_damage(100_000)
+        self.assertEqual(game.story_outcome(), "defeat")
+
+    def test_the_quest_in_words(self):
+        from epic_screens import quest_lines
+        self.assertEqual(quest_lines(epic.by_id("kid_buu")),
+                         ["Vegeta must survive", "Finish Kid Buu with the Spirit Bomb"])
+        self.assertEqual(quest_lines(epic.by_id("last_hope")), ["Survive for 60 seconds"])
+        self.assertEqual(quest_lines(epic.by_id("namek")), ["Defeat every enemy"])

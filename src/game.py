@@ -112,6 +112,7 @@ class Game:
         # and scaled up, so this is not the surface's size)
         self.window_pixels = tuple(pygame.display.get_window_size())
         self.menu = None
+        self.quest_elapsed_ms = 0
         # The screens (see scenes.py), and the one showing
         self.scenes = {scene.name: scene(self) for scene in SCENES}
         self.current = self.scenes["menu"]
@@ -345,6 +346,8 @@ class Game:
         self.select_character(self.menu.selected_character, tuple(self.menu.selected_enemies),
                               tuple(self.menu.selected_allies), self.menu.selected_arena, epic=fight is not None)
         self.epic_wave = 0
+        # How long the fight has gone on (an Epic Fight's "survive" quest)
+        self.quest_elapsed_ms = 0
         if fight is not None:
             epic.start_in_form(self.character, fight.form)
             for ally in self.map_manager.get_map().npcs:
@@ -356,6 +359,8 @@ class Game:
                 epic.strengthen(enemy, epic.ENEMY_STRENGTH)
             if enemies:
                 epic.start_in_form(enemies[0], fight.boss_form)
+                if fight.quest is not None and fight.quest.finisher:
+                    enemies[0].finisher = fight.quest.finisher
             if fight.music:
                 music = PathManager.soundtrack(fight.music)
                 if os.path.exists(music):
@@ -389,14 +394,28 @@ class Game:
 
     def story_outcome(self):
         """"defeat" once the player's knock-out animation is over, "victory"
-        once every enemy's is, else None."""
+        once every enemy's is, else None. An Epic Fight's quest too: an ally
+        to protect knocked out loses it, holding out long enough wins it."""
         if self.character.faint_finished:
             return "defeat"
         world = self.map_manager.maps.get("map")
-        enemies = [npc for npc in (world.npcs if world else []) if npc.team != HEROES]
+        npcs = world.npcs if world else []
+        quest = self.quest
+        if quest is not None:
+            if any(npc.team == HEROES and npc.character_name in quest.protect and npc.hp <= 0 for npc in npcs):
+                return "defeat"
+            if quest.survive and self.quest_elapsed_ms >= quest.survive * 1000:
+                return "victory"
+        enemies = [npc for npc in npcs if npc.team != HEROES]
         if enemies and all(npc.faint_finished for npc in enemies):
             return "victory"
         return None
+
+    @property
+    def quest(self):
+        """The Epic Fight's quest being played, or None."""
+        fight = getattr(self.menu, "epic", None) if self.menu is not None else None
+        return fight.quest if fight is not None and fight.quest is not None else None
 
     def back_to_menu(self):
         self.result = None

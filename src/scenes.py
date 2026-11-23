@@ -14,7 +14,8 @@ import pygame
 
 import epic
 import sfx
-from epic_screens import AllClearedScreen, EpicIntro, WaveBanner
+from epic_screens import AllClearedScreen, EpicIntro, QuestPanel, WaveBanner
+from utils import timing
 from menu import State
 from result_screen import ResultScreen
 
@@ -91,6 +92,7 @@ class StoryScene(Scene):
         self.intro = None
         self.banner = None
         self.celebration = None
+        self.quest_panel = None
 
     def begin(self, fight=None):
         """A fight starts: an Epic Fight shows its versus card first."""
@@ -98,6 +100,7 @@ class StoryScene(Scene):
         self.banner = None
         self.celebration = None
         self.intro = EpicIntro(self.game.resolution, fight) if fight is not None else None
+        self.quest_panel = QuestPanel(self.game.resolution, fight) if fight is not None else None
 
     def gamepad_presses(self):
         pressed = self.game.gamepad.pressed
@@ -120,6 +123,12 @@ class StoryScene(Scene):
             return
         if self.result is None:
             game.play_frame(events, paused)
+            if not paused:
+                # The fight's time (an Epic Fight's "survive" quest)
+                game.quest_elapsed_ms += timing.ticks() * 1000 / timing.REFERENCE_FPS
+            if self.quest_panel is not None:
+                world = game.map_manager.maps.get("map")
+                self.quest_panel.draw(game.screen, game.quest_elapsed_ms, world.npcs if world else ())
             outcome = game.story_outcome()
             if outcome == "victory" and game.next_wave():
                 # An Epic Fight's next wave: the fight goes on
@@ -166,6 +175,8 @@ class StoryScene(Scene):
             game.back_to_menu()
 
     def resize(self, size):
+        if self.quest_panel is not None:
+            self.quest_panel = QuestPanel(size, self.quest_panel.fight)
         if self.result is not None:
             self.result.resize(size)
         if self.intro is not None:

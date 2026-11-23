@@ -443,8 +443,13 @@ class CombatSystem:
     def draw_charge(self, screen, to_screen_rect):
         self.hud.draw_charge(screen, to_screen_rect)
 
-    def _hit_target(self, target, damage, source, push):
-        target.take_damage(damage, source, push)
+    def _hit_target(self, target, damage, source, push, technique_id=None):
+        # The technique that hit (an Epic Fight's boss may need a finisher)
+        target.hit_by = technique_id
+        try:
+            target.take_damage(damage, source, push)
+        finally:
+            target.hit_by = None
 
     def _release(self, technique, direction, power=None):
         """The player's pose reached its firing frame (see _release_by)."""
@@ -463,7 +468,9 @@ class CombatSystem:
         if power is not None:
             damage *= 0.5 + 0.5 * power
         effect = build_effect(technique, technique.form_for(user), user, direction,
-                              damage, self._hit_target, self.add_effect, power=power)
+                              damage, lambda target, amount, source, push, technique_id=technique.id:
+                              self._hit_target(target, amount, source, push, technique_id),
+                              self.add_effect, power=power)
         if effect is not None:
             effect.team = user.team
             self.technique_sound(user, technique)

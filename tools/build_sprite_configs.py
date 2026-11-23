@@ -55,6 +55,8 @@ GOKU_SSJ3_TECHNIQUES = {
         "fire_at": {"Right": 4, "Down": 1, "Up": 1},
     },
     "instant_transmission": {"vanish": [21, 22, 23]},
+    # Both arms raised (front row): his Spirit Bomb (see SPIRIT_BOMB)
+    "spirit_bomb": {"pose": [31, 31, 31, 31], "row": "Down", "fire_at": 3},
 }
 GOHAN_TECHNIQUES = {
     "energy_blast": {"pose": [24, 25, 26], "fire_at": 1},
@@ -1107,8 +1109,8 @@ def update_specials(character, form_poses, effects):
     with open(path, encoding="utf-8") as file:
         specials = json.load(file)
     for technique in specials["techniques"]:
-        if "forms" not in technique:
-            continue  # an "evolve" technique: no sprites of its own
+        if "forms" not in technique or technique["id"] in OWN_EFFECTS:
+            continue  # an "evolve" technique (no sprites), or one with effects of its own
         forms = technique["forms"]
         for form, poses in form_poses.items():
             if technique["id"] not in poses:
@@ -1124,6 +1126,34 @@ def update_specials(character, form_poses, effects):
     ids = {technique["id"] for technique in evolve}
     specials["techniques"] = [t for t in specials["techniques"] if t["id"] not in ids] + evolve
     write_specials(character, specials)
+
+
+# Goku's Spirit Bomb: both arms raised (on his base sheet, his SSJ sheet's
+# "item found" pose, his SSJ3 sheet's front row), then the big blue-white
+# ball (Vegeta's Big Bang effect), three times its size
+SPIRIT_BOMB_POSES = {"base": [[410, 672, 25, 32], [440, 672, 25, 32], [440, 672, 25, 32], [440, 672, 25, 32]],
+                     "ssj": [[24, 1922, 16, 31]] * 4}
+OWN_EFFECTS = ("spirit_bomb",)
+
+
+def add_spirit_bomb(form_poses):
+    """Goku's Spirit Bomb in his specials.json (form_poses: his built forms'
+    poses, the SSJ3 one's among them)."""
+    path = os.path.join(ROOT, "Config", "characters", "goku", "specials.json")
+    with open(path, encoding="utf-8") as file:
+        specials = json.load(file)
+    effects = borrowed_effects("big_bang")
+    forms = {form: {**effects, "pose": {direction: boxes for direction in ("Down", "Right", "Up")}, "fire_at": 3}
+             for form, boxes in SPIRIT_BOMB_POSES.items()}
+    if "spirit_bomb" in form_poses.get("ssj3", {}):
+        forms["ssj3"] = {**effects, **form_poses["ssj3"]["spirit_bomb"]}
+    technique = {"id": "spirit_bomb", "name": "Spirit Bomb", "kind": "ball", "effect_scale": 3, "range_scale": 4,
+                 "forms": forms}
+    techniques = [t for t in specials["techniques"] if t["id"] != "spirit_bomb"]
+    # After his Instant Transmission, before his fusions
+    at = next((i for i, t in enumerate(techniques) if t.get("kind") == "evolve"), len(techniques))
+    specials["techniques"] = techniques[:at] + [technique] + techniques[at:]
+    write_specials("goku", specials)
 
 
 def build_new_specials(character, form_poses):
@@ -1158,6 +1188,7 @@ def main():
             build_character_specials(character, form_poses)
         else:
             update_specials(character, form_poses, effects_by_character[character])
+    add_spirit_bomb(poses_by_character.get("goku", {}))
     print("specials updated")
 
 

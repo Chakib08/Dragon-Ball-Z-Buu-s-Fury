@@ -22,7 +22,7 @@ setUpModule, tearDownModule = steady_module_fixtures()
 
 
 EXPECTED = {
-    "goku": ["Energy Blast", "Kamehameha", "Instant Transmission", "Potara Fusion (Vegito)",
+    "goku": ["Energy Blast", "Kamehameha", "Instant Transmission", "Spirit Bomb", "Potara Fusion (Vegito)",
              "Fusion Dance (Gogeta)"],
     "gohan": ["Energy Blast", "Kamehameha", "Ki Burst"],
     "vegeta": ["Energy Blast", "Final Flash", "Big Bang Attack", "Potara Fusion (Vegito)",
@@ -271,6 +271,10 @@ class TechniqueTests(unittest.TestCase):
             player = Saiyan(100, 100, False, name)
             player.update()
             for technique in player.techniques:
+                if technique.id == "spirit_bomb":
+                    # Bigger still: three times the size
+                    self.assertEqual(technique.effect_scale, 3.0)
+                    continue
                 with self.subTest(character=name, technique=technique.id):
                     usual = STATS[technique.kind]
                     big = technique.id in ids

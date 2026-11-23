@@ -28,6 +28,42 @@ CLEARED_KEY = "epic_cleared"
 
 
 @dataclass
+class Quest:
+    """What an Epic Fight asks besides beating everyone:
+        survive    hold out this many seconds: then it is won (beating
+                   everyone before also wins)
+        protect    allies who must not be knocked out (else it is lost)
+        finisher   the technique the boss must be beaten with: any other
+                   hit leaves it standing (at 1 HP)"""
+    survive: float = 0
+    protect: list = field(default_factory=list)
+    finisher: str = None
+
+    @classmethod
+    def from_entry(cls, entry):
+        if not isinstance(entry, dict):
+            return cls()
+        return cls(survive=float(entry.get("survive", 0) or 0),
+                   protect=[str(name) for name in entry.get("protect", [])],
+                   finisher=str(entry["finisher"]) if entry.get("finisher") else None)
+
+    def lines(self, boss=None, technique_name=None):
+        """The quest in words (the versus card, the objective panel)."""
+        from roster import display_name
+        lines = []
+        if self.survive:
+            lines.append(f"Survive for {int(self.survive)} seconds")
+        for name in self.protect:
+            lines.append(f"{display_name(name)} must survive")
+        if self.finisher:
+            what = technique_name or self.finisher.replace("_", " ").title()
+            lines.append(f"Finish {display_name(boss) if boss else 'the boss'} with the {what}")
+        if not lines:
+            lines.append("Defeat every enemy")
+        return lines
+
+
+@dataclass
 class Fight:
     id: str
     title: str
@@ -40,6 +76,8 @@ class Fight:
     boss_form: str = None
     # The allies' starting Super Saiyan levels ({name: form})
     ally_forms: dict = field(default_factory=dict)
+    # What it takes to win (see Quest)
+    quest: "Quest" = None
     music: str = None
     intro: list = field(default_factory=list)
 
@@ -73,6 +111,7 @@ def _load():
                           form=entry.get("form"), allies=[str(name) for name in entry.get("allies", [])][:MAX_ALLIES],
                           boss_form=entry.get("boss_form"), music=entry.get("music"),
                           ally_forms={str(k): str(v) for k, v in entry.get("ally_forms", {}).items()},
+                          quest=Quest.from_entry(entry.get("quest")),
                           intro=[(str(who), str(line)) for who, line in entry.get("intro", [])])
         except (KeyError, TypeError, ValueError):
             continue

@@ -107,6 +107,15 @@ class EpicIntro:
                 top += text.get_height() + 2
             top += 6
 
+        # The quest
+        if fight.quest is not None and self.online_side is None:
+            for line in quest_lines(fight):
+                if top > self.panel.bottom - 50:
+                    break
+                text = self.text_font.render(f"Quest: {line}", True, (140, 230, 140))
+                screen.blit(text, text.get_rect(midtop=(self.panel.centerx, top)))
+                top += text.get_height() + 2
+
         if self.online_side is not None:
             side = "the heroes" if self.online_side == 0 else display_name(boss)
             note = self.small_font.render(f"Online: you play {side}", True, (160, 230, 160))
@@ -245,3 +254,63 @@ class AllClearedScreen:
             text = self.text_font.render(line, True, colour)
             screen.blit(text, text.get_rect(midtop=(width // 2, top)))
             top += text.get_height() + 6
+
+
+def quest_lines(fight):
+    """The fight's quest in words, its technique by its own name."""
+    quest = fight.quest
+    if quest is None:
+        return []
+    name = None
+    if quest.finisher:
+        import json
+        import os
+        from utils.config import Config
+        for character in {fight.hero, *fight.allies}:
+            path = os.path.join(Config.ROOT_DIR, "Config", "characters", character, "specials.json")
+            try:
+                with open(path, encoding="utf-8") as file:
+                    techniques = json.load(file).get("techniques", [])
+            except (OSError, ValueError):
+                continue
+            name = next((t["name"] for t in techniques if t.get("id") == quest.finisher), name)
+    return quest.lines(fight.boss, name)
+
+
+class QuestPanel:
+    """An Epic Fight's quest at the top of the screen while it is fought:
+    what to do, the time left to hold out, who must not fall."""
+
+    def __init__(self, screen_size, fight):
+        self.fight = fight
+        self.lines = quest_lines(fight)
+        self.font = pygame.font.Font(None, max(20, int(min(screen_size) * 0.036)))
+        self.screen_size = screen_size
+
+    def draw(self, screen, elapsed_ms, fighters=()):
+        quest = self.fight.quest
+        if quest is None:
+            return
+        rows = []
+        for line in self.lines:
+            colour = (235, 235, 240)
+            if quest.survive and line.startswith("Survive"):
+                left = max(0, quest.survive - elapsed_ms / 1000)
+                line = f"Survive: {int(left) // 60}:{int(left) % 60:02d}"
+                colour = (255, 220, 90) if left > 10 else (255, 120, 100)
+            for name in quest.protect:
+                if line.startswith(display_name(name)):
+                    down = any(f.character_name == name and f.hp <= 0 for f in fighters)
+                    colour = (255, 110, 100) if down else (140, 230, 140)
+            rows.append(self.font.render(line, True, colour))
+        width = max(row.get_width() for row in rows) + 24
+        height = sum(row.get_height() + 2 for row in rows) + 12
+        panel = pygame.Rect(0, 0, width, height)
+        panel.midtop = (self.screen_size[0] // 2, 8)
+        plate = pygame.Surface(panel.size, pygame.SRCALPHA)
+        pygame.draw.rect(plate, (12, 14, 24, 170), plate.get_rect(), border_radius=8)
+        screen.blit(plate, panel.topleft)
+        top = panel.top + 6
+        for row in rows:
+            screen.blit(row, row.get_rect(midtop=(panel.centerx, top)))
+            top += row.get_height() + 2
