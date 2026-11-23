@@ -530,3 +530,36 @@ class EpicFormTests(EpicCase):
         from npc import SaiyanNPC
         vegeta = SaiyanNPC(0, 0, False, "vegeta", 0, [], difficulty="normal")
         self.assertFalse(getattr(vegeta, "form_locked", False))
+
+
+class LegendaryTests(EpicCase):
+    def test_the_legendary_super_saiyan(self):
+        from game import Game
+        from npc import SaiyanNPC
+        fight = epic.by_id("legendary_ssj")
+        self.assertEqual(fight.title, "The Legendary Super Saiyan")
+        game = Game((1200, 540), "test", fullscreen=False)
+        game.menu = Menu(game.resolution)
+        game.menu.epic = fight
+        game.start_story()
+        self.assertEqual((game.character.character_name, game.character.form), ("goku_log2", "ssj"))
+        npcs = game.map_manager.get_map().npcs
+        allies = {npc.character_name: npc.form for npc in npcs if npc.team == HEROES}
+        self.assertEqual(allies, {"vegeta_log2": "ssj", "piccolo": "base", "gohan_teen": "ssj", "trunks": "ssj"})
+        broly = next(npc for npc in npcs if npc.team != HEROES)
+        self.assertEqual(broly.character_name, "broly")
+        # Four times as strong as the Z Warriors beside the player
+        z = []
+        for name in epic.Z_WARRIORS:
+            ally = SaiyanNPC(0, 0, False, name, 0, [], team=HEROES)
+            epic.strengthen(ally, epic.ALLY_STRENGTH, health=False)
+            z.append(ally)
+
+        def average(attribute):
+            return sum(getattr(ally, attribute) for ally in z) / len(z)
+
+        self.assertAlmostEqual(broly.attack_damage, 4 * average("attack_damage"))
+        self.assertEqual(broly.max_hp, round(4 * average("max_hp")))
+        self.assertAlmostEqual(broly.damage_taken, average("damage_taken") / 4)
+        for _ in range(30):
+            game.loop_once([])

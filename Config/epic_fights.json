@@ -3,7 +3,7 @@
   "fights": [
     {
       "id": "namek",
-      "title": "The Legendary Super Saiyan",
+      "title": "Showdown on Namek",
       "subtitle": "Goku vs Frieza",
       "hero": "goku_log2",
       "waves": [
@@ -141,6 +141,44 @@
         "trunks": "ssj"
       },
       "face": "android13"
+    },
+    {
+      "id": "legendary_ssj",
+      "title": "The Legendary Super Saiyan",
+      "subtitle": "Goku, Vegeta, Piccolo, Gohan and Trunks vs Broly",
+      "hero": "goku_log2",
+      "form": "ssj",
+      "allies": [
+        "vegeta_log2",
+        "piccolo",
+        "gohan_teen",
+        "trunks"
+      ],
+      "ally_forms": {
+        "vegeta_log2": "ssj",
+        "gohan_teen": "ssj",
+        "trunks": "ssj"
+      },
+      "waves": [
+        [
+          "broly"
+        ]
+      ],
+      "arena": "diablo_desert",
+      "intro": [
+        [
+          "broly",
+          "Kakarot... Kakarooot!"
+        ],
+        [
+          "vegeta_log2",
+          "The Legendary Super Saiyan... his power is endless!"
+        ],
+        [
+          "goku_log2",
+          "Everyone, together! Give it everything you've got!"
+        ]
+      ]
     },
     {
       "id": "cell_juniors",
