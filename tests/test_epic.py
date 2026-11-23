@@ -188,17 +188,27 @@ class EpicGameTests(EpicCase):
         from npc import SaiyanNPC
         game = self.game("cell_juniors")
         npcs = game.map_manager.get_map().npcs
+        # A Cell Jr. is twice as strong as the Z Warriors beside the player
         junior = next(npc for npc in npcs if npc.team != HEROES)
-        plain = SaiyanNPC(0, 0, False, "cell_jr", 0, [], difficulty=junior.difficulty.name)
-        self.assertEqual(junior.max_hp, round(plain.max_hp * epic.ENEMY_STRENGTH))
+        z = [npc for npc in npcs if npc.character_name in ("krillin", "tien", "yamcha")]
+        self.assertEqual(len(z), 3)
+
+        def average(attribute):
+            return sum(getattr(npc, attribute) for npc in z) / len(z)
+
+        self.assertAlmostEqual(junior.attack_damage, 2 * average("attack_damage"))
+        self.assertAlmostEqual(junior.technique_damage, 2 * average("technique_damage"))
+        self.assertEqual(junior.max_hp, round(2 * average("max_hp")))
         self.assertEqual(junior.hp, junior.max_hp)
-        self.assertAlmostEqual(junior.attack_damage, plain.attack_damage * epic.ENEMY_STRENGTH)
-        self.assertAlmostEqual(junior.technique_damage, plain.technique_damage * epic.ENEMY_STRENGTH)
+        self.assertAlmostEqual(junior.damage_taken, average("damage_taken") / 2)
+        # Outside an Epic Fight he is as usual
+        plain = SaiyanNPC(0, 0, False, "cell_jr", 0, [])
+        self.assertLess(plain.max_hp, junior.max_hp)
         ally = next(npc for npc in npcs if npc.team == HEROES)
         normal = SaiyanNPC(0, 0, False, ally.character_name, 0, [], team=HEROES)
         self.assertAlmostEqual(ally.attack_damage, normal.attack_damage * epic.ALLY_STRENGTH)
         self.assertEqual(ally.max_hp, normal.max_hp)  # as healthy, but hitting softer
-        # A later wave is as strong
+        # Other enemies: ENEMY_STRENGTH; a later wave is as strong
         android = self.game("android13")
         android.scenes["story"].intro = None
         self.beat(self.enemies(android))

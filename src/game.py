@@ -356,7 +356,7 @@ class Game:
                     epic.strengthen(ally, epic.ALLY_STRENGTH, health=False)
             enemies = [npc for npc in self.map_manager.get_map().npcs if npc.team != HEROES]
             for enemy in enemies:
-                epic.strengthen(enemy, epic.ENEMY_STRENGTH)
+                epic.strengthen_enemy(enemy)
             if enemies:
                 epic.start_in_form(enemies[0], fight.boss_form)
                 if fight.quest is not None and fight.quest.finisher:
@@ -378,7 +378,7 @@ class Game:
             return False
         self.epic_wave += 1
         for enemy in self.map_manager.add_enemies(fight.waves[self.epic_wave]):
-            epic.strengthen(enemy, epic.ENEMY_STRENGTH)
+            epic.strengthen_enemy(enemy)
         sfx.play("powerup")
         return True
 

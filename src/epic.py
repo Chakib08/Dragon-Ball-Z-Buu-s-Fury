@@ -195,6 +195,38 @@ def strengthen(fighter, factor, health=True):
         fighter.hp = fighter.max_hp
 
 
+# Enemies whose strength an Epic Fight sets against other fighters instead:
+# a Cell Jr. is twice as strong as the Z Warriors, as they fight beside the
+# player in an Epic Fight (their hits, techniques, health, defense)
+STRONGER_THAN = {"cell_jr": (2.0, ("krillin", "tien", "yamcha"))}
+
+
+def strengthen_enemy(enemy):
+    """An Epic Fight's enemy: ENEMY_STRENGTH times as strong, or, for one of
+    STRONGER_THAN, that many times as strong as those fighters are as the
+    player's allies in an Epic Fight."""
+    rule = STRONGER_THAN.get(enemy.character_name)
+    if rule is None:
+        strengthen(enemy, ENEMY_STRENGTH)
+        return
+    from npc import HEROES, SaiyanNPC
+    times, others = rule
+    allies = []
+    for name in others:
+        ally = SaiyanNPC(0, 0, False, name, 0, [], team=HEROES)
+        strengthen(ally, ALLY_STRENGTH, health=False)
+        allies.append(ally)
+
+    def average(attribute):
+        return sum(getattr(ally, attribute) for ally in allies) / len(allies)
+
+    enemy.attack_damage = times * average("attack_damage")
+    enemy.technique_damage = times * average("technique_damage")
+    enemy.max_hp = round(times * average("max_hp"))
+    enemy.hp = enemy.max_hp
+    enemy.damage_taken = average("damage_taken") / times
+
+
 def reset():
     """Read the file again (tests)."""
     global _fights
