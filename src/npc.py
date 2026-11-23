@@ -256,6 +256,8 @@ class SaiyanNPC(SuperSaiyanMixin, NPC):
     """
 
     def update_ai(self):
+        if getattr(self, "form_locked", False):
+            return  # an Epic Fight's: stays as it is
         steps = power_ups(self.character_name)
         if steps:
             self._power_up_by_steps(steps)

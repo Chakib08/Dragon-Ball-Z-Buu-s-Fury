@@ -1,5 +1,5 @@
 {
-  "comment": "Epic Fights (src/epic.py): the story's great battles. hero: the player's character (form: the Super Saiyan level it starts at), allies: who fights with it; waves: the enemies, one wave after the other (up to 4 at once), their leader first; boss_form: the level the leader starts at. Online, the host plays the hero's side and the other player the leader's side (with the rest of the first wave). music: a soundtrack of Sounds/ (without extension). quest: what it takes besides beating everyone (src/epic.py Quest): survive (seconds), protect (allies who must not fall), finisher (the technique the boss must be beaten with).",
+  "comment": "Epic Fights (src/epic.py): the story's great battles. hero: the player's character (form: the Super Saiyan level it starts at), allies: who fights with it; waves: the enemies, one wave after the other (up to 4 at once), their leader first; boss_form: the level the leader starts at. Online, the host plays the hero's side and the other player the leader's side (with the rest of the first wave). music: a soundtrack of Sounds/ (without extension). quest: what it takes besides beating everyone (src/epic.py Quest): survive (seconds), protect (allies who must not fall), finisher (the technique the boss must be beaten with). face: who the versus card and the list show against the heroes (else the first wave's leader). In an Epic Fight the allies and enemies keep their forms (no power-up, fusion or absorption).",
   "fights": [
     {
       "id": "namek",
@@ -107,6 +107,28 @@
       ]
     },
     {
+      "id": "new_hope",
+      "title": "New Hope",
+      "subtitle": "Trunks vs Imperfect Cell",
+      "hero": "trunks",
+      "waves": [
+        [
+          "cell_imperfect"
+        ]
+      ],
+      "arena": "outside_gingertown",
+      "intro": [
+        [
+          "cell_imperfect",
+          "Your energy smells delicious. I'll absorb you, then the androids!"
+        ],
+        [
+          "trunks",
+          "Not while I'm here. You won't reach them, Cell!"
+        ]
+      ]
+    },
+    {
       "id": "android13",
       "title": "Super Android 13!",
       "subtitle": "Goku, Vegeta and Trunks vs Androids 19, 20 and 13",
@@ -139,7 +161,8 @@
       "ally_forms": {
         "vegeta_log2": "ssj",
         "trunks": "ssj"
-      }
+      },
+      "face": "android13"
     },
     {
       "id": "cell_juniors",

@@ -471,3 +471,62 @@ class QuestTests(EpicCase):
         seconds = int(epic.by_id("last_hope").quest.survive)
         self.assertEqual(quest_lines(epic.by_id("last_hope")), [f"Survive for {seconds} seconds"])
         self.assertEqual(quest_lines(epic.by_id("namek")), ["Defeat every enemy"])
+
+
+class EpicFormTests(EpicCase):
+    def game(self, fight_id):
+        from game import Game
+        game = Game((1200, 540), "test", fullscreen=False)
+        game.menu = Menu(game.resolution)
+        game.menu.epic = epic.by_id(fight_id)
+        game.start_story()
+        game.scenes["story"].intro = None
+        return game
+
+    def test_new_hope(self):
+        fight = epic.by_id("new_hope")
+        self.assertEqual((fight.hero, fight.waves, fight.arena), ("trunks", [["cell_imperfect"]], "outside_gingertown"))
+        game = self.game("new_hope")
+        self.assertEqual(game.map_manager.world_file, "outside_gingertown")
+        cell = next(npc for npc in game.map_manager.get_map().npcs if npc.team != HEROES)
+        # Beaten down, with all his ki: he neither absorbs nor powers up
+        cell.hp = cell.max_hp * 0.2
+        cell.ki = cell.max_ki
+        cell.combat_engaged = True
+        cell.next_technique_ms = 0
+        for _ in range(240):
+            game.loop_once([])
+            if cell.hp <= 0:
+                break
+        self.assertEqual(cell.character_name, "cell_imperfect")
+        self.assertFalse(any(type(e).__name__ == "Evolution" for e in game.map_manager.combat.effects))
+
+    def test_allies_and_enemies_keep_their_forms(self):
+        game = self.game("cell_juniors")
+        fight = epic.by_id("cell_juniors")
+        npcs = game.map_manager.get_map().npcs
+        for npc in npcs:
+            self.assertTrue(npc.form_locked)
+            npc.hp = npc.max_hp * 0.1  # low: they would power up
+            npc.ki = npc.max_ki
+        for _ in range(120):
+            game.loop_once([])
+        for npc in npcs:
+            if npc.team == HEROES and npc.hp > 0:
+                self.assertEqual(npc.form, fight.ally_forms.get(npc.character_name, "base"), npc.character_name)
+
+    def test_android_13_is_the_face_of_his_fight(self):
+        fight = epic.by_id("android13")
+        self.assertEqual(fight.boss, "android19")  # who leads the first wave
+        self.assertEqual(fight.face, "android13")
+        from epic_screens import EpicIntro
+        drawn = []
+        with patch("epic_screens.portrait", side_effect=lambda name: drawn.append(name)):
+            EpicIntro((1200, 540), fight).draw(pygame.Surface((1200, 540)))
+        self.assertIn("android13", drawn)
+        self.assertNotIn("android19", drawn)
+
+    def test_outside_epic_fights_they_still_transform(self):
+        from npc import SaiyanNPC
+        vegeta = SaiyanNPC(0, 0, False, "vegeta", 0, [], difficulty="normal")
+        self.assertFalse(getattr(vegeta, "form_locked", False))

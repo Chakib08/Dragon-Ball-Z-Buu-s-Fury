@@ -1032,7 +1032,7 @@ class Menu:
             else:
                 pygame.draw.rect(screen, (90, 95, 120), rect, 1, border_radius=6)
             x = rect.left + 8
-            for name in (fight.hero, fight.boss):
+            for name in (fight.hero, fight.face):
                 picture = self._portrait(name, face)
                 if picture is not None:
                     screen.blit(picture, (x, rect.top + 6))

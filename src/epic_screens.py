@@ -76,7 +76,7 @@ class EpicIntro:
         # The heroes on the left, the boss (and its first wave) on the right
         size = self.portrait_size
         hero, _, allies = fight.side(0)
-        boss = fight.boss
+        boss = fight.face
         left = self._portrait(hero)
         right = self._portrait(boss)
         left_rect = left.get_rect(topright=(self.panel.centerx - size // 2, top))

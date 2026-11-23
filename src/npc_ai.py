@@ -375,6 +375,8 @@ class NpcBrain:
         if technique.kind == "teleport":
             return 60 <= distance <= stats["reach"]
         if technique.kind == "evolve":
+            if getattr(npc, "form_locked", False):
+                return False  # an Epic Fight's: stays as it is
             # Fuses or absorbs once the fight turns against it (not again
             # right after a fusion ended)
             if technique.style == "fusion" and self.combat.fusion_cooldown_left(npc) is not None:

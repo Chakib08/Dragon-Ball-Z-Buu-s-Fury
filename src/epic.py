@@ -78,6 +78,13 @@ class Fight:
     ally_forms: dict = field(default_factory=dict)
     # What it takes to win (see Quest)
     quest: "Quest" = None
+    # Who the versus card and the list show against the heroes (the boss,
+    # unless another one: Android 13, not the first wave's Android 19)
+    face_of: str = None
+
+    @property
+    def face(self):
+        return self.face_of or self.boss
     music: str = None
     intro: list = field(default_factory=list)
 
@@ -112,6 +119,7 @@ def _load():
                           boss_form=entry.get("boss_form"), music=entry.get("music"),
                           ally_forms={str(k): str(v) for k, v in entry.get("ally_forms", {}).items()},
                           quest=Quest.from_entry(entry.get("quest")),
+                          face_of=str(entry["face"]) if entry.get("face") else None,
                           intro=[(str(who), str(line)) for who, line in entry.get("intro", [])])
         except (KeyError, TypeError, ValueError):
             continue
@@ -225,6 +233,12 @@ def strengthen_enemy(enemy):
     enemy.max_hp = round(times * average("max_hp"))
     enemy.hp = enemy.max_hp
     enemy.damage_taken = average("damage_taken") / times
+
+
+def lock_form(fighter):
+    """In an Epic Fight the allies and the enemies stay in the form the
+    fight gives them: no powering up, no fusion, no absorption."""
+    fighter.form_locked = True
 
 
 def reset():
